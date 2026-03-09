@@ -17,3 +17,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ralphify"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -252,6 +252,103 @@ class TestRun:
         mock_sleep.assert_not_called()
 
 
+class TestRunLogging:
+    @patch("ralphify.cli.subprocess.run")
+    def test_creates_log_files(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+        log_dir = tmp_path / "logs"
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="agent output\n", stderr=""
+        )
+
+        result = runner.invoke(app, ["run", "-n", "2", "--log-dir", str(log_dir)])
+        assert result.exit_code == 0
+        log_files = sorted(log_dir.iterdir())
+        assert len(log_files) == 2
+        assert log_files[0].name.startswith("001_")
+        assert log_files[1].name.startswith("002_")
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_log_file_contains_output(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+        log_dir = tmp_path / "logs"
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="hello from agent\n", stderr="warning\n"
+        )
+
+        result = runner.invoke(app, ["run", "-n", "1", "--log-dir", str(log_dir)])
+        assert result.exit_code == 0
+        log_files = list(log_dir.iterdir())
+        content = log_files[0].read_text()
+        assert "hello from agent" in content
+        assert "warning" in content
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_log_dir_created_automatically(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+        log_dir = tmp_path / "nested" / "log" / "dir"
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="out\n", stderr=""
+        )
+
+        result = runner.invoke(app, ["run", "-n", "1", "--log-dir", str(log_dir)])
+        assert result.exit_code == 0
+        assert log_dir.exists()
+        assert len(list(log_dir.iterdir())) == 1
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_no_log_files_without_flag(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "1"])
+        assert result.exit_code == 0
+        # No .ralph or logs directory should be created
+        assert not (tmp_path / ".ralph").exists()
+        assert not (tmp_path / "logs").exists()
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_log_shows_path_in_status(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+        log_dir = tmp_path / "logs"
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="out\n", stderr=""
+        )
+
+        result = runner.invoke(app, ["run", "-n", "1", "--log-dir", str(log_dir)])
+        assert result.exit_code == 0
+        assert "001_" in result.output
+        assert ".log" in result.output
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_log_uses_capture_output(self, mock_run, tmp_path, monkeypatch):
+        """When logging, subprocess.run is called with capture_output=True."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+        log_dir = tmp_path / "logs"
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+
+        runner.invoke(app, ["run", "-n", "1", "--log-dir", str(log_dir)])
+        assert mock_run.call_args.kwargs["capture_output"] is True
+
+
 class TestFormatDuration:
     def test_seconds(self):
         assert _format_duration(5.3) == "5.3s"

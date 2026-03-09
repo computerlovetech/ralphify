@@ -1,7 +1,9 @@
 import shutil
 import subprocess
+import sys
 import time
 import tomllib
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -142,6 +144,7 @@ def run(
     n: Optional[int] = typer.Option(None, "-n", help="Max number of iterations. Infinite if not set."),
     stop_on_error: bool = typer.Option(False, "--stop-on-error", "-s", help="Stop if the agent exits with non-zero."),
     delay: float = typer.Option(0, "--delay", "-d", help="Seconds to wait between iterations."),
+    log_dir: Optional[str] = typer.Option(None, "--log-dir", "-l", help="Save iteration output to log files in this directory."),
 ) -> None:
     """Run the autonomous coding loop."""
     config_path = Path(CONFIG_FILENAME)
@@ -163,6 +166,12 @@ def run(
         rprint(f"[red]Prompt file '{prompt_file}' not found.[/red]")
         raise typer.Exit(1)
 
+    log_path_dir = None
+    if log_dir:
+        log_path_dir = Path(log_dir)
+        log_path_dir.mkdir(parents=True, exist_ok=True)
+        rprint(f"[dim]Logging output to {log_path_dir}/[/dim]")
+
     cmd = [command] + args
     completed = 0
     failed = 0
@@ -178,16 +187,42 @@ def run(
             prompt = prompt_path.read_text()
 
             start = time.monotonic()
-            result = subprocess.run(cmd, input=prompt, text=True)
+
+            if log_path_dir:
+                result = subprocess.run(cmd, input=prompt, text=True, capture_output=True)
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
+                output = ""
+                if result.stdout:
+                    output += result.stdout
+                if result.stderr:
+                    output += result.stderr
+                log_file.write_text(output)
+                # Replay to terminal
+                if result.stdout:
+                    sys.stdout.write(result.stdout)
+                if result.stderr:
+                    sys.stderr.write(result.stderr)
+            else:
+                result = subprocess.run(cmd, input=prompt, text=True)
+
             elapsed = time.monotonic() - start
             duration = _format_duration(elapsed)
 
             if result.returncode == 0:
                 completed += 1
-                rprint(f"[green]✓ Iteration {iteration} completed ({duration})[/green]")
+                status_msg = f"[green]✓ Iteration {iteration} completed ({duration})"
+                if log_path_dir:
+                    status_msg += f" → {log_file}"
+                status_msg += "[/green]"
+                rprint(status_msg)
             else:
                 failed += 1
-                rprint(f"[red]✗ Iteration {iteration} failed with exit code {result.returncode} ({duration})[/red]")
+                status_msg = f"[red]✗ Iteration {iteration} failed with exit code {result.returncode} ({duration})"
+                if log_path_dir:
+                    status_msg += f" → {log_file}"
+                status_msg += "[/red]"
+                rprint(status_msg)
                 if stop_on_error:
                     rprint("[red]Stopping due to --stop-on-error.[/red]")
                     break
