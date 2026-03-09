@@ -50,6 +50,66 @@ class TestInit:
         assert (tmp_path / "PROMPT.md").read_text() == "my custom prompt"
 
 
+class TestStatus:
+    def test_errors_without_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 1
+        assert "not found" in result.output
+
+    def test_shows_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("my prompt")
+        result = runner.invoke(app, ["status"])
+        assert "claude" in result.output
+        assert "PROMPT.md" in result.output
+
+    @patch("ralphify.cli.shutil.which", return_value="/usr/bin/claude")
+    def test_ready_when_all_valid(self, mock_which, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("my prompt")
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 0
+        assert "Ready to run" in result.output
+
+    @patch("ralphify.cli.shutil.which", return_value=None)
+    def test_not_ready_when_command_missing(self, mock_which, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("my prompt")
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 1
+        assert "not found on PATH" in result.output
+        assert "Not ready" in result.output
+
+    def test_not_ready_when_prompt_missing(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 1
+        assert "not found" in result.output
+
+    @patch("ralphify.cli.shutil.which", return_value=None)
+    def test_reports_all_issues(self, mock_which, tmp_path, monkeypatch):
+        """Reports both prompt and command issues at once."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 1
+        assert "Prompt file" in result.output
+        assert "not found on PATH" in result.output
+
+    @patch("ralphify.cli.shutil.which", return_value="/usr/bin/myagent")
+    def test_shows_prompt_size(self, mock_which, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("x" * 150)
+        result = runner.invoke(app, ["status"])
+        assert "150 chars" in result.output
+
+
 class TestRun:
     def test_errors_without_config(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

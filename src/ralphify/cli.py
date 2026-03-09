@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 import time
 import tomllib
@@ -77,6 +78,50 @@ def init(
 
     rprint(f"\nDetected project type: [bold]{project_type}[/bold]")
     rprint("Edit PROMPT.md to customize your agent's behavior.")
+
+
+@app.command()
+def status() -> None:
+    """Show current configuration and validate setup."""
+    config_path = Path(CONFIG_FILENAME)
+
+    if not config_path.exists():
+        rprint(f"[red]✗ {CONFIG_FILENAME} not found. Run 'ralph init' first.[/red]")
+        raise typer.Exit(1)
+
+    with open(config_path, "rb") as f:
+        config = tomllib.load(f)
+
+    agent = config["agent"]
+    command = agent["command"]
+    args = agent.get("args", [])
+    prompt_file = agent["prompt"]
+    prompt_path = Path(prompt_file)
+
+    rprint("[bold]Configuration[/bold]")
+    rprint(f"  Command: [cyan]{command} {' '.join(args)}[/cyan]")
+    rprint(f"  Prompt:  [cyan]{prompt_file}[/cyan]")
+
+    issues = []
+
+    if prompt_path.exists():
+        size = len(prompt_path.read_text())
+        rprint(f"\n[green]✓[/green] Prompt file exists ({size} chars)")
+    else:
+        issues.append("prompt")
+        rprint(f"\n[red]✗[/red] Prompt file '{prompt_file}' not found")
+
+    if shutil.which(command):
+        rprint(f"[green]✓[/green] Command '{command}' found on PATH")
+    else:
+        issues.append("command")
+        rprint(f"[red]✗[/red] Command '{command}' not found on PATH")
+
+    if issues:
+        rprint(f"\n[red]Not ready.[/red] Fix the issues above before running.")
+        raise typer.Exit(1)
+    else:
+        rprint(f"\n[green]Ready to run.[/green]")
 
 
 def _format_duration(seconds: float) -> str:
