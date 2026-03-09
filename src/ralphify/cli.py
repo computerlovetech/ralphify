@@ -145,6 +145,7 @@ def run(
     stop_on_error: bool = typer.Option(False, "--stop-on-error", "-s", help="Stop if the agent exits with non-zero."),
     delay: float = typer.Option(0, "--delay", "-d", help="Seconds to wait between iterations."),
     log_dir: Optional[str] = typer.Option(None, "--log-dir", "-l", help="Save iteration output to log files in this directory."),
+    timeout: Optional[float] = typer.Option(None, "--timeout", "-t", help="Max seconds per iteration. Kill agent if exceeded."),
 ) -> None:
     """Run the autonomous coding loop."""
     config_path = Path(CONFIG_FILENAME)
@@ -172,9 +173,13 @@ def run(
         log_path_dir.mkdir(parents=True, exist_ok=True)
         rprint(f"[dim]Logging output to {log_path_dir}/[/dim]")
 
+    if timeout is not None:
+        rprint(f"[dim]Timeout: {_format_duration(timeout)} per iteration[/dim]")
+
     cmd = [command] + args
     completed = 0
     failed = 0
+    timed_out = 0
 
     try:
         iteration = 0
@@ -187,45 +192,70 @@ def run(
             prompt = prompt_path.read_text()
 
             start = time.monotonic()
+            iteration_timed_out = False
 
-            if log_path_dir:
-                result = subprocess.run(cmd, input=prompt, text=True, capture_output=True)
-                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-                log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
-                output = ""
-                if result.stdout:
-                    output += result.stdout
-                if result.stderr:
-                    output += result.stderr
-                log_file.write_text(output)
-                # Replay to terminal
-                if result.stdout:
-                    sys.stdout.write(result.stdout)
-                if result.stderr:
-                    sys.stderr.write(result.stderr)
-            else:
-                result = subprocess.run(cmd, input=prompt, text=True)
-
-            elapsed = time.monotonic() - start
-            duration = _format_duration(elapsed)
-
-            if result.returncode == 0:
-                completed += 1
-                status_msg = f"[green]✓ Iteration {iteration} completed ({duration})"
+            try:
                 if log_path_dir:
-                    status_msg += f" → {log_file}"
-                status_msg += "[/green]"
-                rprint(status_msg)
-            else:
+                    result = subprocess.run(cmd, input=prompt, text=True, capture_output=True, timeout=timeout)
+                    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                    log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
+                    output = ""
+                    if result.stdout:
+                        output += result.stdout
+                    if result.stderr:
+                        output += result.stderr
+                    log_file.write_text(output)
+                    # Replay to terminal
+                    if result.stdout:
+                        sys.stdout.write(result.stdout)
+                    if result.stderr:
+                        sys.stderr.write(result.stderr)
+                else:
+                    result = subprocess.run(cmd, input=prompt, text=True, timeout=timeout)
+            except subprocess.TimeoutExpired as e:
+                iteration_timed_out = True
+                elapsed = time.monotonic() - start
+                duration = _format_duration(elapsed)
+                timed_out += 1
                 failed += 1
-                status_msg = f"[red]✗ Iteration {iteration} failed with exit code {result.returncode} ({duration})"
+                status_msg = f"[yellow]⏱ Iteration {iteration} timed out after {duration}"
                 if log_path_dir:
+                    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                    log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
+                    output = ""
+                    if e.stdout:
+                        output += e.stdout if isinstance(e.stdout, str) else e.stdout.decode()
+                    if e.stderr:
+                        output += e.stderr if isinstance(e.stderr, str) else e.stderr.decode()
+                    log_file.write_text(output)
                     status_msg += f" → {log_file}"
-                status_msg += "[/red]"
+                status_msg += "[/yellow]"
                 rprint(status_msg)
                 if stop_on_error:
                     rprint("[red]Stopping due to --stop-on-error.[/red]")
                     break
+
+            if not iteration_timed_out:
+                elapsed = time.monotonic() - start
+                duration = _format_duration(elapsed)
+
+                if result.returncode == 0:
+                    completed += 1
+                    status_msg = f"[green]✓ Iteration {iteration} completed ({duration})"
+                    if log_path_dir:
+                        status_msg += f" → {log_file}"
+                    status_msg += "[/green]"
+                    rprint(status_msg)
+                else:
+                    failed += 1
+                    status_msg = f"[red]✗ Iteration {iteration} failed with exit code {result.returncode} ({duration})"
+                    if log_path_dir:
+                        status_msg += f" → {log_file}"
+                    status_msg += "[/red]"
+                    rprint(status_msg)
+                    if stop_on_error:
+                        rprint("[red]Stopping due to --stop-on-error.[/red]")
+                        break
 
             if delay > 0 and (n is None or iteration < n):
                 rprint(f"[dim]Waiting {delay}s...[/dim]")
@@ -238,5 +268,7 @@ def run(
     summary = f"\n[green]Done: {total} iteration(s) — {completed} succeeded"
     if failed:
         summary += f", {failed} failed"
+    if timed_out:
+        summary += f" ({timed_out} timed out)"
     summary += "[/green]"
     rprint(summary)

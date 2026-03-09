@@ -171,7 +171,7 @@ class TestRun:
         result = runner.invoke(app, ["run", "-n", "1"])
         assert result.exit_code == 0
         mock_run.assert_called_once_with(
-            ["myagent", "--fast"], input="go", text=True
+            ["myagent", "--fast"], input="go", text=True, timeout=None
         )
 
     @patch("ralphify.cli.subprocess.run", side_effect=_ok)
@@ -347,6 +347,101 @@ class TestRunLogging:
 
         runner.invoke(app, ["run", "-n", "1", "--log-dir", str(log_dir)])
         assert mock_run.call_args.kwargs["capture_output"] is True
+
+
+class TestRunTimeout:
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_timeout_passed_to_subprocess(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "1", "--timeout", "30"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["timeout"] == 30
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_no_timeout_by_default(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "1"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["timeout"] is None
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_timeout_counts_as_failure(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="claude", timeout=10)
+
+        result = runner.invoke(app, ["run", "-n", "1", "--timeout", "10"])
+        assert result.exit_code == 0
+        assert "timed out" in result.output
+        assert "1 failed" in result.output
+        assert "1 timed out" in result.output
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_timeout_continues_by_default(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        mock_run.side_effect = [
+            subprocess.TimeoutExpired(cmd="claude", timeout=10),
+            subprocess.CompletedProcess(args=[], returncode=0),
+        ]
+
+        result = runner.invoke(app, ["run", "-n", "2", "--timeout", "10"])
+        assert result.exit_code == 0
+        assert mock_run.call_count == 2
+        assert "1 succeeded" in result.output
+        assert "1 failed" in result.output
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_timeout_stops_with_stop_on_error(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="claude", timeout=10)
+
+        result = runner.invoke(app, ["run", "-n", "3", "--timeout", "10", "--stop-on-error"])
+        assert result.exit_code == 0
+        assert mock_run.call_count == 1
+        assert "Stopping due to --stop-on-error" in result.output
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_timeout_with_logging(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+        log_dir = tmp_path / "logs"
+
+        exc = subprocess.TimeoutExpired(cmd="claude", timeout=10)
+        exc.stdout = "partial output\n"
+        exc.stderr = ""
+        mock_run.side_effect = exc
+
+        result = runner.invoke(app, ["run", "-n", "1", "--timeout", "10", "--log-dir", str(log_dir)])
+        assert result.exit_code == 0
+        log_files = list(log_dir.iterdir())
+        assert len(log_files) == 1
+        content = log_files[0].read_text()
+        assert "partial output" in content
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_timeout_shows_in_header(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "1", "--timeout", "300"])
+        assert result.exit_code == 0
+        assert "5m 0s per iteration" in result.output
 
 
 class TestFormatDuration:
