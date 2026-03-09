@@ -1,5 +1,5 @@
 import subprocess
-import sys
+import time
 import tomllib
 from pathlib import Path
 from typing import Optional
@@ -63,9 +63,24 @@ def init(
     rprint("Edit PROMPT.md to customize your agent's behavior.")
 
 
+def _format_duration(seconds: float) -> str:
+    """Format duration in human-readable form."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes = int(seconds // 60)
+    secs = seconds % 60
+    if minutes < 60:
+        return f"{minutes}m {secs:.0f}s"
+    hours = minutes // 60
+    mins = minutes % 60
+    return f"{hours}h {mins}m"
+
+
 @app.command()
 def run(
     n: Optional[int] = typer.Option(None, "-n", help="Max number of iterations. Infinite if not set."),
+    stop_on_error: bool = typer.Option(False, "--stop-on-error", "-s", help="Stop if the agent exits with non-zero."),
+    delay: float = typer.Option(0, "--delay", "-d", help="Seconds to wait between iterations."),
 ) -> None:
     """Run the autonomous coding loop."""
     config_path = Path(CONFIG_FILENAME)
@@ -88,9 +103,11 @@ def run(
         raise typer.Exit(1)
 
     cmd = [command] + args
-    iteration = 0
+    completed = 0
+    failed = 0
 
     try:
+        iteration = 0
         while True:
             iteration += 1
             if n is not None and iteration > n:
@@ -98,9 +115,32 @@ def run(
 
             rprint(f"\n[bold blue]── Iteration {iteration} ──[/bold blue]")
             prompt = prompt_path.read_text()
-            subprocess.run(cmd, input=prompt, text=True)
+
+            start = time.monotonic()
+            result = subprocess.run(cmd, input=prompt, text=True)
+            elapsed = time.monotonic() - start
+            duration = _format_duration(elapsed)
+
+            if result.returncode == 0:
+                completed += 1
+                rprint(f"[green]✓ Iteration {iteration} completed ({duration})[/green]")
+            else:
+                failed += 1
+                rprint(f"[red]✗ Iteration {iteration} failed with exit code {result.returncode} ({duration})[/red]")
+                if stop_on_error:
+                    rprint("[red]Stopping due to --stop-on-error.[/red]")
+                    break
+
+            if delay > 0 and (n is None or iteration < n):
+                rprint(f"[dim]Waiting {delay}s...[/dim]")
+                time.sleep(delay)
 
     except KeyboardInterrupt:
         pass
 
-    rprint(f"\n[green]Completed {iteration if n is None else min(iteration, n)} iteration(s).[/green]")
+    total = completed + failed
+    summary = f"\n[green]Done: {total} iteration(s) — {completed} succeeded"
+    if failed:
+        summary += f", {failed} failed"
+    summary += "[/green]"
+    rprint(summary)

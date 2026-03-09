@@ -1,11 +1,19 @@
-import os
-from unittest.mock import patch
+import subprocess
+from unittest.mock import patch, MagicMock
 
 from typer.testing import CliRunner
 
-from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE
+from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE, _format_duration
 
 runner = CliRunner()
+
+
+def _ok(*args, **kwargs):
+    return subprocess.CompletedProcess(args=args, returncode=0)
+
+
+def _fail(*args, **kwargs):
+    return subprocess.CompletedProcess(args=args, returncode=1)
 
 
 class TestInit:
@@ -56,7 +64,7 @@ class TestRun:
         assert result.exit_code == 1
         assert "not found" in result.output
 
-    @patch("ralphify.cli.subprocess.run")
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
     def test_runs_n_iterations(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
@@ -65,7 +73,6 @@ class TestRun:
         result = runner.invoke(app, ["run", "-n", "3"])
         assert result.exit_code == 0
         assert mock_run.call_count == 3
-        # Verify the prompt was piped as stdin
         for call in mock_run.call_args_list:
             assert call.kwargs["input"] == "test prompt"
             assert call.kwargs["text"] is True
@@ -85,16 +92,16 @@ class TestRun:
             call_count += 1
             if call_count == 1:
                 prompt_path.write_text("v2")
+            return subprocess.CompletedProcess(args=args, returncode=0)
 
         mock_run.side_effect = update_prompt
 
         result = runner.invoke(app, ["run", "-n", "2"])
         assert result.exit_code == 0
-        # First call gets "v1", second call gets "v2"
         assert mock_run.call_args_list[0].kwargs["input"] == "v1"
         assert mock_run.call_args_list[1].kwargs["input"] == "v2"
 
-    @patch("ralphify.cli.subprocess.run")
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
     def test_custom_command_and_args(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         config = '[agent]\ncommand = "myagent"\nargs = ["--fast"]\nprompt = "PROMPT.md"\n'
@@ -106,3 +113,96 @@ class TestRun:
         mock_run.assert_called_once_with(
             ["myagent", "--fast"], input="go", text=True
         )
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_shows_success_per_iteration(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "2"])
+        assert result.exit_code == 0
+        assert "Iteration 1 completed" in result.output
+        assert "Iteration 2 completed" in result.output
+        assert "2 succeeded" in result.output
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_fail)
+    def test_continues_on_error_by_default(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "3"])
+        assert result.exit_code == 0
+        assert mock_run.call_count == 3
+        assert "3 failed" in result.output
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_fail)
+    def test_stop_on_error(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "5", "--stop-on-error"])
+        assert result.exit_code == 0
+        assert mock_run.call_count == 1
+        assert "Stopping due to --stop-on-error" in result.output
+        assert "1 failed" in result.output
+
+    @patch("ralphify.cli.subprocess.run")
+    def test_mixed_success_and_failure(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        mock_run.side_effect = [
+            subprocess.CompletedProcess(args=[], returncode=0),
+            subprocess.CompletedProcess(args=[], returncode=1),
+            subprocess.CompletedProcess(args=[], returncode=0),
+        ]
+
+        result = runner.invoke(app, ["run", "-n", "3"])
+        assert result.exit_code == 0
+        assert "2 succeeded" in result.output
+        assert "1 failed" in result.output
+
+    @patch("ralphify.cli.time.sleep")
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_delay_between_iterations(self, mock_run, mock_sleep, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "3", "--delay", "5"])
+        assert result.exit_code == 0
+        # Delay between iterations, not after the last one
+        assert mock_sleep.call_count == 2
+        for call in mock_sleep.call_args_list:
+            assert call.args[0] == 5
+
+    @patch("ralphify.cli.time.sleep")
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_no_delay_with_single_iteration(self, mock_run, mock_sleep, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("go")
+
+        result = runner.invoke(app, ["run", "-n", "1", "--delay", "5"])
+        assert result.exit_code == 0
+        mock_sleep.assert_not_called()
+
+
+class TestFormatDuration:
+    def test_seconds(self):
+        assert _format_duration(5.3) == "5.3s"
+        assert _format_duration(0.1) == "0.1s"
+        assert _format_duration(59.9) == "59.9s"
+
+    def test_minutes(self):
+        assert _format_duration(60) == "1m 0s"
+        assert _format_duration(90.5) == "1m 30s"
+        assert _format_duration(3599) == "59m 59s"
+
+    def test_hours(self):
+        assert _format_duration(3600) == "1h 0m"
+        assert _format_duration(5400) == "1h 30m"
