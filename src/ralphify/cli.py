@@ -5,7 +5,10 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich import print as rprint
+from rich.console import Console
+
+_console = Console(highlight=False)
+rprint = _console.print
 
 from ralphify.detector import detect_project
 
