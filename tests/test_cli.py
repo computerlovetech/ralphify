@@ -5,8 +5,8 @@ from unittest.mock import patch, MagicMock
 from typer.testing import CliRunner
 
 from ralphify import __version__
-from ralphify.checks import Check, CheckResult
-from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE, _format_duration
+from ralphify.checks import Check, CheckResult, parse_check_md
+from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE, CHECK_MD_TEMPLATE, _format_duration
 
 runner = CliRunner()
 
@@ -639,3 +639,42 @@ class TestRunChecks:
         checks_arg = mock_run_checks.call_args.args[0]
         assert len(checks_arg) == 1
         assert checks_arg[0].name == "enabled"
+
+
+class TestNewCheck:
+    def test_creates_check_directory_and_file(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["new", "check", "my-lint"])
+        assert result.exit_code == 0
+        check_md = tmp_path / ".ralph" / "checks" / "my-lint" / "CHECK.md"
+        assert check_md.exists()
+        content = check_md.read_text()
+        assert "command:" in content
+        assert "timeout:" in content
+        assert "enabled:" in content
+
+    def test_refuses_existing_check(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        check_dir = tmp_path / ".ralph" / "checks" / "my-lint"
+        check_dir.mkdir(parents=True)
+        (check_dir / "CHECK.md").write_text("original content")
+
+        result = runner.invoke(app, ["new", "check", "my-lint"])
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+        assert (check_dir / "CHECK.md").read_text() == "original content"
+
+    def test_creates_ralph_dirs_if_missing(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert not (tmp_path / ".ralph").exists()
+        result = runner.invoke(app, ["new", "check", "fresh"])
+        assert result.exit_code == 0
+        assert (tmp_path / ".ralph" / "checks" / "fresh" / "CHECK.md").exists()
+
+    def test_default_body_stripped_to_empty(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["new", "check", "empty-body"])
+        assert result.exit_code == 0
+        check_md = tmp_path / ".ralph" / "checks" / "empty-body" / "CHECK.md"
+        _, body = parse_check_md(check_md.read_text())
+        assert body == ""

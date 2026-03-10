@@ -22,6 +22,26 @@ class TestParseCheckMd:
         assert fm["description"] == "Lint check"
         assert body == "Fix lint errors."
 
+    def test_strips_html_comments(self):
+        text = "---\ncommand: echo hi\n---\n<!-- comment -->Keep this."
+        fm, body = parse_check_md(text)
+        assert body == "Keep this."
+
+    def test_strips_multiline_html_comments(self):
+        text = "---\ncommand: echo hi\n---\n<!--\nmultiline\ncomment\n-->Keep this."
+        fm, body = parse_check_md(text)
+        assert body == "Keep this."
+
+    def test_body_only_html_comment_becomes_empty(self):
+        text = "---\ncommand: echo hi\n---\n<!-- only a comment -->"
+        fm, body = parse_check_md(text)
+        assert body == ""
+
+    def test_multiple_html_comments_stripped(self):
+        text = "---\ncommand: echo hi\n---\n<!-- first -->Keep<!-- second --> this."
+        fm, body = parse_check_md(text)
+        assert body == "Keep this."
+
     def test_no_frontmatter(self):
         text = "Just a body with instructions."
         fm, body = parse_check_md(text)
@@ -103,7 +123,6 @@ class TestDiscoverChecks:
         assert len(result) == 1
         assert result[0].name == "typecheck"
         assert result[0].script == script
-        assert result[0].description == "Type check"
 
     def test_script_takes_precedence(self, tmp_path):
         """run.* script should be found even when command is also set."""
@@ -161,7 +180,6 @@ class TestDiscoverChecks:
         result = discover_checks(tmp_path)
         assert result[0].timeout == 60
         assert result[0].enabled is True
-        assert result[0].description == ""
 
     def test_custom_timeout_and_enabled(self, tmp_path):
         check_dir = tmp_path / ".ralph" / "checks" / "custom"
@@ -189,7 +207,6 @@ class TestRunCheck:
             path=Path("/fake"),
             command="echo hello",
             script=None,
-            description="",
             timeout=60,
             enabled=True,
             failure_instruction="Fix it.",

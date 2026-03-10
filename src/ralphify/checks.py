@@ -1,3 +1,4 @@
+import re
 import shlex
 import subprocess
 import warnings
@@ -11,7 +12,6 @@ class Check:
     path: Path
     command: str | None
     script: Path | None
-    description: str = ""
     timeout: int = 60
     enabled: bool = True
     failure_instruction: str = ""
@@ -66,6 +66,7 @@ def parse_check_md(text: str) -> tuple[dict, str]:
                             frontmatter[key] = value
                     break
 
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL).strip()
     return frontmatter, body
 
 
@@ -106,7 +107,6 @@ def discover_checks(root: Path = Path(".")) -> list[Check]:
                 path=entry,
                 command=command,
                 script=script,
-                description=frontmatter.get("description", ""),
                 timeout=frontmatter.get("timeout", 60),
                 enabled=frontmatter.get("enabled", True),
                 failure_instruction=body,

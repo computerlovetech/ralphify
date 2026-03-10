@@ -19,6 +19,9 @@ from ralphify.detector import detect_project
 
 app = typer.Typer()
 
+new_app = typer.Typer(help="Scaffold new ralph primitives.")
+app.add_typer(new_app, name="new")
+
 BANNER_LINES = [
     "██████╗░░█████╗░██╗░░░░░██████╗░██╗░░██╗██╗███████╗██╗░░░██╗",
     "██╔══██╗██╔══██╗██║░░░░░██╔══██╗██║░░██║██║██╔════╝╚██╗░██╔╝",
@@ -85,6 +88,20 @@ args = ["-p", "--dangerously-skip-permissions"]
 prompt = "PROMPT.md"
 """
 
+CHECK_MD_TEMPLATE = """\
+---
+command: ruff check .
+timeout: 60
+enabled: true
+---
+<!--
+Optional instructions for the agent when this check fails.
+Appended to the prompt alongside the command output.
+
+Example: "Fix all lint errors. Do not add noqa comments."
+-->
+"""
+
 PROMPT_TEMPLATE = """\
 # Prompt
 
@@ -126,6 +143,23 @@ def init(
 
     rprint(f"\nDetected project type: [bold]{project_type}[/bold]")
     rprint("Edit PROMPT.md to customize your agent's behavior.")
+
+
+@new_app.command()
+def check(
+    name: str = typer.Argument(help="Name of the new check."),
+) -> None:
+    """Create a new check scaffold."""
+    check_dir = Path(".ralph") / "checks" / name
+    check_md = check_dir / "CHECK.md"
+
+    if check_md.exists():
+        rprint(f"[red]Check '{name}' already exists at {check_md}[/red]")
+        raise typer.Exit(1)
+
+    check_dir.mkdir(parents=True, exist_ok=True)
+    check_md.write_text(CHECK_MD_TEMPLATE)
+    rprint(f"[green]Created {check_md}[/green]")
 
 
 @app.command()
