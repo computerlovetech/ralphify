@@ -1,14 +1,13 @@
 import subprocess
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from typer.testing import CliRunner
 
 from ralphify import __version__
 from ralphify.checks import Check, CheckResult, parse_check_md
 from ralphify.contexts import Context, ContextResult
-from ralphify.instructions import Instruction
-from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE, CHECK_MD_TEMPLATE, INSTRUCTION_MD_TEMPLATE, CONTEXT_MD_TEMPLATE, _format_duration
+from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE, _format_duration
 
 runner = CliRunner()
 
@@ -439,8 +438,8 @@ class TestRunTimeout:
         log_dir = tmp_path / "logs"
 
         exc = subprocess.TimeoutExpired(cmd="claude", timeout=10)
-        exc.stdout = "partial output\n"
-        exc.stderr = ""
+        exc.stdout = b"partial output\n"
+        exc.stderr = b""
         mock_run.side_effect = exc
 
         result = runner.invoke(app, ["run", "-n", "1", "--timeout", "10", "--log-dir", str(log_dir)])

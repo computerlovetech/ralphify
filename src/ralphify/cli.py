@@ -10,14 +10,14 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-_console = Console(highlight=False)
-rprint = _console.print
-
 from ralphify import __version__
 from ralphify.checks import discover_checks, run_all_checks, format_check_failures
 from ralphify.contexts import discover_contexts, run_all_contexts, resolve_contexts
 from ralphify.instructions import discover_instructions, resolve_instructions
 from ralphify.detector import detect_project
+
+_console = Console(highlight=False)
+rprint = _console.print
 
 app = typer.Typer()
 
@@ -77,8 +77,8 @@ def main_callback(
     version: bool = typer.Option(False, "--version", "-V", help="Show version and exit.", callback=_version_callback, is_eager=True),
 ) -> None:
     """Harness toolkit for autonomous AI coding loops."""
-    _print_banner()
     if ctx.invoked_subcommand is None:
+        _print_banner()
         raise typer.Exit()
 
 CONFIG_FILENAME = "ralph.toml"
@@ -166,10 +166,10 @@ def init(
     rprint(f"[green]Created {CONFIG_FILENAME}[/green]")
 
     if prompt_path.exists() and not force:
-        rprint(f"[yellow]PROMPT.md already exists. Use --force to overwrite.[/yellow]")
+        rprint("[yellow]PROMPT.md already exists. Use --force to overwrite.[/yellow]")
     else:
         prompt_path.write_text(PROMPT_TEMPLATE)
-        rprint(f"[green]Created PROMPT.md[/green]")
+        rprint("[green]Created PROMPT.md[/green]")
 
     rprint(f"\nDetected project type: [bold]{project_type}[/bold]")
     rprint("Edit PROMPT.md to customize your agent's behavior.")
@@ -271,7 +271,7 @@ def status() -> None:
             icon = "[green]✓[/green]" if check.enabled else "[dim]○[/dim]"
             rprint(f"  {icon} {check.name:<18} {cmd_display}")
     else:
-        rprint(f"\n[bold]Checks:[/bold]  [dim]none[/dim]")
+        rprint("\n[bold]Checks:[/bold]  [dim]none[/dim]")
 
     contexts = discover_contexts()
     if contexts:
@@ -281,7 +281,7 @@ def status() -> None:
             icon = "[green]✓[/green]" if ctx.enabled else "[dim]○[/dim]"
             rprint(f"  {icon} {ctx.name:<18} {cmd_display}")
     else:
-        rprint(f"\n[bold]Contexts:[/bold]  [dim]none[/dim]")
+        rprint("\n[bold]Contexts:[/bold]  [dim]none[/dim]")
 
     instructions = discover_instructions()
     if instructions:
@@ -291,13 +291,13 @@ def status() -> None:
             icon = "[green]✓[/green]" if inst.enabled else "[dim]○[/dim]"
             rprint(f"  {icon} {inst.name:<18} {preview}")
     else:
-        rprint(f"\n[bold]Instructions:[/bold]  [dim]none[/dim]")
+        rprint("\n[bold]Instructions:[/bold]  [dim]none[/dim]")
 
     if issues:
-        rprint(f"\n[red]Not ready.[/red] Fix the issues above before running.")
+        rprint("\n[red]Not ready.[/red] Fix the issues above before running.")
         raise typer.Exit(1)
     else:
-        rprint(f"\n[green]Ready to run.[/green]")
+        rprint("\n[green]Ready to run.[/green]")
 
 
 def _format_duration(seconds: float) -> str:
@@ -317,7 +317,6 @@ def _print_check_summary(results: list) -> None:
     """Print a summary line for check results."""
     passed = sum(1 for r in results if r.passed)
     failed = sum(1 for r in results if not r.passed)
-    timed = sum(1 for r in results if r.timed_out)
 
     parts = []
     if passed:
@@ -344,6 +343,7 @@ def run(
     timeout: Optional[float] = typer.Option(None, "--timeout", "-t", help="Max seconds per iteration. Kill agent if exceeded."),
 ) -> None:
     """Run the autonomous coding loop."""
+    _print_banner()
     config_path = Path(CONFIG_FILENAME)
 
     if not config_path.exists():

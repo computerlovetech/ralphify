@@ -9,4 +9,4 @@ starts with a fresh context. Your progress lives in the code and git.
 - Run tests and fix failures before committing
 - Commit with a descriptive message
 
-<!-- Add your project-specific instructions below -->
+Improve the codebase without adding or removing any features, but keeping all funcitonality the same.

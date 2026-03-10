@@ -137,18 +137,17 @@ class TestDiscoverContexts:
 
 
 class TestRunContext:
-    def _make_context(self, **kwargs):
-        defaults = dict(
-            name="test-ctx",
-            path=Path("/fake"),
-            command="echo hello",
-            script=None,
-            timeout=30,
-            enabled=True,
-            static_content="",
+    def _make_context(self, **kwargs: object) -> Context:
+        cmd = kwargs.get("command", "echo hello")
+        return Context(
+            name=str(kwargs.get("name", "test-ctx")),
+            path=Path(str(kwargs["path"])) if "path" in kwargs else Path("/fake"),
+            command=str(cmd) if cmd is not None else None,
+            script=Path(str(kwargs["script"])) if kwargs.get("script") else None,
+            timeout=int(str(kwargs["timeout"])) if "timeout" in kwargs else 30,
+            enabled=bool(kwargs.get("enabled", True)),
+            static_content=str(kwargs.get("static_content", "")),
         )
-        defaults.update(kwargs)
-        return Context(**defaults)
 
     @patch("ralphify.contexts.subprocess.run")
     def test_successful_command(self, mock_run):

@@ -201,18 +201,16 @@ class TestDiscoverChecks:
 
 
 class TestRunCheck:
-    def _make_check(self, **kwargs):
-        defaults = dict(
-            name="test-check",
-            path=Path("/fake"),
-            command="echo hello",
-            script=None,
-            timeout=60,
-            enabled=True,
-            failure_instruction="Fix it.",
+    def _make_check(self, **kwargs: object) -> Check:
+        return Check(
+            name=str(kwargs.get("name", "test-check")),
+            path=Path(str(kwargs["path"])) if "path" in kwargs else Path("/fake"),
+            command=str(kwargs["command"]) if "command" in kwargs else "echo hello",
+            script=Path(str(kwargs["script"])) if kwargs.get("script") else None,
+            timeout=int(str(kwargs["timeout"])) if "timeout" in kwargs else 60,
+            enabled=bool(kwargs.get("enabled", True)),
+            failure_instruction=str(kwargs.get("failure_instruction", "Fix it.")),
         )
-        defaults.update(kwargs)
-        return Check(**defaults)
 
     @patch("ralphify.checks.subprocess.run")
     def test_passing_check(self, mock_run):
