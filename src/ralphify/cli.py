@@ -312,6 +312,14 @@ def _format_duration(seconds: float) -> str:
     return f"{hours}h {mins}m"
 
 
+def _write_log(log_path_dir: Path, iteration: int, stdout: str | bytes | None, stderr: str | bytes | None) -> Path:
+    """Write iteration output to a timestamped log file and return the path."""
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
+    log_file.write_text(collect_output(stdout, stderr))
+    return log_file
+
+
 def _print_check_summary(results: list) -> None:
     """Print a summary line for check results."""
     passed = sum(1 for r in results if r.passed)
@@ -401,60 +409,50 @@ def run(
                 prompt = prompt + "\n\n" + check_failures_text
 
             start = time.monotonic()
-            iteration_timed_out = False
+            log_file = None
+            returncode = None
 
             try:
                 if log_path_dir:
                     result = subprocess.run(cmd, input=prompt, text=True, capture_output=True, timeout=timeout)
-                    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-                    log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
-                    log_file.write_text(collect_output(result.stdout, result.stderr))
-                    # Replay to terminal
+                    log_file = _write_log(log_path_dir, iteration, result.stdout, result.stderr)
                     if result.stdout:
                         sys.stdout.write(result.stdout)
                     if result.stderr:
                         sys.stderr.write(result.stderr)
                 else:
                     result = subprocess.run(cmd, input=prompt, text=True, timeout=timeout)
+                returncode = result.returncode
             except subprocess.TimeoutExpired as e:
-                iteration_timed_out = True
-                elapsed = time.monotonic() - start
-                duration = _format_duration(elapsed)
                 timed_out += 1
                 failed += 1
-                status_msg = f"[yellow]⏱ Iteration {iteration} timed out after {duration}"
                 if log_path_dir:
-                    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-                    log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
-                    log_file.write_text(collect_output(e.stdout, e.stderr))
-                    status_msg += f" → {log_file}"
-                status_msg += "[/yellow]"
-                rprint(status_msg)
-                if stop_on_error:
-                    rprint("[red]Stopping due to --stop-on-error.[/red]")
-                    break
+                    log_file = _write_log(log_path_dir, iteration, e.stdout, e.stderr)
 
-            if not iteration_timed_out:
-                elapsed = time.monotonic() - start
-                duration = _format_duration(elapsed)
+            elapsed = time.monotonic() - start
+            duration = _format_duration(elapsed)
 
-                if result.returncode == 0:
-                    completed += 1
-                    status_msg = f"[green]✓ Iteration {iteration} completed ({duration})"
-                    if log_path_dir:
-                        status_msg += f" → {log_file}"
-                    status_msg += "[/green]"
-                    rprint(status_msg)
-                else:
-                    failed += 1
-                    status_msg = f"[red]✗ Iteration {iteration} failed with exit code {result.returncode} ({duration})"
-                    if log_path_dir:
-                        status_msg += f" → {log_file}"
-                    status_msg += "[/red]"
-                    rprint(status_msg)
-                    if stop_on_error:
-                        rprint("[red]Stopping due to --stop-on-error.[/red]")
-                        break
+            if returncode is None:
+                color, icon = "yellow", "⏱"
+                detail = f"timed out after {duration}"
+            elif returncode == 0:
+                completed += 1
+                color, icon = "green", "✓"
+                detail = f"completed ({duration})"
+            else:
+                failed += 1
+                color, icon = "red", "✗"
+                detail = f"failed with exit code {returncode} ({duration})"
+
+            status_msg = f"[{color}]{icon} Iteration {iteration} {detail}"
+            if log_file:
+                status_msg += f" → {log_file}"
+            status_msg += f"[/{color}]"
+            rprint(status_msg)
+
+            if returncode != 0 and stop_on_error:
+                rprint("[red]Stopping due to --stop-on-error.[/red]")
+                break
 
             if enabled_checks:
                 check_results = run_all_checks(enabled_checks, Path("."))
