@@ -12,7 +12,7 @@ from rich.console import Console
 
 from ralphify import __version__
 from ralphify._output import collect_output
-from ralphify.checks import discover_checks, run_all_checks, format_check_failures
+from ralphify.checks import CheckResult, discover_checks, run_all_checks, format_check_failures
 from ralphify.contexts import discover_contexts, run_all_contexts, resolve_contexts
 from ralphify.instructions import discover_instructions, resolve_instructions
 from ralphify.detector import detect_project
@@ -320,7 +320,7 @@ def _write_log(log_path_dir: Path, iteration: int, stdout: str | bytes | None, s
     return log_file
 
 
-def _print_check_summary(results: list) -> None:
+def _print_check_summary(results: list[CheckResult]) -> None:
     """Print a summary line for check results."""
     passed = sum(1 for r in results if r.passed)
     failed = sum(1 for r in results if not r.passed)
@@ -413,15 +413,16 @@ def run(
             returncode = None
 
             try:
+                run_kwargs = dict(input=prompt, text=True, timeout=timeout)
                 if log_path_dir:
-                    result = subprocess.run(cmd, input=prompt, text=True, capture_output=True, timeout=timeout)
+                    run_kwargs["capture_output"] = True
+                result = subprocess.run(cmd, **run_kwargs)
+                if log_path_dir:
                     log_file = _write_log(log_path_dir, iteration, result.stdout, result.stderr)
                     if result.stdout:
                         sys.stdout.write(result.stdout)
                     if result.stderr:
                         sys.stderr.write(result.stderr)
-                else:
-                    result = subprocess.run(cmd, input=prompt, text=True, timeout=timeout)
                 returncode = result.returncode
             except subprocess.TimeoutExpired as e:
                 timed_out += 1
