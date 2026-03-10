@@ -2,55 +2,54 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
+from ralphify._frontmatter import MAX_OUTPUT_LEN, parse_frontmatter
 from ralphify.checks import (
     Check,
     CheckResult,
     discover_checks,
     format_check_failures,
-    parse_check_md,
     run_check,
     run_all_checks,
-    MAX_OUTPUT_LEN,
 )
 
 
-class TestParseCheckMd:
+class TestParseFrontmatter:
     def test_basic_frontmatter(self):
         text = "---\ncommand: ruff check .\ndescription: Lint check\n---\nFix lint errors."
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert fm["command"] == "ruff check ."
         assert fm["description"] == "Lint check"
         assert body == "Fix lint errors."
 
     def test_strips_html_comments(self):
         text = "---\ncommand: echo hi\n---\n<!-- comment -->Keep this."
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert body == "Keep this."
 
     def test_strips_multiline_html_comments(self):
         text = "---\ncommand: echo hi\n---\n<!--\nmultiline\ncomment\n-->Keep this."
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert body == "Keep this."
 
     def test_body_only_html_comment_becomes_empty(self):
         text = "---\ncommand: echo hi\n---\n<!-- only a comment -->"
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert body == ""
 
     def test_multiple_html_comments_stripped(self):
         text = "---\ncommand: echo hi\n---\n<!-- first -->Keep<!-- second --> this."
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert body == "Keep this."
 
     def test_no_frontmatter(self):
         text = "Just a body with instructions."
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert fm == {}
         assert body == "Just a body with instructions."
 
     def test_timeout_coerced_to_int(self):
         text = "---\ntimeout: 30\n---\nbody"
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert fm["timeout"] == 30
         assert isinstance(fm["timeout"], int)
 
@@ -58,35 +57,35 @@ class TestParseCheckMd:
         for val, expected in [("true", True), ("True", True), ("yes", True), ("1", True),
                                ("false", False), ("no", False), ("0", False)]:
             text = f"---\nenabled: {val}\n---\n"
-            fm, _ = parse_check_md(text)
+            fm, _ = parse_frontmatter(text)
             assert fm["enabled"] is expected, f"enabled: {val} should be {expected}"
 
     def test_empty_body(self):
         text = "---\ncommand: echo hi\n---\n"
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert fm["command"] == "echo hi"
         assert body == ""
 
     def test_multiline_body(self):
         text = "---\ncommand: test\n---\nLine 1\nLine 2\nLine 3"
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert "Line 1" in body
         assert "Line 3" in body
 
     def test_skips_comments_in_frontmatter(self):
         text = "---\n# this is a comment\ncommand: echo hi\n---\nbody"
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert fm == {"command": "echo hi"}
 
     def test_skips_blank_lines_in_frontmatter(self):
         text = "---\ncommand: echo hi\n\ndescription: test\n---\nbody"
-        fm, body = parse_check_md(text)
+        fm, body = parse_frontmatter(text)
         assert fm["command"] == "echo hi"
         assert fm["description"] == "test"
 
     def test_value_with_colons(self):
         text = "---\ncommand: echo foo:bar:baz\n---\n"
-        fm, _ = parse_check_md(text)
+        fm, _ = parse_frontmatter(text)
         assert fm["command"] == "echo foo:bar:baz"
 
 

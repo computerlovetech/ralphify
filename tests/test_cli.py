@@ -5,7 +5,8 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from ralphify import __version__
-from ralphify.checks import Check, CheckResult, parse_check_md
+from ralphify._frontmatter import parse_frontmatter
+from ralphify.checks import Check, CheckResult
 from ralphify.contexts import Context, ContextResult
 from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE, _format_duration
 
@@ -677,7 +678,7 @@ class TestNewCheck:
         result = runner.invoke(app, ["new", "check", "empty-body"])
         assert result.exit_code == 0
         check_md = tmp_path / ".ralph" / "checks" / "empty-body" / "CHECK.md"
-        _, body = parse_check_md(check_md.read_text())
+        _, body = parse_frontmatter(check_md.read_text())
         assert body == ""
 
 
@@ -725,7 +726,7 @@ class TestNewInstruction:
         result = runner.invoke(app, ["new", "instruction", "empty-body"])
         assert result.exit_code == 0
         inst_md = tmp_path / ".ralph" / "instructions" / "empty-body" / "INSTRUCTION.md"
-        _, body = parse_check_md(inst_md.read_text())
+        _, body = parse_frontmatter(inst_md.read_text())
         assert body == ""
 
 
@@ -857,7 +858,7 @@ class TestNewContext:
         result = runner.invoke(app, ["new", "context", "empty-body"])
         assert result.exit_code == 0
         ctx_md = tmp_path / ".ralph" / "contexts" / "empty-body" / "CONTEXT.md"
-        _, body = parse_check_md(ctx_md.read_text())
+        _, body = parse_frontmatter(ctx_md.read_text())
         assert body == ""
 
 

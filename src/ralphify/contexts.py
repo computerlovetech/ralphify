@@ -4,8 +4,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from ralphify._frontmatter import MAX_OUTPUT_LEN, parse_frontmatter
 from ralphify._output import collect_output
-from ralphify.checks import parse_check_md
 from ralphify.resolver import resolve_placeholders
 
 
@@ -28,8 +28,6 @@ class ContextResult:
     timed_out: bool = False
 
 
-MAX_OUTPUT_LEN = 5000
-
 _NAMED_PATTERN = re.compile(r"\{\{\s*contexts\.([a-zA-Z0-9_-]+)\s*\}\}")
 _BULK_PATTERN = re.compile(r"\{\{\s*contexts\s*\}\}")
 
@@ -50,7 +48,7 @@ def discover_contexts(root: Path = Path(".")) -> list[Context]:
             continue
 
         text = context_md.read_text()
-        frontmatter, body = parse_check_md(text)
+        frontmatter, body = parse_frontmatter(text)
 
         # Look for run.* executable
         script = None

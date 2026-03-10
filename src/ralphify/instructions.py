@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify.checks import parse_check_md
+from ralphify._frontmatter import parse_frontmatter
 from ralphify.resolver import resolve_placeholders
 
 
@@ -34,7 +34,7 @@ def discover_instructions(root: Path = Path(".")) -> list[Instruction]:
             continue
 
         text = instruction_md.read_text()
-        frontmatter, body = parse_check_md(text)
+        frontmatter, body = parse_frontmatter(text)
 
         instructions.append(
             Instruction(
