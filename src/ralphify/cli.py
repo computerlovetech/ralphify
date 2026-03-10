@@ -22,8 +22,16 @@ rprint = _console.print
 
 app = typer.Typer()
 
-new_app = typer.Typer(help="Scaffold new ralph primitives.")
+new_app = typer.Typer(help="Scaffold new ralph primitives.", invoke_without_command=True)
 app.add_typer(new_app, name="new")
+
+
+@new_app.callback()
+def new_callback(ctx: typer.Context) -> None:
+    """Scaffold new ralph primitives."""
+    if ctx.invoked_subcommand is None:
+        rprint(ctx.get_help())
+        raise typer.Exit()
 
 BANNER_LINES = [
     "██████╗░░█████╗░██╗░░░░░██████╗░██╗░░██╗██╗███████╗██╗░░░██╗",
@@ -80,6 +88,7 @@ def main_callback(
     """Harness toolkit for autonomous AI coding loops."""
     if ctx.invoked_subcommand is None:
         _print_banner()
+        rprint(ctx.get_help())
         raise typer.Exit()
 
 CONFIG_FILENAME = "ralph.toml"
@@ -180,7 +189,7 @@ def init(
 def check(
     name: str = typer.Argument(help="Name of the new check."),
 ) -> None:
-    """Create a new check scaffold."""
+    """Create a new check. Checks are scripts that run after each iteration to validate the agent's work (e.g. tests, linters)."""
     check_dir = Path(".ralph") / "checks" / name
     check_md = check_dir / "CHECK.md"
 
@@ -197,7 +206,7 @@ def check(
 def instruction(
     name: str = typer.Argument(help="Name of the new instruction."),
 ) -> None:
-    """Create a new instruction scaffold."""
+    """Create a new instruction. Instructions are template-based prompts injected into the agent's context each iteration."""
     inst_dir = Path(".ralph") / "instructions" / name
     inst_md = inst_dir / "INSTRUCTION.md"
 
@@ -214,7 +223,7 @@ def instruction(
 def context(
     name: str = typer.Argument(help="Name of the new context."),
 ) -> None:
-    """Create a new context scaffold."""
+    """Create a new context. Contexts are dynamic data sources (scripts or static text) injected before each iteration."""
     ctx_dir = Path(".ralph") / "contexts" / name
     ctx_md = ctx_dir / "CONTEXT.md"
 
