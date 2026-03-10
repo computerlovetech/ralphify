@@ -413,10 +413,13 @@ def run(
             returncode = None
 
             try:
-                run_kwargs = dict(input=prompt, text=True, timeout=timeout)
-                if log_path_dir:
-                    run_kwargs["capture_output"] = True
-                result = subprocess.run(cmd, **run_kwargs)
+                result = subprocess.run(
+                    cmd,
+                    input=prompt,
+                    text=True,
+                    timeout=timeout,
+                    capture_output=bool(log_path_dir),
+                )
                 if log_path_dir:
                     log_file = _write_log(log_path_dir, iteration, result.stdout, result.stderr)
                     if result.stdout:

@@ -188,7 +188,7 @@ class TestRun:
         result = runner.invoke(app, ["run", "-n", "1"])
         assert result.exit_code == 0
         mock_run.assert_called_once_with(
-            ["myagent", "--fast"], input="go", text=True, timeout=None
+            ["myagent", "--fast"], input="go", text=True, timeout=None, capture_output=False
         )
 
     @patch("ralphify.cli.subprocess.run", side_effect=_ok)
