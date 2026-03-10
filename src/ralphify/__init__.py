@@ -1,4 +1,9 @@
-__version__ = "0.1.2"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("ralphify")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 from ralphify.cli import app
 
