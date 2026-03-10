@@ -55,6 +55,17 @@ BANNER_COLORS = [
 ]
 
 
+def _print_primitives_section(label: str, items: list, detail_fn) -> None:
+    """Print a status section for discovered primitives."""
+    if items:
+        rprint(f"\n[bold]{label}:[/bold]  {len(items)} found")
+        for item in items:
+            icon = "[green]✓[/green]" if item.enabled else "[dim]○[/dim]"
+            rprint(f"  {icon} {item.name:<18} {detail_fn(item)}")
+    else:
+        rprint(f"\n[bold]{label}:[/bold]  [dim]none[/dim]")
+
+
 def _print_banner() -> None:
     width = shutil.get_terminal_size().columns
     art_width = max(len(line) for line in BANNER_LINES)
@@ -263,34 +274,16 @@ def status() -> None:
         rprint(f"[red]✗[/red] Command '{command}' not found on PATH")
 
     checks = discover_checks()
-    if checks:
-        rprint(f"\n[bold]Checks:[/bold]  {len(checks)} found")
-        for check in checks:
-            cmd_display = str(check.script.name) if check.script else check.command or "?"
-            icon = "[green]✓[/green]" if check.enabled else "[dim]○[/dim]"
-            rprint(f"  {icon} {check.name:<18} {cmd_display}")
-    else:
-        rprint("\n[bold]Checks:[/bold]  [dim]none[/dim]")
+    _print_primitives_section("Checks", checks,
+        lambda c: str(c.script.name) if c.script else c.command or "?")
 
     contexts = discover_contexts()
-    if contexts:
-        rprint(f"\n[bold]Contexts:[/bold]  {len(contexts)} found")
-        for ctx in contexts:
-            cmd_display = str(ctx.script.name) if ctx.script else ctx.command or "(static)"
-            icon = "[green]✓[/green]" if ctx.enabled else "[dim]○[/dim]"
-            rprint(f"  {icon} {ctx.name:<18} {cmd_display}")
-    else:
-        rprint("\n[bold]Contexts:[/bold]  [dim]none[/dim]")
+    _print_primitives_section("Contexts", contexts,
+        lambda c: str(c.script.name) if c.script else c.command or "(static)")
 
     instructions = discover_instructions()
-    if instructions:
-        rprint(f"\n[bold]Instructions:[/bold]  {len(instructions)} found")
-        for inst in instructions:
-            preview = inst.content[:50] + "..." if len(inst.content) > 50 else inst.content
-            icon = "[green]✓[/green]" if inst.enabled else "[dim]○[/dim]"
-            rprint(f"  {icon} {inst.name:<18} {preview}")
-    else:
-        rprint("\n[bold]Instructions:[/bold]  [dim]none[/dim]")
+    _print_primitives_section("Instructions", instructions,
+        lambda i: (i.content[:50] + "...") if len(i.content) > 50 else i.content)
 
     if issues:
         rprint("\n[red]Not ready.[/red] Fix the issues above before running.")
