@@ -1,4 +1,6 @@
-# ralphify
+<p align="center">
+  <img src="cli-graphic.png" alt="ralphify" />
+</p>
 
 Put your AI coding agent in a `while True` loop and let it ship.
 
