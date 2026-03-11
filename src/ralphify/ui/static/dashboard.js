@@ -1018,6 +1018,17 @@ function ConfigureView() {
                     </svg>
                   </div>
                 `}
+                ${view.kind === 'prompts' && p.enabled && html`
+                  <button class="prim-item-run-btn" title="Run with this prompt" onClick=${(e) => {
+                    e.stopPropagation();
+                    startRunWithPrompt(p.name);
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Run
+                  </button>
+                `}
                 <div class="prim-item-badge ${p.enabled ? 'enabled' : 'disabled'}">
                   ${p.enabled ? 'Enabled' : 'Disabled'}
                 </div>
@@ -1115,8 +1126,16 @@ function PrimEditForm({ primitive, kind, meta, onBack, onSaved }) {
             <${KindIcon} kind=${kind} size=${18} />
           </div>
           <h2>${primitive.name}</h2>
+          <div style="flex: 1"></div>
+          ${kind === 'prompts' && primitive.enabled && html`
+            <button class="btn btn-sm prim-run-prompt-btn" onClick=${() => startRunWithPrompt(primitive.name)}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              Run this prompt
+            </button>
+          `}
           ${isCheck && html`
-            <div style="flex: 1"></div>
             <button class="btn btn-sm check-test-btn ${testing ? 'testing' : ''}" onClick=${handleTest} disabled=${testing || !command.trim()}>
               ${testing ? html`
                 <div class="btn-spinner"></div>

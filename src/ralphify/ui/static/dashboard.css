@@ -1284,6 +1284,46 @@ body {
   color: var(--text-muted);
 }
 
+.prim-item-run-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--primary-border);
+  border-radius: 6px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  opacity: 0;
+}
+
+.prim-item:hover .prim-item-run-btn {
+  opacity: 1;
+}
+
+.prim-item-run-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.prim-run-prompt-btn {
+  background: var(--primary-light) !important;
+  color: var(--primary) !important;
+  border-color: var(--primary-border) !important;
+}
+
+.prim-run-prompt-btn:hover {
+  background: var(--primary) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
+}
+
 .prim-item-arrow {
   color: var(--text-muted);
   flex-shrink: 0;
@@ -2661,6 +2701,11 @@ body {
   .empty-state-steps {
     flex-direction: column;
     max-width: 320px;
+  }
+
+  /* Show run button always on touch devices */
+  .prim-item-run-btn {
+    opacity: 1;
   }
 }
 
