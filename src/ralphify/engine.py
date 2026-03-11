@@ -382,6 +382,71 @@ def _run_checks_phase(
     return format_check_failures(check_results)
 
 
+def _run_iteration(
+    config: RunConfig,
+    state: RunState,
+    primitives: EnabledPrimitives,
+    log_path_dir: Path | None,
+    check_failures_text: str,
+    emitter: EventEmitter,
+) -> tuple[str, bool]:
+    """Execute one iteration of the agent loop.
+
+    Runs contexts, assembles the prompt, executes the agent, and runs
+    checks.  Returns ``(check_failures_text, should_continue)`` where
+    *check_failures_text* is the feedback for the next iteration and
+    *should_continue* is ``False`` when ``--stop-on-error`` triggers.
+    """
+    iteration = state.iteration
+
+    emitter.emit(Event(
+        type=EventType.ITERATION_STARTED,
+        run_id=state.run_id,
+        data={"iteration": iteration},
+    ))
+
+    # Run contexts (subprocess I/O)
+    context_results: list[ContextResult] = []
+    if primitives.contexts:
+        context_results = run_all_contexts(
+            primitives.contexts, config.project_root,
+        )
+        emitter.emit(Event(
+            type=EventType.CONTEXTS_RESOLVED,
+            run_id=state.run_id,
+            data={"iteration": iteration, "count": len(primitives.contexts)},
+        ))
+
+    # Assemble prompt (pure text resolution)
+    prompt = _assemble_prompt(
+        config, primitives, context_results, check_failures_text,
+    )
+    emitter.emit(Event(
+        type=EventType.PROMPT_ASSEMBLED,
+        run_id=state.run_id,
+        data={"iteration": iteration, "prompt_length": len(prompt)},
+    ))
+
+    returncode = _execute_agent(
+        prompt, config, state, log_path_dir, emitter,
+    )
+
+    if returncode != 0 and config.stop_on_error:
+        emitter.emit(Event(
+            type=EventType.LOG_MESSAGE,
+            run_id=state.run_id,
+            data={"message": "Stopping due to --stop-on-error.", "level": "error"},
+        ))
+        return check_failures_text, False
+
+    if primitives.checks:
+        check_failures_text = _run_checks_phase(
+            primitives.checks, config.project_root, state, emitter,
+        )
+
+    return check_failures_text, True
+
+
 def run_loop(
     config: RunConfig,
     state: RunState,
@@ -392,6 +457,9 @@ def run_loop(
     This is the core loop extracted from ``cli.py:run()``.  All terminal
     output is replaced by ``emitter.emit()`` calls so the same logic can
     drive both CLI and web UIs.
+
+    Orchestration only — the work of each iteration is in
+    :func:`_run_iteration`.
     """
     if emitter is None:
         emitter = NullEmitter()
@@ -429,59 +497,18 @@ def run_loop(
                 break
 
             state.iteration += 1
-            iteration = state.iteration
-
-            if config.max_iterations is not None and iteration > config.max_iterations:
+            if config.max_iterations is not None and state.iteration > config.max_iterations:
                 break
 
-            emitter.emit(Event(
-                type=EventType.ITERATION_STARTED,
-                run_id=state.run_id,
-                data={"iteration": iteration},
-            ))
-
-            # Run contexts (subprocess I/O)
-            context_results: list[ContextResult] = []
-            if primitives.contexts:
-                context_results = run_all_contexts(
-                    primitives.contexts, config.project_root,
-                )
-                emitter.emit(Event(
-                    type=EventType.CONTEXTS_RESOLVED,
-                    run_id=state.run_id,
-                    data={"iteration": iteration, "count": len(primitives.contexts)},
-                ))
-
-            # Assemble prompt (pure text resolution)
-            prompt = _assemble_prompt(
-                config, primitives, context_results, check_failures_text,
+            check_failures_text, should_continue = _run_iteration(
+                config, state, primitives, log_path_dir, check_failures_text, emitter,
             )
-            emitter.emit(Event(
-                type=EventType.PROMPT_ASSEMBLED,
-                run_id=state.run_id,
-                data={"iteration": iteration, "prompt_length": len(prompt)},
-            ))
-
-            returncode = _execute_agent(
-                prompt, config, state, log_path_dir, emitter,
-            )
-
-            if returncode != 0 and config.stop_on_error:
-                emitter.emit(Event(
-                    type=EventType.LOG_MESSAGE,
-                    run_id=state.run_id,
-                    data={"message": "Stopping due to --stop-on-error.", "level": "error"},
-                ))
+            if not should_continue:
                 break
-
-            if primitives.checks:
-                check_failures_text = _run_checks_phase(
-                    primitives.checks, config.project_root, state, emitter,
-                )
 
             # Delay between iterations
             if config.delay > 0 and (
-                config.max_iterations is None or iteration < config.max_iterations
+                config.max_iterations is None or state.iteration < config.max_iterations
             ):
                 emitter.emit(Event(
                     type=EventType.LOG_MESSAGE,
