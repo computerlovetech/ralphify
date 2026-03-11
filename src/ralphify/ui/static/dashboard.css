@@ -1398,6 +1398,9 @@ body {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - var(--controls-height) - 94px);
 }
 
 .prim-editor-header {
@@ -1419,6 +1422,9 @@ body {
 
 .prim-editor-body {
   padding: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .prim-editor-fields {
