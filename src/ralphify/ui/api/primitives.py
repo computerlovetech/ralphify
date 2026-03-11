@@ -11,6 +11,7 @@ from ralphify._frontmatter import parse_frontmatter
 from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
 from ralphify.instructions import discover_instructions
+from ralphify.prompts import discover_prompts
 from ralphify.ui.models import PrimitiveResponse, PrimitiveUpdate
 
 router = APIRouter()
@@ -20,6 +21,7 @@ _KIND_MAP = {
     "checks": (discover_checks, "CHECK.md"),
     "contexts": (discover_contexts, "CONTEXT.md"),
     "instructions": (discover_instructions, "INSTRUCTION.md"),
+    "prompts": (discover_prompts, "PROMPT.md"),
 }
 
 

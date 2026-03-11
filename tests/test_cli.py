@@ -8,7 +8,7 @@ from ralphify import __version__
 from ralphify._frontmatter import parse_frontmatter
 from ralphify.checks import Check, CheckResult
 from ralphify.contexts import Context, ContextResult
-from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE
+from ralphify.cli import app, CONFIG_FILENAME, RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE, PROMPT_MD_TEMPLATE
 from ralphify.engine import _format_duration
 
 runner = CliRunner()
@@ -1049,3 +1049,166 @@ class TestRunContexts:
         result = runner.invoke(app, ["run", "-n", "3"])
         assert result.exit_code == 0
         assert mock_run_contexts.call_count == 3
+
+
+def _setup_prompt(tmp_path, name="improve-docs", description="Improve docs", enabled=True, content="Fix the docs."):
+    """Helper to create a prompt directory with PROMPT.md."""
+    p_dir = tmp_path / ".ralph" / "prompts" / name
+    p_dir.mkdir(parents=True, exist_ok=True)
+    enabled_str = "true" if enabled else "false"
+    (p_dir / "PROMPT.md").write_text(
+        f"---\ndescription: {description}\nenabled: {enabled_str}\n---\n{content}"
+    )
+    return p_dir
+
+
+class TestNewPrompt:
+    def test_creates_prompt_directory_and_file(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["new", "prompt", "improve-docs"])
+        assert result.exit_code == 0
+        prompt_md = tmp_path / ".ralph" / "prompts" / "improve-docs" / "PROMPT.md"
+        assert prompt_md.exists()
+        content = prompt_md.read_text()
+        assert "description:" in content
+        assert "enabled:" in content
+
+    def test_refuses_existing_prompt(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        p_dir = tmp_path / ".ralph" / "prompts" / "improve-docs"
+        p_dir.mkdir(parents=True)
+        (p_dir / "PROMPT.md").write_text("original content")
+
+        result = runner.invoke(app, ["new", "prompt", "improve-docs"])
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+        assert (p_dir / "PROMPT.md").read_text() == "original content"
+
+    def test_creates_ralph_dirs_if_missing(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert not (tmp_path / ".ralph").exists()
+        result = runner.invoke(app, ["new", "prompt", "fresh"])
+        assert result.exit_code == 0
+        assert (tmp_path / ".ralph" / "prompts" / "fresh" / "PROMPT.md").exists()
+
+    def test_default_template_has_placeholder_body(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["new", "prompt", "empty-body"])
+        assert result.exit_code == 0
+        prompt_md = tmp_path / ".ralph" / "prompts" / "empty-body" / "PROMPT.md"
+        _, body = parse_frontmatter(prompt_md.read_text())
+        assert "Your prompt content here." in body
+
+
+class TestPromptsList:
+    def test_no_prompts_shows_message(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["prompts", "list"])
+        assert result.exit_code == 0
+        assert "No prompts found" in result.output
+
+    def test_shows_root_prompt(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "PROMPT.md").write_text("my prompt")
+        result = runner.invoke(app, ["prompts", "list"])
+        assert result.exit_code == 0
+        assert "PROMPT.md" in result.output
+        assert "root" in result.output
+
+    def test_shows_named_prompts(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        _setup_prompt(tmp_path, "improve-docs", description="Improve docs")
+        _setup_prompt(tmp_path, "refactor", description="Refactor code")
+        result = runner.invoke(app, ["prompts", "list"])
+        assert result.exit_code == 0
+        assert "improve-docs" in result.output
+        assert "refactor" in result.output
+
+
+class TestStatusPrompts:
+    @patch("ralphify.cli.shutil.which", return_value="/usr/bin/claude")
+    def test_no_prompts_shows_none(self, mock_which, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("prompt")
+
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 0
+        assert "Prompts:" in result.output
+        assert "none" in result.output
+
+    @patch("ralphify.cli.shutil.which", return_value="/usr/bin/claude")
+    def test_found_prompts_shown(self, mock_which, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("prompt")
+        _setup_prompt(tmp_path, "improve-docs")
+        _setup_prompt(tmp_path, "refactor", description="Refactor code")
+
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 0
+        assert "2 found" in result.output
+        assert "improve-docs" in result.output
+        assert "refactor" in result.output
+
+
+class TestRunPromptName:
+    @patch("ralphify.engine.subprocess.run", side_effect=_ok)
+    def test_run_with_prompt_name(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+
+        result = runner.invoke(app, ["run", "improve-docs", "-n", "1"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["input"] == "Fix the docs."
+
+    def test_run_with_nonexistent_prompt_name(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+
+        result = runner.invoke(app, ["run", "nonexistent", "-n", "1"])
+        assert result.exit_code == 1
+        assert "not found" in result.output
+
+    def test_run_with_name_and_prompt_file_conflicts(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+        (tmp_path / "alt.md").write_text("alt prompt")
+
+        result = runner.invoke(app, ["run", "improve-docs", "-n", "1", "--prompt-file", "alt.md"])
+        assert result.exit_code == 1
+        assert "Cannot use both" in result.output
+
+    @patch("ralphify.engine.subprocess.run", side_effect=_ok)
+    def test_run_without_name_falls_back_to_toml(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        (tmp_path / "PROMPT.md").write_text("default prompt")
+
+        result = runner.invoke(app, ["run", "-n", "1"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["input"] == "default prompt"
+
+    @patch("ralphify.engine.subprocess.run", side_effect=_ok)
+    def test_toml_prompt_as_name(self, mock_run, tmp_path, monkeypatch):
+        """When ralph.toml agent.prompt is a prompt name, resolve it."""
+        monkeypatch.chdir(tmp_path)
+        config = '[agent]\ncommand = "claude"\nargs = ["-p"]\nprompt = "improve-docs"\n'
+        (tmp_path / CONFIG_FILENAME).write_text(config)
+        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+
+        result = runner.invoke(app, ["run", "-n", "1"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["input"] == "Fix the docs."
+
+    @patch("ralphify.engine.subprocess.run", side_effect=_ok)
+    def test_inline_prompt_overrides_name(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+
+        result = runner.invoke(app, ["run", "-n", "1", "-p", "inline text"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["input"] == "inline text"

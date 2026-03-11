@@ -20,6 +20,7 @@ from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
 from ralphify.engine import RunConfig, RunState, _format_duration, run_loop
 from ralphify.instructions import discover_instructions
+from ralphify.prompts import discover_prompts, is_prompt_name, resolve_prompt_name
 from ralphify.detector import detect_project
 
 _console = Console(highlight=False)
@@ -30,6 +31,9 @@ app = typer.Typer()
 new_app = typer.Typer(help="Scaffold new ralph primitives.", invoke_without_command=True)
 app.add_typer(new_app, name="new")
 
+prompts_app = typer.Typer(help="Manage prompt primitives.", invoke_without_command=True)
+app.add_typer(prompts_app, name="prompts")
+
 
 @new_app.callback()
 def new_callback(ctx: typer.Context) -> None:
@@ -37,6 +41,31 @@ def new_callback(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
         rprint(ctx.get_help())
         raise typer.Exit()
+
+
+@prompts_app.callback()
+def prompts_callback(ctx: typer.Context) -> None:
+    """Manage prompt primitives."""
+    if ctx.invoked_subcommand is None:
+        rprint(ctx.get_help())
+        raise typer.Exit()
+
+
+@prompts_app.command("list")
+def prompts_list() -> None:
+    """List available prompts."""
+    prompts = discover_prompts()
+    root_prompt = Path("PROMPT.md")
+    if not prompts and not root_prompt.exists():
+        rprint("[dim]No prompts found.[/dim]")
+        return
+    if root_prompt.exists():
+        size = len(root_prompt.read_text())
+        rprint(f"  [cyan]PROMPT.md[/cyan]  (root, {size} chars)")
+    for p in prompts:
+        icon = "[green]✓[/green]" if p.enabled else "[dim]○[/dim]"
+        desc = f"  {p.description}" if p.description else ""
+        rprint(f"  {icon} {p.name:<18}{desc}")
 
 BANNER_LINES = [
     "██████╗░░█████╗░██╗░░░░░██████╗░██╗░░██╗██╗███████╗██╗░░░██╗",
@@ -169,6 +198,15 @@ or {{ contexts }} to inject all enabled contexts.
 -->
 """
 
+PROMPT_MD_TEMPLATE = """\
+---
+description: Describe what this prompt does
+enabled: true
+---
+
+Your prompt content here.
+"""
+
 PROMPT_TEMPLATE = """\
 # Prompt
 
@@ -249,6 +287,14 @@ def context(
     _scaffold_primitive("contexts", name, "CONTEXT.md", CONTEXT_MD_TEMPLATE)
 
 
+@new_app.command()
+def prompt(
+    name: str = typer.Argument(help="Name of the new prompt."),
+) -> None:
+    """Create a new prompt. Prompts are reusable task-focused prompt files you can switch between."""
+    _scaffold_primitive("prompts", name, "PROMPT.md", PROMPT_MD_TEMPLATE)
+
+
 @app.command()
 def status() -> None:
     """Show current configuration and validate setup."""
@@ -289,6 +335,10 @@ def status() -> None:
     instructions = discover_instructions()
     _print_primitives_section("Instructions", instructions,
         lambda i: (i.content[:50] + "...") if len(i.content) > 50 else i.content)
+
+    prompts = discover_prompts()
+    _print_primitives_section("Prompts", prompts,
+        lambda p: p.description or "(no description)")
 
     if issues:
         rprint("\n[red]Not ready.[/red] Fix the issues above before running.")
@@ -381,6 +431,7 @@ class ConsoleEmitter:
 
 @app.command()
 def run(
+    prompt_name: Optional[str] = typer.Argument(None, help="Name of a prompt in .ralph/prompts/."),
     n: Optional[int] = typer.Option(None, "-n", help="Max number of iterations. Infinite if not set."),
     prompt_text: Optional[str] = typer.Option(None, "-p", "--prompt", help="Ad-hoc prompt text. Overrides the prompt file."),
     prompt_file: Optional[str] = typer.Option(None, "--prompt-file", "-f", help="Path to prompt file. Overrides ralph.toml."),
@@ -401,7 +452,42 @@ def run(
     agent = toml_config["agent"]
     command = agent["command"]
     args = agent.get("args", [])
-    prompt_file_path = prompt_file if prompt_file else agent["prompt"]
+
+    # Conflict: positional name + --prompt-file
+    if prompt_name and prompt_file:
+        rprint("[red]Cannot use both a prompt name and --prompt-file.[/red]")
+        raise typer.Exit(1)
+
+    # Resolve prompt file path using priority chain:
+    # --prompt (inline text) > positional name > --prompt-file > ralph.toml > root PROMPT.md
+    resolved_prompt_name: str | None = None
+    if prompt_text:
+        # Inline text — no file needed
+        prompt_file_path = agent.get("prompt", "PROMPT.md")
+    elif prompt_name:
+        # Positional arg — look up in .ralph/prompts/
+        try:
+            found = resolve_prompt_name(prompt_name)
+        except ValueError as e:
+            rprint(f"[red]{e}[/red]")
+            raise typer.Exit(1)
+        prompt_file_path = str(found.path / "PROMPT.md")
+        resolved_prompt_name = found.name
+    elif prompt_file:
+        prompt_file_path = prompt_file
+    else:
+        # Fall back to ralph.toml agent.prompt — could be a name or a path
+        toml_prompt = agent.get("prompt", "PROMPT.md")
+        if is_prompt_name(toml_prompt):
+            # Try as a prompt name first, fall back to file path
+            try:
+                found = resolve_prompt_name(toml_prompt)
+                prompt_file_path = str(found.path / "PROMPT.md")
+                resolved_prompt_name = found.name
+            except ValueError:
+                prompt_file_path = toml_prompt
+        else:
+            prompt_file_path = toml_prompt
 
     prompt_path = Path(prompt_file_path)
     if not prompt_text and not prompt_path.exists():
@@ -416,6 +502,7 @@ def run(
         args=args,
         prompt_file=prompt_file_path,
         prompt_text=prompt_text,
+        prompt_name=resolved_prompt_name,
         max_iterations=n,
         delay=delay,
         timeout=timeout,

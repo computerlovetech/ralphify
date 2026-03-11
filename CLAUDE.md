@@ -25,7 +25,8 @@ Key modules:
 - `cli.py` — CLI commands and the main `run()` loop
 - `_frontmatter.py` — Primitive discovery and YAML frontmatter parsing
 - `resolver.py` — Template placeholder resolution (`{{ contexts.name }}`, `{{ instructions }}`)
-- `checks.py`, `contexts.py`, `instructions.py` — The three primitive types
+- `prompts.py` — Named prompt discovery and resolution
+- `checks.py`, `contexts.py`, `instructions.py` — The other three primitive types
 
 Tests are in `tests/` with one file per module. Docs are in `docs/` using MkDocs with Material theme.
 
@@ -38,7 +39,7 @@ Tests are in `tests/` with one file per module. Docs are in `docs/` using MkDocs
 
 ## Traps
 
-- Primitive marker filenames (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`) are hardcoded in each module's `discover_*()` function AND in scaffold templates in `cli.py`. Change one → update both.
+- Primitive marker filenames (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are hardcoded in each module's `discover_*()` function AND in scaffold templates in `cli.py`. Change one → update both.
 - `timeout` and `enabled` frontmatter fields have special type coercion in `_frontmatter.py:parse_frontmatter()`. New typed fields need coercion logic added there.
 - Both contexts and instructions share `resolver.py:resolve_placeholders()`. Changes affect both.
 - Output is truncated to 5000 chars in `_output.py`. This is intentional.

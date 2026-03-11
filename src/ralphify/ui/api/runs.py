@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException  # ty: ignore[unresolved-import]
 
 from ralphify.engine import RunConfig
 from ralphify.manager import RunManager
+from ralphify.prompts import resolve_prompt_name
 from ralphify.ui.models import RunCreate, RunResponse, RunSettingsUpdate
 
 router = APIRouter()
@@ -36,11 +37,22 @@ def _run_response(managed) -> RunResponse:
 async def create_run(body: RunCreate) -> RunResponse:
     """Create and start a new run."""
     mgr = _get_manager()
+    prompt_file = body.prompt_file
+    resolved_name: str | None = None
+    if body.prompt_name:
+        root = Path(body.project_dir)
+        try:
+            found = resolve_prompt_name(body.prompt_name, root)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        prompt_file = str(found.path / "PROMPT.md")
+        resolved_name = found.name
     config = RunConfig(
         command=body.command,
         args=body.args,
-        prompt_file=body.prompt_file,
+        prompt_file=prompt_file,
         prompt_text=body.prompt_text,
+        prompt_name=resolved_name,
         max_iterations=body.max_iterations,
         delay=body.delay,
         timeout=body.timeout,

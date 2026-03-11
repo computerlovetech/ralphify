@@ -23,6 +23,7 @@ from ralphify.checks import (
     run_all_checks,
 )
 from ralphify.contexts import discover_contexts, resolve_contexts, run_all_contexts
+from ralphify._frontmatter import parse_frontmatter
 from ralphify.instructions import discover_instructions, resolve_instructions
 
 
@@ -46,6 +47,7 @@ class RunConfig:
     args: list[str]
     prompt_file: str
     prompt_text: str | None = None
+    prompt_name: str | None = None
     max_iterations: int | None = None
     delay: float = 0
     timeout: float | None = None
@@ -160,6 +162,7 @@ def run_loop(
             "max_iterations": config.max_iterations,
             "timeout": config.timeout,
             "delay": config.delay,
+            "prompt_name": config.prompt_name,
         },
     ))
 
@@ -227,7 +230,11 @@ def run_loop(
             ))
 
             # Assemble prompt
-            prompt = config.prompt_text if config.prompt_text else prompt_path.read_text()
+            if config.prompt_text:
+                prompt = config.prompt_text
+            else:
+                raw = prompt_path.read_text()
+                _, prompt = parse_frontmatter(raw)
             if enabled_contexts:
                 context_results = run_all_contexts(enabled_contexts, config.project_root)
                 prompt = resolve_contexts(prompt, context_results)

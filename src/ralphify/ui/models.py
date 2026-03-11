@@ -8,6 +8,7 @@ class RunCreate(BaseModel):
     args: list[str] = []
     prompt_file: str = "PROMPT.md"
     prompt_text: str | None = None
+    prompt_name: str | None = None
     max_iterations: int | None = None
     delay: float = 0
     timeout: float | None = None
