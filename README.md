@@ -5,8 +5,8 @@
 <p align="center">
   <a href="https://pypi.org/project/ralphify/"><img src="https://img.shields.io/pypi/v/ralphify?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/ralphify/"><img src="https://img.shields.io/pypi/pyversions/ralphify" alt="Python versions"></a>
-  <a href="https://github.com/computerlovetech/ralphify/blob/main/LICENSE"><img src="https://img.shields.io/github/license/computerlovetech/ralphify" alt="License"></a>
-  <a href="https://computerlovetech.github.io/ralphify/"><img src="https://img.shields.io/badge/docs-computerlovetech.github.io%2Fralphify-blue" alt="Documentation"></a>
+  <a href="https://github.com/kasperjunge/ralphify/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kasperjunge/ralphify" alt="License"></a>
+  <a href="https://kasperjunge.github.io/ralphify/"><img src="https://img.shields.io/badge/docs-kasperjunge.github.io%2Fralphify-blue" alt="Documentation"></a>
 </p>
 
 Put your AI coding agent in a `while True` loop and let it ship.
@@ -150,7 +150,7 @@ The agent reads this prompt fresh every iteration, so you can edit it while the 
 
 ## Documentation
 
-Full documentation at **[computerlovetech.github.io/ralphify](https://computerlovetech.github.io/ralphify/)** — tutorials, cookbook, prompt writing guide, and troubleshooting.
+Full documentation at **[kasperjunge.github.io/ralphify](https://kasperjunge.github.io/ralphify/)** — tutorials, cookbook, prompt writing guide, and troubleshooting.
 
 ## Requirements
 

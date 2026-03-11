@@ -31,9 +31,9 @@ dev = [
 ]
 
 [project.urls]
-Documentation = "https://computerlovetech.github.io/ralphify/"
-Repository = "https://github.com/computerlovetech/ralphify"
-Issues = "https://github.com/computerlovetech/ralphify/issues"
+Documentation = "https://kasperjunge.github.io/ralphify/"
+Repository = "https://github.com/kasperjunge/ralphify"
+Issues = "https://github.com/kasperjunge/ralphify/issues"
 
 [build-system]
 requires = ["hatchling"]

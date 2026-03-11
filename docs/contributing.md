@@ -7,7 +7,7 @@ Ralphify is open source (MIT) and welcomes contributions. This page covers every
 Clone the repository and install dependencies with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-git clone https://github.com/computerlovetech/ralphify.git
+git clone https://github.com/kasperjunge/ralphify.git
 cd ralphify
 uv sync
 ```

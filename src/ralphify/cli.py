@@ -87,7 +87,7 @@ def _print_banner() -> None:
     rprint(f"{'':^{width}}")
     help_text = "Run 'ralph --help' for usage information"
     rprint(f"[dim]{help_text:^{width}}[/dim]")
-    star_text = "⭐ Star us on GitHub: https://github.com/computerlovetech/ralphify"
+    star_text = "⭐ Star us on GitHub: https://github.com/kasperjunge/ralphify"
     rprint(f"[dim]{star_text:^{width}}[/dim]")
     rprint()
 

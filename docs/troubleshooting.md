@@ -241,4 +241,4 @@ By default, agent output goes directly to the terminal. If you're using `--log-d
 1. Run `ralph status` to validate your full setup
 2. Use `ralph run -n 1 --log-dir ralph_logs` to capture a single iteration for debugging
 3. Check the [Configuration & CLI](cli.md) for all available options
-4. File an issue at [github.com/computerlovetech/ralphify](https://github.com/computerlovetech/ralphify/issues)
+4. File an issue at [github.com/kasperjunge/ralphify](https://github.com/kasperjunge/ralphify/issues)

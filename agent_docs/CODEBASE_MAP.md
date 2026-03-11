@@ -116,7 +116,7 @@ uv run mkdocs serve     # Local preview at http://127.0.0.1:8000
 uv run mkdocs build --strict   # Build and check for warnings
 ```
 
-Docs auto-deploy to GitHub Pages on push to main (via `.github/workflows/docs.yml`). The site lives at `https://computerlovetech.github.io/ralphify/`.
+Docs auto-deploy to GitHub Pages on push to main (via `.github/workflows/docs.yml`). The site lives at `https://kasperjunge.github.io/ralphify/`.
 
 ## Dependencies
 
