@@ -35,6 +35,7 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 | `ralph new context <name>` | Scaffold a new context |
 | `ralph new instruction <name>` | Scaffold a new instruction |
 | `ralph new prompt <name>` | Scaffold a new named prompt |
+| `ralph ui` | Launch the [web dashboard](dashboard.md) |
 
 ### `ralph run` options
 

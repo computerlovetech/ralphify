@@ -164,6 +164,29 @@ ralph prompts list
 
 Output shows enabled status, name, and description for each prompt.
 
+### `ralph ui`
+
+Launch the web-based orchestration dashboard for managing multiple runs, watching iterations live, and editing primitives from your browser.
+
+```bash
+ralph ui                    # Default: http://127.0.0.1:8765
+ralph ui --port 9000        # Custom port
+ralph ui --host 0.0.0.0     # Expose on network
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--port` | `8765` | Port to serve the UI on |
+| `--host` | `127.0.0.1` | Host to bind to |
+
+Requires optional dependencies:
+
+```bash
+pip install ralphify[ui]    # Adds FastAPI, uvicorn, WebSocket support
+```
+
+See [Web Dashboard](dashboard.md) for a full walkthrough of the UI features and REST API.
+
 ### `ralph new`
 
 Scaffold new primitives. Each command creates a directory under `.ralph/` with a template file.
