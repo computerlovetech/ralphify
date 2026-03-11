@@ -161,3 +161,13 @@ class TestResolveInstructions:
         prompt = "{{  instructions.foo  }}"
         result = resolve_instructions(prompt, instructions)
         assert result == "Foo text."
+
+    def test_bulk_placeholder_with_backslash_sequences(self):
+        """Content with regex-like backslash sequences must not crash re.sub."""
+        instructions = self._make_instructions(
+            ("regex", r"Use \d+ to match numbers and \1 for backreferences."),
+        )
+        prompt = "Start.\n\n{{ instructions }}\n\nEnd."
+        result = resolve_instructions(prompt, instructions)
+        assert r"\d+" in result
+        assert r"\1" in result

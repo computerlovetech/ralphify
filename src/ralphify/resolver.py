@@ -45,7 +45,9 @@ def resolve_placeholders(
     bulk_text = "\n\n".join(remaining)
 
     if bulk_pattern.search(result):
-        result = bulk_pattern.sub(bulk_text, result)
+        # Use a function replacement to prevent re.sub from interpreting
+        # backslash sequences (e.g. \1, \d) in user-provided content.
+        result = bulk_pattern.sub(lambda _: bulk_text, result)
     elif not has_named:
         # No placeholders found at all -> append
         if bulk_text:
