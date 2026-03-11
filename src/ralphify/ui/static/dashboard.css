@@ -1467,16 +1467,17 @@ body {
 }
 
 .prompt-tile-preview {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.5;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
   background: var(--bg);
   padding: 10px 12px;
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  white-space: pre-wrap;
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
   word-break: break-word;
-  max-height: 60px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 

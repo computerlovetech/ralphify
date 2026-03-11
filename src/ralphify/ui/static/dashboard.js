@@ -774,10 +774,27 @@ function PromptsView() {
   `;
 }
 
+function stripMarkdown(text) {
+  return text
+    .replace(/^#{1,6}\s+.*$/gm, '')   // remove heading lines
+    .replace(/\*\*(.+?)\*\*/g, '$1')  // bold
+    .replace(/\*(.+?)\*/g, '$1')      // italic
+    .replace(/`(.+?)`/g, '$1')        // inline code
+    .replace(/^\s*[-*]\s+/gm, '')     // list markers
+    .replace(/^\s*\d+\.\s+/gm, '')    // numbered lists
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // links
+    .replace(/^>+\s?/gm, '')          // blockquotes
+    .replace(/^---+$/gm, '')          // horizontal rules
+    .replace(/\n{2,}/g, ' ')          // collapse blank lines
+    .replace(/\n/g, ' ')
+    .trim();
+}
+
 function PromptCard({ prompt, onEdit, onRun }) {
   const desc = prompt.frontmatter?.description || '';
-  const contentPreview = prompt.content
-    ? prompt.content.slice(0, 140).replace(/\n/g, ' ') + (prompt.content.length > 140 ? '\u2026' : '')
+  const cleaned = prompt.content ? stripMarkdown(prompt.content) : '';
+  const contentPreview = cleaned
+    ? cleaned.slice(0, 180) + (cleaned.length > 180 ? '\u2026' : '')
     : '';
 
   return html`
