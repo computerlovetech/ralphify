@@ -67,6 +67,7 @@ Read the full writeup: [Ralph Wiggum as a "software engineer"](https://ghuntley.
 ## Next steps
 
 - [Getting Started](getting-started.md) — step-by-step tutorial from install to a running loop with checks and contexts
+- [How It Works](how-it-works.md) — the iteration lifecycle, prompt assembly, and feedback loop explained
 - [Writing Your Prompt](prompts.md) — how to write prompts that produce useful work
 - [Cookbook](cookbook.md) — complete, copy-pasteable setups for Python, TypeScript, bug fixing, and docs
 - [Primitives](primitives.md) — add checks, contexts, and instructions to your loop

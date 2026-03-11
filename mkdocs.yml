@@ -51,6 +51,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - How It Works: how-it-works.md
   - Writing Your Prompt: prompts.md
   - Cookbook: cookbook.md
   - Primitives: primitives.md
