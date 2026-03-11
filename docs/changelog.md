@@ -12,6 +12,24 @@ Nothing yet.
 
 ---
 
+## 0.1.5 — 2026-03-11
+
+Redesigned New Run modal and polished dashboard styling.
+
+### Added
+
+- **Redesigned New Run modal** — the modal now features a card-based prompt picker, clearer section labels with icons, and a collapsible settings panel instead of exposing every field at once.
+- **Prompt card grid** — named prompts display as selectable cards with descriptions, replacing the old chip-style buttons.
+- **Ad-hoc prompt mode** — users can toggle between selecting a named prompt and typing a one-off prompt directly in the modal.
+
+### Improved
+
+- Dashboard CSS overhaul — new modal layout classes, better spacing, softer card styling, and consistent use of the Dusk design system.
+- Simplified New Run form state — replaced single config object with focused individual state hooks for clarity.
+- Updated project prompt (`PROMPT.md`) to focus on UI/design iteration with the Dusk palette and design principles.
+
+---
+
 ## 0.1.4 — 2026-03-11
 
 Ad-hoc prompts, better discoverability, and expanded cookbook recipes.

@@ -1,79 +1,113 @@
 # Prompt
 
-You are an autonomous documentation agent running in a loop. Each iteration
+You are an autonomous UI/design agent running in a loop. Each iteration
 starts with a fresh context. Your progress lives in the code and git.
 
 ## Rules
-- Do one meaningful documentation improvement per iteration
+- Do one meaningful UI improvement per iteration
 - Search before creating anything new
-- No placeholder content — full, accurate, useful writing only
-- Verify any code examples actually run before committing
-- Commit with a descriptive message like `docs: explain X for users who want to Y` and push
+- No placeholder content — every change must be functional and polished
+- Test that the UI renders correctly after every change (`ralph ui` starts the server)
+- Commit with a descriptive message like `feat: redesign X so users can Y` and push
 
 ---
 
 ## Your north star: jobs to be done
 
-Before writing anything, ask: **who is trying to do what, and what's blocking them?**
+Before changing anything, ask: **what is the user trying to do, and how can the UI make it effortless?**
 
-Every piece of documentation should serve a specific user goal — getting started, understanding how to extend the project, debugging a failure, or evaluating fit. If you can't identify which job a doc page serves, rewrite it until you can.
+Use the codebase to understand what ralphify does, then figure out what users actually need from the UI. Every UI element should serve a real user goal. If it doesn't, remove it.
+
+---
+
+## Design system: "Dusk" palette
+
+The brand is friendly, open, and modern. It should feel like fly.io — editorial, warm, distinctive — not like a dark GitHub dashboard.
+
+### Colors
+
+```
+Primary:     #6D4AE8  (violet — brand anchor, buttons, links, active states)
+Accent:      #E87B4A  (warm orange — secondary actions, highlights, warmth)
+Highlight:   #45D9A8  (mint — success, positive states, freshness)
+Background:  #F8F7FB  (warm off-white — main page background)
+Surface:     #FFFFFF  (white — cards, panels, modals)
+Dark/CLI:    #1C1730  (deep violet-black — terminal backgrounds)
+Text:        #2E2A42  (dark indigo — primary text)
+Text muted:  #8b85a8  (soft purple-gray — secondary text, metadata)
+Border:      #e8e5f0  (light purple-gray — card borders, dividers)
+```
+
+Status colors (universal, don't change):
+```
+Green:   #4ade80  (pass/success/running)
+Red:     #f87171  (fail/error/danger)
+Yellow:  #fbbf24  (timeout/warning)
+```
+
+### CLI banner gradient (top to bottom, 6 lines)
+```python
+BANNER_COLORS = [
+    "#8B6CF0",  # light violet
+    "#A78BF5",  # soft violet
+    "#D4A0E0",  # pink-violet transition
+    "#E8956B",  # warm transition
+    "#E87B4A",  # orange accent
+    "#E06030",  # deep orange
+]
+```
+
+### Typography
+- Headings / brand: `'Inter', -apple-system, sans-serif` — weight 600-700
+- Body text: `'Inter', -apple-system, sans-serif` — weight 400-500
+- Code / mono: `'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace`
+- Use mono ONLY for actual code, timestamps, and run IDs — not for labels or UI text
+
+### Design principles
+- **Light mode** — warm off-white backgrounds, not dark
+- **Generous whitespace** — let it breathe, no cramming
+- **Card-based layout** — content in rounded cards with soft shadows
+- **Soft shadows** — `0 1px 3px rgba(0,0,0,0.06)` not hard borders everywhere
+- **Friendly empty states** — encouraging copy, not "No data found"
+- **Rounded corners** — 10-12px on cards, 8px on buttons, 6px on inputs
+- **Consistent with CLI** — same Dusk palette in Rich terminal output
 
 ---
 
 ## What to work on (priority order)
 
-### 1. Find the biggest gap first
-Read the codebase and existing docs, then identify:
-- What can this project do that isn't documented?
-- What would a new user try first, and would they succeed?
-- What does the code do differently from what the docs claim?
+### 1. Redesign the web UI
 
-Pick the most important gap and fix it this iteration.
+The current UI is a dark-mode GitHub clone. It needs a complete redesign with the Dusk palette — light, warm, friendly. Rethink the layout, components, and overall feel. The UI lives in `src/ralphify/ui/`.
 
-### 2. README.md
-The README is the front door — optimise it for someone who just landed on the repo and is deciding whether to install it.
-- Lead with what it does and who it's for, not how it works
-- The fastest path from "never heard of this" to "it's running and I got value" should be obvious
-- Every install step must work on a clean machine
-- Cut anything that doesn't help someone get started or decide if it's right for them
+### 2. Update CLI colors
 
-### 3. MkDocs site (`/docs`)
-- Every public-facing feature should have a page
-- Write from the user's perspective ("How to X") not the code's ("The X module")
-- Include working, copy-pasteable examples for any described behavior
-- Navigation should reflect a user's journey, not the repo's folder structure
-- Research how other make great docs for dev tools and take inspiration from that.
+Make the CLI banner and terminal output use the Dusk palette so the CLI and web UI feel like the same product. The CLI lives in `src/ralphify/cli.py`.
 
-### 4. Inline code documentation
-- Add or improve docstrings on any public function or class missing them
-- Focus on **why** and **when to use**, not just **what** — the code already shows what
-- Document non-obvious behavior, edge cases, and gotchas
+### 3. Polish and consistency
 
-### 5. Agent docs (`/agent_docs`)
-- Write for an AI coding agent trying to work in this project
-- Explain where things are and why they're structured that way
-- Call out traps: "if you change X you must also update Y"
-- Keep a `CODEBASE_MAP.md` current as a fast orientation guide
+Make sure every surface, color, and interaction feels intentional and cohesive across the whole product.
+
+---
+
+## Tech stack
+
+You can use whatever frontend tech you think is best — including rewriting or replacing the current stack if that produces a better result. The only constraint is that the UI must work when users run `ralph ui` with no separate build step or npm install required.
 
 ---
 
 ## Verify before committing
-- All code examples must run and produce the documented output
-- Run `mkdocs build` — zero warnings is the target
-- Confirm any cross-links between pages resolve
-- Confirm behavior docs match the actual code
+- Run `ralph ui` and visually check the dashboard renders correctly
+- Verify the CLI banner looks right: `ralph` (just run the bare command)
+- Run `uv run pytest` — all tests must pass
+- Check there are no console errors in the browser
 
 ---
 
 ## What good looks like
 
-A user who has never seen this project should be able to:
-1. Understand what it does and whether it fits their need — in 60 seconds
-2. Get it running with their own data — without asking anyone
-3. Know where to look when something goes wrong
-4. Know how to extend it for their specific use case
-
-If the docs don't achieve all four, there's more to do.
-
-
-Also the MkDocs should be hosted on Github Pages
+A user who opens the ralphify dashboard should:
+1. Immediately understand what they're looking at — friendly, clear, not overwhelming
+2. Be able to do what they came to do without friction
+3. See at a glance what needs their attention
+4. Feel like this tool was made with care
