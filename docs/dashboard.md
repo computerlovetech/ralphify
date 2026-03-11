@@ -472,6 +472,46 @@ Each iteration includes:
 | `duration`   | string\|null      | Formatted duration (e.g. `"52.3s"`)                      |
 | `checks`     | array\|null       | Per-check results, or `null` if no checks ran            |
 
+#### Get agent activity for an iteration
+
+Retrieve the raw agent activity stream for a specific iteration — useful for
+replaying what the agent did step-by-step or building custom activity UIs.
+Only returns data when the agent is Claude Code (which uses streamed JSON
+output).
+
+```bash
+curl http://127.0.0.1:8765/api/runs/a1b2c3d4/iterations/1/activity
+```
+
+```json
+[
+  {
+    "type": "stream_event",
+    "subtype": "content_block_start",
+    "content_block": {"type": "tool_use", "name": "Read", "id": "toolu_01..."}
+  },
+  {
+    "type": "stream_event",
+    "subtype": "content_block_delta",
+    "delta": {"type": "input_json_delta", "partial_json": "{\"file_path\":..."}
+  },
+  {
+    "type": "result",
+    "cost_usd": 0.042,
+    "input_tokens": 12345,
+    "output_tokens": 678
+  }
+]
+```
+
+Each item is a raw Claude Code stream-json object — the same format used by the
+live [agent activity stream](#live-agent-activity-stream). The endpoint
+correlates events to the iteration using timestamp ranges, so it works for both
+completed and in-progress iterations.
+
+Returns an empty array if the iteration doesn't exist or if no activity events
+were recorded (e.g. when using a non-Claude-Code agent).
+
 #### List past runs (history)
 
 Retrieve all persisted runs from the SQLite store — these survive dashboard
@@ -695,7 +735,7 @@ Every event has `type`, `run_id`, `timestamp`, and `data`. The table below lists
 
 | Event type | When | Data fields |
 |---|---|---|
-| `agent_activity` | Each line of streamed agent output (Claude Code only) | `raw` (dict — one parsed JSON line from the agent's `stream-json` output) |
+| `agent_activity` | Each line of streamed agent output (Claude Code only) | `raw` (dict — one parsed JSON line from the agent's `stream-json` output), `iteration` (int — which iteration produced this event) |
 
 The `raw` dict contains the original Claude Code stream event. Common shapes
 include `stream_event` (with `content_block_start`, `content_block_delta`,

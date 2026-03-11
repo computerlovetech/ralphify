@@ -27,6 +27,7 @@ All notable changes to ralphify are documented here.
 - **Keyboard shortcuts in dashboard** — press Cmd+S / Ctrl+S to save changes in primitive editors and create forms. Escape closes the New Run modal.
 - **History runs API endpoint** — `GET /api/history/runs` returns all persisted runs from the SQLite store, enabling custom history queries and reporting.
 - **Live agent activity stream** — when the agent command is Claude Code, the dashboard streams tool calls, text output, and cost/token stats in real time during each iteration. The engine auto-detects Claude Code and uses `--output-format stream-json` with `subprocess.Popen` for line-by-line streaming. Other agents continue to use the standard `subprocess.run()` path. The activity feed shows color-coded tool badges (Read, Edit, Bash, Grep, etc.) with expandable results and auto-scrolling.
+- **Iteration activity API endpoint** — `GET /api/runs/{run_id}/iterations/{iteration}/activity` returns raw agent activity events for a specific iteration, enabling replay of what the agent did step-by-step.
 
 ### Fixed
 
