@@ -29,7 +29,8 @@ src/ralphify/           # All source code
 ├── _agent.py           # Run agent subprocesses (streaming + blocking modes, log writing)
 ├── _run_types.py       # RunConfig, RunState, RunStatus — shared data types for the engine
 ├── _runner.py          # Execute shell commands with timeout and capture output (checks/contexts)
-├── _frontmatter.py     # Parse YAML frontmatter from markdown primitives, discover primitives
+├── _frontmatter.py     # Parse YAML frontmatter from markdown primitives, marker/config constants
+├── _discovery.py       # Scan .ralph/ directories for primitives (discover_primitives, find_run_script)
 ├── _templates.py       # Scaffold templates for init and new commands
 ├── _console_emitter.py # Rich console renderer for run-loop events (ConsoleEmitter)
 ├── _events.py          # Event types and emitter protocol (NullEmitter, QueueEmitter)
@@ -88,7 +89,7 @@ All four follow the same pattern: a directory under `.ralph/` with a marker mark
 | Instruction | `INSTRUCTION.md` | Before iteration | Content replaces `{{ instructions.name }}` |
 | Prompt | `PROMPT.md` | At run start | Replaces root PROMPT.md when selected by name |
 
-Discovery is handled by `_frontmatter.py:discover_primitives()` which scans `.ralph/{kind}/*/` for marker files.
+Discovery is handled by `_discovery.py:discover_primitives()` which scans `.ralph/{kind}/*/` for marker files.
 
 ### Placeholder resolution
 
@@ -123,7 +124,7 @@ The CLI uses a `ConsoleEmitter` (defined in `_console_emitter.py`) that renders 
 1. **`engine.py`** — The core run loop. Uses `RunConfig` and `RunState` (from `_run_types.py`) and `EventEmitter`. This is where iteration logic lives.
 2. **`_run_types.py`** — `RunConfig`, `RunState`, and `RunStatus`. These are the shared data types used by the engine, CLI, manager, and UI. Separated so modules that only need the types don't pull in execution logic.
 3. **`cli.py`** — All CLI commands. Delegates to `engine.run_loop()` for the actual loop. Prompt source resolution (name vs. file path vs. inline) lives in `prompts.py:resolve_prompt_source()`. Scaffold templates live in `_templates.py`. Terminal event rendering lives in `_console_emitter.py`.
-4. **`_frontmatter.py`** — The primitive discovery system. Understanding `discover_primitives()` and `parse_frontmatter()` is essential for working on checks/contexts/instructions/prompts.
+4. **`_frontmatter.py`** + **`_discovery.py`** — Frontmatter parsing and primitive discovery. `_frontmatter.py` handles YAML parsing and defines marker constants. `_discovery.py` scans `.ralph/` directories and uses `parse_frontmatter()` to yield `PrimitiveEntry` results. Understanding both is essential for working on checks/contexts/instructions/prompts.
 5. **`resolver.py`** — Template placeholder logic shared by contexts and instructions. Small file but critical — changes here affect both.
 
 ## Traps and gotchas
@@ -160,7 +161,7 @@ Events are defined in `_events.py:EventType`. The `ConsoleEmitter` in `_console_
 
 ### The `run.*` script convention
 
-Checks and contexts can use either a `command` in frontmatter or a `run.*` script file in the primitive directory. If both exist, the script wins. This is handled by `_frontmatter.py:find_run_script()`.
+Checks and contexts can use either a `command` in frontmatter or a `run.*` script file in the primitive directory. If both exist, the script wins. This is handled by `_discovery.py:find_run_script()`.
 
 ## Testing
 

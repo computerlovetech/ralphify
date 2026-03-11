@@ -8,7 +8,8 @@ A context can run a command/script, provide static text, or both.
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify._frontmatter import CONTEXT_MARKER, discover_primitives, find_run_script
+from ralphify._discovery import discover_primitives, find_run_script
+from ralphify._frontmatter import CONTEXT_MARKER
 from ralphify._output import truncate_output
 from ralphify._runner import run_command
 from ralphify.resolver import resolve_placeholders

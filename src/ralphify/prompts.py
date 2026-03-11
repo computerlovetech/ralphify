@@ -8,7 +8,8 @@ Prompts are reusable task-focused prompt files that users can switch between
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify._frontmatter import PROMPT_MARKER, discover_primitives
+from ralphify._discovery import discover_primitives
+from ralphify._frontmatter import PROMPT_MARKER
 
 
 @dataclass

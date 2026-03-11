@@ -24,7 +24,8 @@ All source code is in `src/ralphify/`. The main file is `cli.py` — it contains
 Key modules:
 - `cli.py` — CLI commands; delegates to `_console_emitter.py` for terminal event rendering
 - `_templates.py` — Scaffold templates for `ralph init` and `ralph new`
-- `_frontmatter.py` — Primitive discovery and YAML frontmatter parsing
+- `_frontmatter.py` — YAML frontmatter parsing and marker/config filename constants
+- `_discovery.py` — Primitive directory scanning (`discover_primitives`, `find_run_script`)
 - `resolver.py` — Template placeholder resolution (`{{ contexts.name }}`, `{{ instructions }}`)
 - `prompts.py` — Named prompt discovery and resolution
 - `checks.py`, `contexts.py`, `instructions.py` — The other three primitive types

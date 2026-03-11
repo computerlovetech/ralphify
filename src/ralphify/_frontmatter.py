@@ -1,17 +1,17 @@
-"""Parse YAML frontmatter from primitive markdown files and discover primitives.
+"""Parse YAML frontmatter from primitive markdown files.
 
-All three primitive types (checks, contexts, instructions) store their
+All primitive types (checks, contexts, instructions, prompts) store their
 configuration in markdown files with ``---``-delimited frontmatter.
-This module provides the shared parsing and directory-scanning logic.
+This module provides the shared parsing logic.
 
 HTML comments in the body are stripped so users can leave notes that
 don't leak into the assembled prompt.
+
+Directory scanning and primitive discovery live in :mod:`_discovery`.
 """
 
 import re
-from collections.abc import Callable, Iterator
-from pathlib import Path
-from typing import NamedTuple
+from collections.abc import Callable
 
 
 # Single source of truth for well-known filenames.
@@ -103,49 +103,3 @@ def serialize_frontmatter(frontmatter: dict, body: str) -> str:
         parts.append("")
     parts.append(body)
     return "\n".join(parts)
-
-
-def find_run_script(directory: Path) -> Path | None:
-    """Find the first ``run.*`` script in a primitive directory.
-
-    Returns the first match in sorted order (e.g. ``run.py`` before
-    ``run.sh``), or ``None`` if no ``run.*`` file exists.
-    """
-    for f in sorted(directory.iterdir()):
-        if f.name.startswith("run.") and f.is_file():
-            return f
-    return None
-
-
-class PrimitiveEntry(NamedTuple):
-    """A discovered primitive's directory, parsed frontmatter, and body text."""
-
-    path: Path
-    frontmatter: dict
-    body: str
-
-
-def discover_primitives(
-    root: Path, kind: str, marker: str
-) -> Iterator[PrimitiveEntry]:
-    """Yield a :class:`PrimitiveEntry` for each primitive found.
-
-    Scans ``root/.ralph/{kind}/`` for subdirectories containing a
-    *marker* file (e.g. ``CHECK.md``), parses its frontmatter, and
-    yields results in alphabetical order.
-    """
-    primitives_dir = root / ".ralph" / kind
-    if not primitives_dir.is_dir():
-        return
-
-    for entry in sorted(primitives_dir.iterdir()):
-        if not entry.is_dir():
-            continue
-
-        marker_file = entry / marker
-        if not marker_file.exists():
-            continue
-
-        text = marker_file.read_text()
-        frontmatter, body = parse_frontmatter(text)
-        yield PrimitiveEntry(entry, frontmatter, body)

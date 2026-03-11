@@ -10,7 +10,8 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify._frontmatter import CHECK_MARKER, discover_primitives, find_run_script
+from ralphify._discovery import discover_primitives, find_run_script
+from ralphify._frontmatter import CHECK_MARKER
 from ralphify._output import truncate_output
 from ralphify._runner import run_command
 
