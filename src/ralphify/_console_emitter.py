@@ -32,9 +32,9 @@ class ConsoleEmitter:
         self._handlers: dict[EventType, Callable[[dict], None]] = {
             EventType.RUN_STARTED: self._on_run_started,
             EventType.ITERATION_STARTED: self._on_iteration_started,
-            EventType.ITERATION_COMPLETED: self._on_iteration_ended,
-            EventType.ITERATION_FAILED: self._on_iteration_ended,
-            EventType.ITERATION_TIMED_OUT: self._on_iteration_ended,
+            EventType.ITERATION_COMPLETED: lambda d: self._on_iteration_ended(d, "green", _ICON_SUCCESS),
+            EventType.ITERATION_FAILED: lambda d: self._on_iteration_ended(d, "red", _ICON_FAILURE),
+            EventType.ITERATION_TIMED_OUT: lambda d: self._on_iteration_ended(d, "yellow", _ICON_TIMEOUT),
             EventType.CHECKS_COMPLETED: self._on_checks_completed,
             EventType.LOG_MESSAGE: self._on_log_message,
             EventType.RUN_STOPPED: self._on_run_stopped,
@@ -64,15 +64,7 @@ class ConsoleEmitter:
     def _on_iteration_started(self, data: dict) -> None:
         self._rprint(f"\n[bold blue]── Iteration {data['iteration']} ──[/bold blue]")
 
-    def _on_iteration_ended(self, data: dict) -> None:
-        returncode = data.get("returncode")
-        if returncode is None:
-            color, icon = "yellow", _ICON_TIMEOUT
-        elif returncode == 0:
-            color, icon = "green", _ICON_SUCCESS
-        else:
-            color, icon = "red", _ICON_FAILURE
-
+    def _on_iteration_ended(self, data: dict, color: str, icon: str) -> None:
         status_msg = f"[{color}]{icon} Iteration {data['iteration']} {data['detail']}"
         if data.get("log_file"):
             status_msg += f" {_ICON_ARROW} {data['log_file']}"
