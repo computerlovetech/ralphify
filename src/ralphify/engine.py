@@ -121,7 +121,7 @@ class RunState:
         return False
 
 
-def _format_duration(seconds: float) -> str:
+def format_duration(seconds: float) -> str:
     """Format duration in human-readable form."""
     if seconds < 60:
         return f"{seconds:.1f}s"
@@ -270,7 +270,7 @@ def _execute_agent(
             log_file = _write_log(log_path_dir, iteration, e.stdout, e.stderr)
 
     elapsed = time.monotonic() - start
-    duration = _format_duration(elapsed)
+    duration = format_duration(elapsed)
 
     if returncode is None:
         event_type = EventType.ITERATION_TIMED_OUT

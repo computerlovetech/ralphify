@@ -19,7 +19,7 @@ from ralphify._events import Event, EventType
 from ralphify._frontmatter import CHECK_MARKER, CONTEXT_MARKER, INSTRUCTION_MARKER, PROMPT_MARKER
 from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
-from ralphify.engine import RunConfig, RunState, _format_duration, run_loop
+from ralphify.engine import RunConfig, RunState, format_duration, run_loop
 from ralphify.instructions import discover_instructions
 from ralphify.prompts import discover_prompts, is_prompt_name, resolve_prompt_name
 from ralphify.detector import detect_project
@@ -296,7 +296,7 @@ class ConsoleEmitter:
 
     def _on_run_started(self, d: dict) -> None:
         if d.get("timeout"):
-            self._rprint(f"[dim]Timeout: {_format_duration(d['timeout'])} per iteration[/dim]")
+            self._rprint(f"[dim]Timeout: {format_duration(d['timeout'])} per iteration[/dim]")
         if d.get("checks"):
             self._rprint(f"[dim]Checks: {d['checks']} enabled[/dim]")
         if d.get("contexts"):
