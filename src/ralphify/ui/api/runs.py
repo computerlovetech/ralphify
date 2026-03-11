@@ -167,6 +167,12 @@ async def update_settings(run_id: str, body: RunSettingsUpdate, mgr: RunManager 
     return _run_response(managed)
 
 
+@router.get("/history/runs")
+async def list_history_runs(store: Store = Depends(_get_store)) -> list[dict]:
+    """Return all persisted runs from the SQLite store (survives server restarts)."""
+    return await store.list_runs()
+
+
 @router.get("/runs/{run_id}/iterations")
 async def get_iterations(run_id: str, store: Store = Depends(_get_store)) -> list[dict]:
     """Return persisted iteration data with check results for a run."""

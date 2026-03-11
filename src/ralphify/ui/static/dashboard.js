@@ -21,6 +21,7 @@ const preSelectedPrompt = signal(null);
 const activeTab = signal('runs');  // runs | configure | history
 const toastMessage = signal(null);  // { text, type: 'error' | 'info' }
 const sidebarOpen = signal(false);  // mobile sidebar drawer
+const historyRuns = signal([]);  // persisted runs from SQLite (survives restarts)
 
 const activeRun = computed(() => runs.value.find(r => r.run_id === activeRunId.value));
 
@@ -353,12 +354,20 @@ async function loadRuns() {
   } catch (e) { /* server may not be ready */ }
 }
 
+async function loadHistoryRuns() {
+  try {
+    const data = await api('GET', '/history/runs');
+    historyRuns.value = data || [];
+  } catch { /* endpoint may not exist on older servers */ }
+}
+
 // ── Components ─────────────────────────────────────────────────────
 
 function App() {
   useEffect(() => {
     connectWs();
     loadRuns();
+    loadHistoryRuns();
     return () => { if (ws) ws.close(); };
   }, []);
 
@@ -488,7 +497,9 @@ function TabIcon({ tab, size = 16 }) {
 function Main() {
   const run = activeRun.value;
   const activeCount = runs.value.filter(r => ['running', 'paused', 'pending'].includes(r.status)).length;
-  const historyCount = runs.value.filter(r => ['completed', 'stopped', 'failed'].includes(r.status)).length;
+  const inMemoryHistoryIds = new Set(runs.value.filter(r => ['completed', 'stopped', 'failed'].includes(r.status)).map(r => r.run_id));
+  const persistedHistoryCount = historyRuns.value.filter(r => !inMemoryHistoryIds.has(r.run_id) && ['completed', 'stopped', 'failed'].includes(r.status)).length;
+  const historyCount = inMemoryHistoryIds.size + persistedHistoryCount;
 
   return html`
     <div class="main">
@@ -1580,7 +1591,24 @@ function PrimCreateForm({ kind, meta, onBack, onCreated }) {
 // ── History view ───────────────────────────────────────────────────
 
 function HistoryView() {
-  const completedRuns = runs.value.filter(r => ['completed', 'stopped', 'failed'].includes(r.status));
+  // Merge in-memory runs with persisted history from SQLite (dedup by run_id).
+  // Persisted runs use store schema field names — normalise them.
+  const inMemory = runs.value.filter(r => ['completed', 'stopped', 'failed'].includes(r.status));
+  const inMemoryIds = new Set(inMemory.map(r => r.run_id));
+  const persisted = historyRuns.value
+    .filter(r => !inMemoryIds.has(r.run_id) && ['completed', 'stopped', 'failed'].includes(r.status))
+    .map(r => ({
+      run_id: r.run_id,
+      status: r.status,
+      started_at: r.started_at,
+      iteration: r.iterations || 0,
+      completed: r.completed || 0,
+      failed: r.failed || 0,
+      timed_out: r.timed_out || 0,
+      prompt_name: r.prompt_file ? r.prompt_file.split('/').slice(-2, -1)[0] : null,
+    }));
+  const completedRuns = [...inMemory, ...persisted]
+    .sort((a, b) => (b.started_at || '').localeCompare(a.started_at || ''));
 
   if (completedRuns.length === 0) {
     return html`
