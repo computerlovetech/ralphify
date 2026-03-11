@@ -181,6 +181,19 @@ To apply primitive configuration changes to a running run, **stop** the run and 
 !!! tip "Prompt edits are always live"
     The most common adjustment — adding a constraint or changing the task in your prompt — takes effect on the very next iteration without restarting. This is the primary way to steer the agent in real time.
 
+## Data storage
+
+The dashboard persists run history, iterations, check results, and raw events
+in a SQLite database at `~/.ralph/ui.db`. This is what powers the History tab
+and the iterations endpoint — data survives across dashboard restarts.
+
+The database is created automatically on first launch. To reset all history,
+stop the dashboard and delete the file:
+
+```bash
+rm ~/.ralph/ui.db
+```
+
 ## Architecture
 
 The dashboard is a single-page app that talks to a FastAPI backend:
@@ -261,7 +274,13 @@ Response:
   "iteration": 0,
   "completed": 0,
   "failed": 0,
-  "timed_out": 0
+  "timed_out": 0,
+  "prompt_name": null,
+  "started_at": "2026-03-11T14:23:01.123456",
+  "max_iterations": 5,
+  "delay": 2.0,
+  "timeout": 300.0,
+  "stop_on_error": true
 }
 ```
 
@@ -285,7 +304,13 @@ curl http://127.0.0.1:8765/api/runs
     "iteration": 3,
     "completed": 2,
     "failed": 1,
-    "timed_out": 0
+    "timed_out": 0,
+    "prompt_name": "docs",
+    "started_at": "2026-03-11T14:23:01.123456",
+    "max_iterations": 5,
+    "delay": 2.0,
+    "timeout": 300.0,
+    "stop_on_error": true
   }
 ]
 ```
@@ -326,6 +351,50 @@ All fields are optional — only the ones you include are updated:
 | `delay`          | float\|null  | New delay between iterations          |
 | `timeout`        | float\|null  | New timeout per iteration             |
 | `stop_on_error`  | bool\|null   | Whether to stop on agent errors       |
+
+#### Get iterations for a run
+
+Retrieve persisted iteration data with per-check results — useful for reviewing
+past runs or building custom reports.
+
+```bash
+curl http://127.0.0.1:8765/api/runs/a1b2c3d4/iterations
+```
+
+```json
+[
+  {
+    "iteration": 1,
+    "status": "success",
+    "returncode": 0,
+    "duration": "52.3s",
+    "checks": [
+      {"name": "tests", "passed": true, "exit_code": 0, "timed_out": false},
+      {"name": "lint", "passed": true, "exit_code": 0, "timed_out": false}
+    ]
+  },
+  {
+    "iteration": 2,
+    "status": "failure",
+    "returncode": 1,
+    "duration": "23.1s",
+    "checks": [
+      {"name": "tests", "passed": false, "exit_code": 1, "timed_out": false},
+      {"name": "lint", "passed": true, "exit_code": 0, "timed_out": false}
+    ]
+  }
+]
+```
+
+Each iteration includes:
+
+| Field        | Type              | Description                                              |
+|--------------|-------------------|----------------------------------------------------------|
+| `iteration`  | int               | Iteration number (1-indexed)                             |
+| `status`     | string            | `"success"`, `"failure"`, `"timeout"`, or `"running"`    |
+| `returncode` | int\|null         | Agent exit code (`null` if timed out or still running)   |
+| `duration`   | string\|null      | Formatted duration (e.g. `"52.3s"`)                      |
+| `checks`     | array\|null       | Per-check results, or `null` if no checks ran            |
 
 ### Primitives
 

@@ -22,6 +22,8 @@ All notable changes to ralphify are documented here.
 - **WebSocket event type reference** — dashboard docs now include a complete table of all event types and their data fields.
 - **Codebase migration cookbook recipe** — step-by-step guide for automating JavaScript-to-TypeScript migrations, with adaptation tips for Python 2→3, CommonJS→ESM, and more.
 - **Contributor docs** — new `docs/contributing/` section with a codebase map, replacing the old `agent_docs/` directory.
+- **Iterations API endpoint** — `GET /api/runs/{run_id}/iterations` returns persisted iteration data with per-check results, enabling History tab drill-downs and custom reporting.
+- **Persistent run history** — the dashboard stores run history, iterations, and check results in a SQLite database at `~/.ralph/ui.db` that survives across restarts.
 
 ### Fixed
 
