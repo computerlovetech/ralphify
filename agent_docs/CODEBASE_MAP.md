@@ -26,6 +26,7 @@ src/ralphify/           # All source code
 tests/                  # Pytest tests — one test file per module
 docs/                   # MkDocs site (Material theme) — user-facing documentation
 .github/workflows/
+├── test.yml            # Run tests on push to main and PRs (Python 3.11–3.13)
 ├── docs.yml            # Deploy docs to GitHub Pages on push to main
 └── publish.yml         # Publish to PyPI on release (with test gate)
 ```
