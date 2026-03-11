@@ -67,10 +67,16 @@ class RunConfig:
 
 @dataclass
 class RunState:
-    """Observable, thread-safe state for a run.
+    """Observable state for a run.
 
-    Control methods use :class:`threading.Event` objects so the run loop
+    Control methods (:meth:`request_stop`, :meth:`request_pause`,
+    :meth:`request_resume`) use :class:`threading.Event` so the run loop
     can react at iteration boundaries without busy-waiting.
+
+    **Threading model**: counters (``iteration``, ``completed``, etc.) are
+    written only by the engine thread and read by API threads.  Under
+    CPython's GIL this is safe — readers may see a briefly stale value,
+    which is acceptable for dashboard display.
     """
 
     run_id: str

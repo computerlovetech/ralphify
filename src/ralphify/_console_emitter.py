@@ -38,21 +38,21 @@ class ConsoleEmitter:
         if handler:
             handler(event.data)
 
-    def _on_run_started(self, d: dict) -> None:
-        if d.get("timeout"):
-            self._rprint(f"[dim]Timeout: {format_duration(d['timeout'])} per iteration[/dim]")
-        if d.get("checks"):
-            self._rprint(f"[dim]Checks: {d['checks']} enabled[/dim]")
-        if d.get("contexts"):
-            self._rprint(f"[dim]Contexts: {d['contexts']} enabled[/dim]")
-        if d.get("instructions"):
-            self._rprint(f"[dim]Instructions: {d['instructions']} enabled[/dim]")
+    def _on_run_started(self, data: dict) -> None:
+        if data.get("timeout"):
+            self._rprint(f"[dim]Timeout: {format_duration(data['timeout'])} per iteration[/dim]")
+        if data.get("checks"):
+            self._rprint(f"[dim]Checks: {data['checks']} enabled[/dim]")
+        if data.get("contexts"):
+            self._rprint(f"[dim]Contexts: {data['contexts']} enabled[/dim]")
+        if data.get("instructions"):
+            self._rprint(f"[dim]Instructions: {data['instructions']} enabled[/dim]")
 
-    def _on_iteration_started(self, d: dict) -> None:
-        self._rprint(f"\n[bold blue]── Iteration {d['iteration']} ──[/bold blue]")
+    def _on_iteration_started(self, data: dict) -> None:
+        self._rprint(f"\n[bold blue]── Iteration {data['iteration']} ──[/bold blue]")
 
-    def _on_iteration_ended(self, d: dict) -> None:
-        returncode = d.get("returncode")
+    def _on_iteration_ended(self, data: dict) -> None:
+        returncode = data.get("returncode")
         if returncode is None:
             color, icon = "yellow", "\u23f1"
         elif returncode == 0:
@@ -60,20 +60,20 @@ class ConsoleEmitter:
         else:
             color, icon = "red", "\u2717"
 
-        status_msg = f"[{color}]{icon} Iteration {d['iteration']} {d['detail']}"
-        if d.get("log_file"):
-            status_msg += f" \u2192 {d['log_file']}"
+        status_msg = f"[{color}]{icon} Iteration {data['iteration']} {data['detail']}"
+        if data.get("log_file"):
+            status_msg += f" \u2192 {data['log_file']}"
         status_msg += f"[/{color}]"
         self._rprint(status_msg)
 
-    def _on_checks_completed(self, d: dict) -> None:
+    def _on_checks_completed(self, data: dict) -> None:
         parts = []
-        if d["passed"]:
-            parts.append(f"{d['passed']} passed")
-        if d["failed"]:
-            parts.append(f"{d['failed']} failed")
+        if data["passed"]:
+            parts.append(f"{data['passed']} passed")
+        if data["failed"]:
+            parts.append(f"{data['failed']} failed")
         self._rprint(f"  [bold]Checks:[/bold] {', '.join(parts)}")
-        for r in d["results"]:
+        for r in data["results"]:
             if r["passed"]:
                 self._rprint(f"    [green]\u2713[/green] {r['name']}")
             elif r["timed_out"]:
@@ -81,23 +81,23 @@ class ConsoleEmitter:
             else:
                 self._rprint(f"    [red]\u2717[/red] {r['name']} (exit {r['exit_code']})")
 
-    def _on_log_message(self, d: dict) -> None:
-        msg = d.get("message", "")
-        level = d.get("level", "info")
+    def _on_log_message(self, data: dict) -> None:
+        msg = data.get("message", "")
+        level = data.get("level", "info")
         if level == "error":
             self._rprint(f"[red]{msg}[/red]")
-            tb = d.get("traceback")
+            tb = data.get("traceback")
             if tb:
                 self._rprint(f"[dim]{tb}[/dim]")
         else:
             self._rprint(f"[dim]{msg}[/dim]")
 
-    def _on_run_stopped(self, d: dict) -> None:
-        if d.get("reason") == "completed":
-            total = d.get("total", 0)
-            completed = d.get("completed", 0)
-            failed = d.get("failed", 0)
-            timed_out_count = d.get("timed_out", 0)
+    def _on_run_stopped(self, data: dict) -> None:
+        if data.get("reason") == "completed":
+            total = data.get("total", 0)
+            completed = data.get("completed", 0)
+            failed = data.get("failed", 0)
+            timed_out_count = data.get("timed_out", 0)
             summary = f"\n[green]Done: {total} iteration(s) \u2014 {completed} succeeded"
             if failed:
                 summary += f", {failed} failed"
