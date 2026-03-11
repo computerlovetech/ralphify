@@ -69,6 +69,36 @@ function selectRun(run_id) {
   // Auto-select the latest iteration for the new run
   const runIters = iterations.value[run_id] || [];
   activeIteration.value = runIters.length > 0 ? runIters[runIters.length - 1].iteration : null;
+  // Load persisted iteration data if none in memory
+  if (runIters.length === 0) {
+    loadIterations(run_id);
+  }
+}
+
+async function loadIterations(run_id) {
+  try {
+    const data = await api('GET', `/runs/${run_id}/iterations`);
+    if (data && data.length > 0) {
+      iterations.value = { ...iterations.value, [run_id]: data };
+      // Also rebuild check health sparklines from the loaded data
+      const health = {};
+      for (const it of data) {
+        if (it.checks) {
+          for (const c of it.checks) {
+            if (!health[c.name]) health[c.name] = [];
+            health[c.name].push(c.passed ? 'pass' : c.timed_out ? 'timeout' : 'fail');
+          }
+        }
+      }
+      if (Object.keys(health).length > 0) {
+        checkHealth.value = { ...checkHealth.value, [run_id]: health };
+      }
+      // Auto-select the latest iteration
+      if (run_id === activeRunId.value) {
+        activeIteration.value = data[data.length - 1].iteration;
+      }
+    }
+  } catch { /* endpoint may not exist on older servers */ }
 }
 
 function showToast(text, type = 'error') {

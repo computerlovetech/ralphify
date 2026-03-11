@@ -11,6 +11,7 @@ from ralphify._run_types import RunConfig
 from ralphify.manager import ManagedRun, RunManager
 from ralphify.prompts import resolve_prompt_name
 from ralphify.ui.models import RunCreate, RunResponse, RunSettingsUpdate
+from ralphify.ui.persistence import Store
 
 def _load_agent_config(project_dir: str) -> dict:
     """Read ``[agent]`` from ralph.toml so the UI never hard-codes command/args."""
@@ -35,6 +36,14 @@ def _get_manager(request: Request) -> RunManager:
     if mgr is None:
         raise RuntimeError("RunManager not initialised")
     return mgr
+
+
+def _get_store(request: Request) -> Store:
+    """Extract the Store from app state (set during lifespan startup)."""
+    store: Store | None = getattr(request.app.state, "store", None)
+    if store is None:
+        raise RuntimeError("Store not initialised")
+    return store
 
 
 def _get_run_or_404(mgr: RunManager, run_id: str) -> ManagedRun:
@@ -156,3 +165,25 @@ async def update_settings(run_id: str, body: RunSettingsUpdate, mgr: RunManager 
         managed.config.stop_on_error = body.stop_on_error
 
     return _run_response(managed)
+
+
+@router.get("/runs/{run_id}/iterations")
+async def get_iterations(run_id: str, store: Store = Depends(_get_store)) -> list[dict]:
+    """Return persisted iteration data with check results for a run."""
+    iters = await store.get_iterations(run_id)
+    result = []
+    for it in iters:
+        status_map = {"completed": "success", "failed": "failure", "timed_out": "timeout", "started": "running"}
+        checks_raw = await store.get_check_results(run_id, it["iteration"])
+        checks = [
+            {"name": c["check_name"], "passed": bool(c["passed"]), "exit_code": c["exit_code"], "timed_out": bool(c["timed_out"])}
+            for c in checks_raw
+        ]
+        result.append({
+            "iteration": it["iteration"],
+            "status": status_map.get(it["status"], it["status"]),
+            "returncode": it["returncode"],
+            "duration": f"{it['duration']:.1f}s" if it["duration"] is not None else None,
+            "checks": checks if checks else None,
+        })
+    return result
