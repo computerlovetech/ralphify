@@ -108,6 +108,30 @@ This is different from `PROMPT.md`, which **is** re-read every iteration. See [W
 
 ## Check issues
 
+### Command with pipes or redirections not working
+
+Commands in frontmatter are parsed with `shlex` and run **directly** — not through a shell. Shell features like pipes (`|`), redirections (`2>&1`), chaining (`&&`), and variable expansion (`$VAR`) silently fail or produce unexpected results.
+
+**Won't work:**
+
+```yaml
+command: pytest --tb=line -q 2>&1 | tail -20
+```
+
+**Fix:** Use a `run.sh` script instead:
+
+```bash
+#!/bin/bash
+# .ralph/checks/my-check/run.sh
+pytest --tb=line -q 2>&1 | tail -20
+```
+
+```bash
+chmod +x .ralph/checks/my-check/run.sh
+```
+
+See [command parsing](primitives.md#command-parsing) for details.
+
 ### Checks always failing
 
 Run the check command manually to see if it works:

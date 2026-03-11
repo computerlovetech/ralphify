@@ -155,14 +155,17 @@ Do not modify tests unless they are incorrect.
 
 ```markdown
 ---
-command: uv run pytest --tb=line -q 2>&1 | tail -20
+command: uv run pytest --tb=line -q
 timeout: 60
 enabled: true
 ---
 ## Current test status
 ```
 
-This context gives the agent a snapshot of which tests are failing before it starts, so it can pick the most important one without running the full suite first.
+This context gives the agent a snapshot of which tests are failing before it starts, so it can pick the most important one without running the full suite first. Ralphify automatically truncates output to 5,000 characters, so you don't need to limit it yourself.
+
+!!! note "Need pipes or redirections?"
+    Commands are parsed with `shlex` and run directly — not through a shell. If you need pipes (`|`), redirections (`2>&1`), or other shell features, use a [`run.sh` script](primitives.md#using-a-script-instead-of-a-command) instead.
 
 ### Setup commands
 

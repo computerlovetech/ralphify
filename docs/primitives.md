@@ -47,9 +47,19 @@ The body text below the frontmatter is the **failure instruction** — it gets i
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `command` | string | — | Shell command to run |
+| `command` | string | — | Command to run (see [command parsing](#command-parsing) below) |
 | `timeout` | int | `60` | Max seconds before the check is killed |
 | `enabled` | bool | `true` | Set to `false` to skip without deleting |
+
+### Command parsing
+
+Commands are split with Python's `shlex.split()` and executed **directly** — not through a shell. This means:
+
+- Simple commands work as expected: `uv run pytest -x`, `npm test`, `ruff check .`
+- Shell features like **pipes** (`|`), **redirections** (`2>&1`, `>`), **chaining** (`&&`, `||`), and **variable expansion** (`$VAR`) do **not** work
+- Arguments with spaces need quoting: `pytest "tests/my dir/"` works correctly
+
+If you need shell features, use a [script](#using-a-script-instead-of-a-command) instead.
 
 ### Using a script instead of a command
 
@@ -142,7 +152,7 @@ A context can also be purely static (no command) — just omit the `command` fie
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `command` | string | — | Shell command whose stdout is captured |
+| `command` | string | — | Command whose stdout is captured (see [command parsing](#command-parsing)) |
 | `timeout` | int | `30` | Max seconds before the command is killed |
 | `enabled` | bool | `true` | Set to `false` to skip without deleting |
 
