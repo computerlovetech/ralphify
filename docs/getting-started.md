@@ -8,9 +8,32 @@ This tutorial walks through setting up ralphify on a project, adding checks and 
 
 ## Prerequisites
 
-- Python 3.11+
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated (or any agent CLI that accepts piped input)
-- A project with a test suite (we'll use this for the feedback loop)
+- **Python 3.11+**
+- **An AI coding agent CLI** — this tutorial uses Claude Code, but ralphify works with [any agent that accepts piped input](agents.md)
+- **A project with a test suite** (we'll use this for the feedback loop)
+
+### Install Claude Code (if you don't have it)
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Then authenticate:
+
+```bash
+claude  # Opens an interactive session — follow the login prompts
+```
+
+Once authenticated, verify it works non-interactively:
+
+```bash
+echo "Say hello" | claude -p
+```
+
+You should see a text response. If this works, you're ready.
+
+!!! tip "Using a different agent?"
+    See [Using with Different Agents](agents.md) for setup guides for Aider, Codex CLI, or your own custom wrapper.
 
 ## Step 1: Install ralphify
 

@@ -487,7 +487,7 @@ def ui(
     except ImportError:
         rprint("[red]UI deps not installed. Run: pip install ralphify[ui][/red]")
         raise typer.Exit(1)
-    import uvicorn
+    import uvicorn  # ty: ignore[unresolved-import]
 
     rprint(f"[bold]Starting Ralphify UI at http://{host}:{port}[/bold]")
     uvicorn.run(create_app(), host=host, port=port)

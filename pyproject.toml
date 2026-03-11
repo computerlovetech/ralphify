@@ -47,5 +47,8 @@ build-backend = "hatchling.build"
 packages = ["src/ralphify"]
 exclude = ["src/ralphify/ui/frontend/"]
 
+[tool.ty.src]
+exclude = ["src/ralphify/ui/"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
