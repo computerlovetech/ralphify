@@ -350,11 +350,11 @@ When you run `ralph init`, ralphify detects your project type by looking for mar
 
 | File found | Detected type |
 |---|---|
-| `package.json` | Node.js |
-| `pyproject.toml` | Python |
-| `Cargo.toml` | Rust |
-| `go.mod` | Go |
-| None of the above | Generic |
+| `package.json` | `node` |
+| `pyproject.toml` | `python` |
+| `Cargo.toml` | `rust` |
+| `go.mod` | `go` |
+| None of the above | `generic` |
 
 Files are checked in the order shown above. If a project contains multiple manifest files (e.g. both `package.json` and `pyproject.toml`), the first match wins.
 
