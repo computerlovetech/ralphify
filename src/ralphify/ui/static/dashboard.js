@@ -206,6 +206,7 @@ function Sidebar() {
   return html`
     <div class="sidebar">
       <div class="sidebar-header">
+        <div class="logo-mark">R</div>
         <h1>Ralphify</h1>
         <span class="version">UI</span>
       </div>
@@ -277,9 +278,44 @@ function Main() {
 function EmptyState() {
   return html`
     <div class="empty-state">
-      <div class="empty-state-icon">\u{1F680}</div>
-      <div class="empty-state-text">Ready to run</div>
-      <div class="empty-state-hint">Start a new autonomous coding loop to see your agent in action</div>
+      <div class="empty-illustration">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <g stroke="url(#eig)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2v6h-6"/>
+            <path d="M21 13a9 9 0 1 1-3-7.7L21 8"/>
+          </g>
+          <defs>
+            <linearGradient id="eig" x1="0" y1="0" x2="24" y2="24">
+              <stop stop-color="#8B6CF0"/>
+              <stop offset="1" stop-color="#E87B4A"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="empty-state-text">Ready when you are</div>
+      <div class="empty-state-hint">
+        Launch an autonomous coding loop and watch your AI agent iterate, test, and improve.
+      </div>
+      <button class="btn btn-primary btn-lg" onClick=${() => showNewRunModal.value = true}>
+        + New Run
+      </button>
+      <div class="empty-state-steps">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <div class="step-title">Configure</div>
+          <div class="step-desc">Set up checks and a prompt in your project</div>
+        </div>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <div class="step-title">Launch</div>
+          <div class="step-desc">Start a new run from the dashboard</div>
+        </div>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <div class="step-title">Monitor</div>
+          <div class="step-desc">Watch iterations and checks in real time</div>
+        </div>
+      </div>
     </div>
   `;
 }
