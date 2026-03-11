@@ -856,9 +856,108 @@ body {
   margin-top: 12px;
 }
 
-/* ── Primitive browser ───────────────────────────────────────────── */
+/* ── Primitives overview ─────────────────────────────────────────── */
 
-.primitive-browser {
+.prim-overview-header {
+  margin-bottom: 24px;
+}
+
+.prim-overview-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.prim-overview-header p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.prim-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.prim-kind-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-sm);
+}
+
+.prim-kind-card:hover {
+  border-color: var(--primary-border);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+.prim-kind-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prim-kind-card-icon.prim-kind-checks { background: var(--green-bg); color: #16a34a; }
+.prim-kind-card-icon.prim-kind-contexts { background: var(--primary-light); color: var(--primary); }
+.prim-kind-card-icon.prim-kind-instructions { background: var(--accent-light); color: var(--accent); }
+.prim-kind-card-icon.prim-kind-prompts { background: rgba(139, 108, 240, 0.1); color: #8B6CF0; }
+
+.prim-kind-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.prim-kind-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.prim-kind-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.prim-kind-card-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.prim-kind-count-num {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.prim-kind-count-detail {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Kind view ───────────────────────────────────────────────────── */
+
+.prim-kind-view {
   background: var(--surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -866,97 +965,322 @@ body {
   overflow: hidden;
 }
 
-.primitive-tree {
-  padding: 12px;
+.prim-kind-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
 }
 
-.primitive-group-title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  padding: 12px 8px 6px;
-  letter-spacing: 0.6px;
-}
-
-.primitive-item {
-  display: flex;
+.prim-back-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--radius);
-  cursor: pointer;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text);
-  transition: all 0.15s ease;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+  font-family: var(--font-sans);
+  transition: color 0.15s ease;
 }
 
-.primitive-item:hover {
-  background: var(--primary-light);
-}
-
-.primitive-item.active {
-  background: var(--primary-light);
+.prim-back-btn:hover {
   color: var(--primary);
 }
 
-.primitive-toggle {
-  width: 30px;
-  height: 16px;
+.prim-kind-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prim-kind-title-row h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.prim-kind-title-icon {
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  background: var(--border);
-  border: none;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.primitive-toggle.enabled {
+.prim-kind-title-icon.prim-kind-checks { background: var(--green-bg); color: #16a34a; }
+.prim-kind-title-icon.prim-kind-contexts { background: var(--primary-light); color: var(--primary); }
+.prim-kind-title-icon.prim-kind-instructions { background: var(--accent-light); color: var(--accent); }
+.prim-kind-title-icon.prim-kind-prompts { background: rgba(139, 108, 240, 0.1); color: #8B6CF0; }
+
+.prim-kind-count-badge {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg);
+  color: var(--text-secondary);
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.prim-kind-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 10px;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+/* ── Primitive list ──────────────────────────────────────────────── */
+
+.prim-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.prim-item:last-child {
+  border-bottom: none;
+}
+
+.prim-item:hover {
+  background: var(--primary-light);
+}
+
+.prim-item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.prim-item-dot.enabled { background: var(--green); }
+.prim-item-dot.disabled { background: var(--text-muted); }
+
+.prim-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.prim-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.prim-item-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prim-item-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.prim-item-badge.enabled {
+  background: var(--green-bg);
+  color: #16a34a;
+}
+
+.prim-item-badge.disabled {
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+.prim-item-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Primitive empty state ───────────────────────────────────────── */
+
+.prim-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.prim-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.prim-empty-icon.prim-kind-checks { background: var(--green-bg); color: #16a34a; }
+.prim-empty-icon.prim-kind-contexts { background: var(--primary-light); color: var(--primary); }
+.prim-empty-icon.prim-kind-instructions { background: var(--accent-light); color: var(--accent); }
+.prim-empty-icon.prim-kind-prompts { background: rgba(139, 108, 240, 0.1); color: #8B6CF0; }
+
+.prim-empty-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.prim-empty-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+/* ── Primitive editor ────────────────────────────────────────────── */
+
+.prim-editor {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.prim-editor-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prim-editor-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prim-editor-title-row h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.prim-editor-body {
+  padding: 24px;
+}
+
+.prim-editor-fields {
+  margin-bottom: 20px;
+}
+
+.prim-field-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.prim-enabled-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.prim-toggle-btn {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s ease;
+  padding: 0;
+}
+
+.prim-toggle-btn.enabled {
   background: var(--green);
 }
 
-.primitive-toggle::after {
-  content: '';
+.prim-toggle-knob {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: white;
-  top: 2px;
-  left: 2px;
+  top: 3px;
+  left: 3px;
   transition: transform 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.primitive-toggle.enabled::after {
-  transform: translateX(14px);
+.prim-toggle-btn.enabled .prim-toggle-knob {
+  transform: translateX(20px);
 }
 
-.primitive-editor {
-  padding: 20px;
-  border-top: 1px solid var(--border);
-}
-
-.primitive-editor textarea {
+.prim-content-textarea {
   width: 100%;
-  min-height: 200px;
+  min-height: 260px;
   background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   padding: 16px;
   resize: vertical;
-  line-height: 1.6;
+  line-height: 1.7;
+  transition: all 0.15s ease;
 }
 
-.primitive-editor textarea:focus {
+.prim-content-textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.prim-content-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.prim-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.btn-danger-outline {
+  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--red);
+  background: transparent;
+}
+
+.btn-danger-outline:hover {
+  background: var(--red-bg);
+  border-color: var(--red);
+}
+
+.prim-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--red-bg);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: #dc2626;
 }
 
 /* ── History panel ───────────────────────────────────────────────── */

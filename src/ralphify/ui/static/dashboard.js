@@ -159,6 +159,7 @@ async function api(method, path, body) {
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`/api${path}`, opts);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (res.status === 204) return null;
   return res.json();
 }
 
@@ -275,9 +276,8 @@ function Main() {
              onClick=${() => activeTab.value = 'history'}>History</div>
       </div>
       <div class="content">
-        ${!run && html`<${EmptyState} />`}
-        ${run && activeTab.value === 'timeline' && html`<${TimelineView} run=${run} />`}
-        ${run && activeTab.value === 'primitives' && html`<${PrimitivesView} />`}
+        ${activeTab.value === 'timeline' && (!run ? html`<${EmptyState} />` : html`<${TimelineView} run=${run} />`)}
+        ${activeTab.value === 'primitives' && html`<${PrimitivesView} />`}
         ${activeTab.value === 'history' && html`<${HistoryView} />`}
       </div>
     </div>
@@ -611,19 +611,43 @@ function CheckHealthPanel({ health }) {
 
 // ── Primitives view ────────────────────────────────────────────────
 
+function KindIcon({ kind, size = 20 }) {
+  const s = size;
+  if (kind === 'checks') return html`
+    <svg width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>
+    </svg>`;
+  if (kind === 'contexts') return html`
+    <svg width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+    </svg>`;
+  if (kind === 'instructions') return html`
+    <svg width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>`;
+  return html`
+    <svg width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>`;
+}
+
+const KINDS_META = {
+  checks: { label: 'Checks', desc: 'Validation scripts that verify each iteration' },
+  contexts: { label: 'Contexts', desc: 'Dynamic context injected into prompts' },
+  instructions: { label: 'Instructions', desc: 'Static instructions prepended to prompts' },
+  prompts: { label: 'Prompts', desc: 'Named task descriptions for starting runs' },
+};
+
 function PrimitivesView() {
   const [primitives, setPrimitives] = useState(null);
-  const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState({ page: 'overview' });
 
-  useEffect(() => {
-    loadPrimitives();
-  }, []);
+  useEffect(() => { loadPrimitives(); }, []);
 
   async function loadPrimitives() {
     try {
-      const projectDir = btoa('.');
-      const data = await api('GET', `/projects/${projectDir}/primitives`);
+      const data = await api('GET', `/projects/${btoa('.')}/primitives`);
       setPrimitives(data);
     } catch (e) {
       setPrimitives([]);
@@ -632,39 +656,295 @@ function PrimitivesView() {
   }
 
   if (loading) return html`<div style="color: var(--text-secondary); padding: 20px">Loading primitives...</div>`;
-  if (!primitives || primitives.length === 0) {
-    return html`<div style="color: var(--text-secondary); padding: 20px">No primitives found. Use "ralph new" to create some.</div>`;
+
+  const grouped = { checks: [], contexts: [], instructions: [], prompts: [] };
+  for (const p of (primitives || [])) {
+    if (grouped[p.kind]) grouped[p.kind].push(p);
   }
 
-  const grouped = {};
-  for (const p of primitives) {
-    if (!grouped[p.kind]) grouped[p.kind] = [];
-    grouped[p.kind].push(p);
+  if (view.page === 'overview') {
+    return html`
+      <div class="prim-overview">
+        <div class="prim-overview-header">
+          <h2>Primitives</h2>
+          <p>Configure the building blocks of your autonomous coding loops.</p>
+        </div>
+        <div class="prim-overview-grid">
+          ${['checks', 'contexts', 'instructions', 'prompts'].map(kind => {
+            const meta = KINDS_META[kind];
+            const count = grouped[kind].length;
+            const enabledCount = grouped[kind].filter(p => p.enabled).length;
+            return html`
+              <button key=${kind} class="prim-kind-card" onClick=${() => setView({ page: 'kind', kind })}>
+                <div class="prim-kind-card-icon prim-kind-${kind}">
+                  <${KindIcon} kind=${kind} size=${22} />
+                </div>
+                <div class="prim-kind-card-body">
+                  <div class="prim-kind-card-name">${meta.label}</div>
+                  <div class="prim-kind-card-desc">${meta.desc}</div>
+                </div>
+                <div class="prim-kind-card-count">
+                  <span class="prim-kind-count-num">${count}</span>
+                  ${count > 0 && enabledCount < count && html`
+                    <span class="prim-kind-count-detail">${enabledCount} enabled</span>
+                  `}
+                </div>
+              </button>
+            `;
+          })}
+        </div>
+      </div>
+    `;
+  }
+
+  const meta = KINDS_META[view.kind];
+  const items = grouped[view.kind] || [];
+
+  if (view.page === 'edit') {
+    const prim = items.find(p => p.name === view.name);
+    if (!prim) { setView({ page: 'kind', kind: view.kind }); return null; }
+    return html`<${PrimEditForm}
+      primitive=${prim} kind=${view.kind} meta=${meta}
+      onBack=${() => setView({ page: 'kind', kind: view.kind })}
+      onSaved=${() => { loadPrimitives(); setView({ page: 'kind', kind: view.kind }); }}
+    />`;
+  }
+
+  if (view.page === 'create') {
+    return html`<${PrimCreateForm}
+      kind=${view.kind} meta=${meta}
+      onBack=${() => setView({ page: 'kind', kind: view.kind })}
+      onCreated=${() => { loadPrimitives(); setView({ page: 'kind', kind: view.kind }); }}
+    />`;
+  }
+
+  // Kind list view
+  return html`
+    <div class="prim-kind-view">
+      <div class="prim-kind-header">
+        <button class="prim-back-btn" onClick=${() => setView({ page: 'overview' })}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          All primitives
+        </button>
+        <div class="prim-kind-title-row">
+          <div class="prim-kind-title-icon prim-kind-${view.kind}">
+            <${KindIcon} kind=${view.kind} size=${20} />
+          </div>
+          <h2>${meta.label}</h2>
+          <span class="prim-kind-count-badge">${items.length}</span>
+          <div style="flex: 1"></div>
+          <button class="btn btn-primary btn-sm" onClick=${() => setView({ page: 'create', kind: view.kind })}>
+            + Create New
+          </button>
+        </div>
+        <div class="prim-kind-desc">${meta.desc}</div>
+      </div>
+      ${items.length === 0 && html`
+        <div class="prim-empty">
+          <div class="prim-empty-icon prim-kind-${view.kind}">
+            <${KindIcon} kind=${view.kind} size=${32} />
+          </div>
+          <div class="prim-empty-text">No ${meta.label.toLowerCase()} yet</div>
+          <div class="prim-empty-hint">Create your first ${meta.label.toLowerCase().replace(/s$/, '')} to get started.</div>
+          <button class="btn btn-primary" onClick=${() => setView({ page: 'create', kind: view.kind })}>
+            + Create ${meta.label.replace(/s$/, '')}
+          </button>
+        </div>
+      `}
+      ${items.length > 0 && html`
+        <div class="prim-list">
+          ${items.map(p => html`
+            <div key=${p.name} class="prim-item" onClick=${() => setView({ page: 'edit', kind: view.kind, name: p.name })}>
+              <div class="prim-item-dot ${p.enabled ? 'enabled' : 'disabled'}"></div>
+              <div class="prim-item-info">
+                <div class="prim-item-name">${p.name}</div>
+                ${p.frontmatter?.description && html`
+                  <div class="prim-item-desc">${p.frontmatter.description}</div>
+                `}
+              </div>
+              <div class="prim-item-badge ${p.enabled ? 'enabled' : 'disabled'}">
+                ${p.enabled ? 'Enabled' : 'Disabled'}
+              </div>
+              <svg class="prim-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          `)}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function PrimEditForm({ primitive, kind, meta, onBack, onSaved }) {
+  const [content, setContent] = useState(primitive.content);
+  const [description, setDescription] = useState(primitive.frontmatter?.description || '');
+  const [enabled, setEnabled] = useState(primitive.enabled);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const hasChanges = content !== primitive.content ||
+    description !== (primitive.frontmatter?.description || '') ||
+    enabled !== primitive.enabled;
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const fm = { ...primitive.frontmatter, description, enabled };
+      await api('PUT', `/projects/${btoa('.')}/primitives/${kind}/${primitive.name}`, {
+        content, frontmatter: fm,
+      });
+      onSaved();
+    } catch (e) {
+      console.error('Save failed:', e);
+    }
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete "${primitive.name}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api('DELETE', `/projects/${btoa('.')}/primitives/${kind}/${primitive.name}`);
+      onSaved();
+    } catch (e) {
+      console.error('Delete failed:', e);
+    }
+    setDeleting(false);
   }
 
   return html`
-    <div class="primitive-browser">
-      <div class="primitive-tree">
-        ${Object.entries(grouped).map(([kind, items]) => html`
-          <div key=${kind}>
-            <div class="primitive-group-title">${kind}</div>
-            ${items.map(p => html`
-              <div key=${p.name}
-                   class="primitive-item ${selected?.name === p.name && selected?.kind === p.kind ? 'active' : ''}"
-                   onClick=${() => setSelected(p)}>
-                <div class="primitive-toggle ${p.enabled ? 'enabled' : ''}"></div>
-                <span>${p.name}</span>
-              </div>
-            `)}
+    <div class="prim-editor">
+      <div class="prim-editor-header">
+        <button class="prim-back-btn" onClick=${onBack}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          ${meta.label}
+        </button>
+        <div class="prim-editor-title-row">
+          <div class="prim-kind-title-icon prim-kind-${kind}">
+            <${KindIcon} kind=${kind} size=${18} />
           </div>
-        `)}
-      </div>
-      ${selected && html`
-        <div class="primitive-editor">
-          <div style="font-weight: 600; margin-bottom: 8px">${selected.kind}/${selected.name}</div>
-          <textarea value=${selected.content} readonly></textarea>
+          <h2>${primitive.name}</h2>
         </div>
-      `}
+      </div>
+      <div class="prim-editor-body">
+        <div class="prim-editor-fields">
+          <div class="prim-field-row">
+            <div class="form-group" style="flex: 1; margin-bottom: 0">
+              <label class="form-label">Description</label>
+              <input class="form-input" type="text" value=${description}
+                     onInput=${(e) => setDescription(e.target.value)}
+                     placeholder="Brief description of this ${meta.label.toLowerCase().replace(/s$/, '')}" />
+            </div>
+            <div class="prim-enabled-field">
+              <label class="form-label">Enabled</label>
+              <button class="prim-toggle-btn ${enabled ? 'enabled' : ''}"
+                      onClick=${() => setEnabled(!enabled)}>
+                <span class="prim-toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 0">
+          <label class="form-label">Content</label>
+          <textarea class="prim-content-textarea"
+                    value=${content}
+                    onInput=${(e) => setContent(e.target.value)}
+                    rows="14"
+                    placeholder="Write the content here..."></textarea>
+        </div>
+      </div>
+      <div class="prim-editor-actions">
+        <button class="btn btn-danger-outline" onClick=${handleDelete} disabled=${deleting}>
+          ${deleting ? 'Deleting...' : 'Delete'}
+        </button>
+        <div style="flex: 1"></div>
+        <button class="btn" onClick=${onBack}>Cancel</button>
+        <button class="btn btn-primary" onClick=${handleSave} disabled=${!hasChanges || saving}>
+          ${saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function PrimCreateForm({ kind, meta, onBack, onCreated }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [content, setContent] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState(null);
+
+  const canCreate = name.trim().length > 0;
+
+  async function handleCreate() {
+    setCreating(true);
+    setError(null);
+    try {
+      const fm = { name: name.trim() };
+      if (description.trim()) fm.description = description.trim();
+      await api('POST', `/projects/${btoa('.')}/primitives/${kind}`, {
+        content, frontmatter: fm,
+      });
+      onCreated();
+    } catch (e) {
+      setError(e.message.includes('409') ? 'A primitive with that name already exists.' : 'Failed to create primitive.');
+    }
+    setCreating(false);
+  }
+
+  return html`
+    <div class="prim-editor">
+      <div class="prim-editor-header">
+        <button class="prim-back-btn" onClick=${onBack}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          ${meta.label}
+        </button>
+        <div class="prim-editor-title-row">
+          <div class="prim-kind-title-icon prim-kind-${kind}">
+            <${KindIcon} kind=${kind} size=${18} />
+          </div>
+          <h2>New ${meta.label.replace(/s$/, '')}</h2>
+        </div>
+      </div>
+      <div class="prim-editor-body">
+        <div class="prim-editor-fields">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input class="form-input" type="text" value=${name}
+                   onInput=${(e) => setName(e.target.value)}
+                   placeholder="e.g. my-${kind.replace(/s$/, '')}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <input class="form-input" type="text" value=${description}
+                   onInput=${(e) => setDescription(e.target.value)}
+                   placeholder="Brief description (optional)" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 0">
+          <label class="form-label">Content</label>
+          <textarea class="prim-content-textarea"
+                    value=${content}
+                    onInput=${(e) => setContent(e.target.value)}
+                    rows="14"
+                    placeholder="Write the content here..."></textarea>
+        </div>
+        ${error && html`<div class="prim-error">${error}</div>`}
+      </div>
+      <div class="prim-editor-actions">
+        <div style="flex: 1"></div>
+        <button class="btn" onClick=${onBack}>Cancel</button>
+        <button class="btn btn-primary" onClick=${handleCreate} disabled=${!canCreate || creating}>
+          ${creating ? 'Creating...' : `Create ${meta.label.replace(/s$/, '')}`}
+        </button>
+      </div>
     </div>
   `;
 }
