@@ -70,16 +70,76 @@ The Ralph Wiggum technique works because:
 
 Read the full writeup: [Ralph Wiggum as a "software engineer"](https://ghuntley.com/ralph/)
 
+## Beyond the basic loop
+
+The simple loop works, but ralphify's real power comes from three primitives that live in the `.ralph/` directory.
+
+### Checks — the self-healing loop
+
+Checks validate the agent's work after each iteration. When one fails, its output automatically feeds into the next iteration so the agent can fix its own mistakes.
+
+```bash
+ralph new check tests
+```
+
+Edit `.ralph/checks/tests/CHECK.md`:
+
+```markdown
+---
+command: uv run pytest -x
+timeout: 120
+---
+Fix all failing tests. Do not skip or delete tests.
+```
+
+Now the loop self-corrects:
+
+```
+Iteration 1 → Agent adds feature → tests pass ✓ → moves on
+Iteration 2 → Agent adds feature → tests fail ✗
+Iteration 3 → Agent sees failure output → fixes tests → pass ✓
+```
+
+You define what "valid" means. Ralphify feeds failures back automatically.
+
+### Contexts — dynamic data injection
+
+Contexts inject fresh data into the prompt each iteration — git history, test status, anything a shell command can produce.
+
+```bash
+ralph new context git-log
+```
+
+Edit `.ralph/contexts/git-log/CONTEXT.md`:
+
+```markdown
+---
+command: git log --oneline -10
+---
+## Recent commits
+```
+
+The command runs before each iteration. Use `{{ contexts.git-log }}` in your `PROMPT.md` to control where the output appears.
+
+### Instructions — reusable rules
+
+Instructions are static text blocks (coding standards, commit conventions) you can toggle on and off without editing the prompt.
+
+```bash
+ralph new instruction code-style
+```
+
+Drop `{{ instructions }}` into `PROMPT.md` to inject all enabled instructions.
+
 ## Customizing your prompt
 
 The generated `PROMPT.md` is a starting point. A good prompt for autonomous loops typically includes:
 
 - What to work on (specs, plan file, TODO list)
-- How to validate (run tests, type check, build)
-- What NOT to do (no placeholders, no skipping tests)
-- When to commit (after tests pass)
+- Constraints — what NOT to do (no placeholders, no skipping tests)
+- Process — how to validate and commit
 
-The agent reads this prompt fresh every iteration, so you can edit it while the loop is running.
+The agent reads this prompt fresh every iteration, so you can edit it while the loop is running. When the agent does something dumb, add a sign to the prompt — the next iteration follows the new rules.
 
 ## Documentation
 
