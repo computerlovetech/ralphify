@@ -38,6 +38,7 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 | Option | Short | Default | Description |
 |---|---|---|---|
 | `-n` | | unlimited | Max iterations |
+| `--prompt` | `-p` | none | Ad-hoc prompt text (overrides prompt file) |
 | `--stop-on-error` | `-s` | off | Stop if agent exits non-zero or times out |
 | `--delay` | `-d` | `0` | Seconds between iterations |
 | `--timeout` | `-t` | none | Max seconds per iteration |
@@ -46,6 +47,7 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 ```bash
 # Common combinations
 ralph run -n 1 --log-dir ralph_logs         # Single test iteration
+ralph run -n 1 -p "Fix the login bug"       # Quick one-off task
 ralph run -n 5 --stop-on-error              # Short batch, stop on failure
 ralph run --timeout 300 --log-dir ralph_logs # Production run with safety net
 ```
@@ -200,7 +202,7 @@ Frontmatter `command` values are split with `shlex` and run **directly** (no she
 
 Each iteration assembles the prompt in this order:
 
-1. Read `PROMPT.md` from disk
+1. Read prompt (from `PROMPT.md`, or from `-p` flag if provided)
 2. Run context commands and resolve `{{ contexts }}` placeholders
 3. Resolve `{{ instructions }}` placeholders
 4. Append check failures from previous iteration (if any)

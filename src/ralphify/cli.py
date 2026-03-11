@@ -344,6 +344,7 @@ def _print_check_summary(results: list[CheckResult]) -> None:
 @app.command()
 def run(
     n: Optional[int] = typer.Option(None, "-n", help="Max number of iterations. Infinite if not set."),
+    prompt_text: Optional[str] = typer.Option(None, "-p", "--prompt", help="Ad-hoc prompt text. Overrides the prompt file."),
     stop_on_error: bool = typer.Option(False, "--stop-on-error", "-s", help="Stop if the agent exits with non-zero."),
     delay: float = typer.Option(0, "--delay", "-d", help="Seconds to wait between iterations."),
     log_dir: Optional[str] = typer.Option(None, "--log-dir", "-l", help="Save iteration output to log files in this directory."),
@@ -364,7 +365,7 @@ def run(
     prompt_file = agent["prompt"]
 
     prompt_path = Path(prompt_file)
-    if not prompt_path.exists():
+    if not prompt_text and not prompt_path.exists():
         rprint(f"[red]Prompt file '{prompt_file}' not found.[/red]")
         raise typer.Exit(1)
 
@@ -405,7 +406,7 @@ def run(
                 break
 
             rprint(f"\n[bold blue]── Iteration {iteration} ──[/bold blue]")
-            prompt = prompt_path.read_text()
+            prompt = prompt_text if prompt_text else prompt_path.read_text()
             if enabled_contexts:
                 context_results = run_all_contexts(enabled_contexts, Path("."))
                 prompt = resolve_contexts(prompt, context_results)

@@ -92,6 +92,7 @@ Start the autonomous coding loop.
 ```bash
 ralph run                          # Run forever (Ctrl+C to stop)
 ralph run -n 5                     # Run 5 iterations
+ralph run -p "Fix the login bug"   # Ad-hoc prompt (no PROMPT.md needed)
 ralph run --stop-on-error          # Stop if agent exits non-zero
 ralph run --delay 10               # Wait 10s between iterations
 ralph run --timeout 300            # Kill agent after 5 minutes per iteration
@@ -101,6 +102,7 @@ ralph run --log-dir ralph_logs     # Save output to log files
 | Option | Short | Default | Description |
 |---|---|---|---|
 | `-n` | | unlimited | Max number of iterations |
+| `--prompt` | `-p` | none | Ad-hoc prompt text. Overrides the prompt file |
 | `--stop-on-error` | `-s` | off | Stop loop if agent exits non-zero or times out |
 | `--delay` | `-d` | `0` | Seconds to wait between iterations |
 | `--timeout` | `-t` | none | Max seconds per iteration |
@@ -111,6 +113,22 @@ Options can be combined:
 ```bash
 ralph run -n 10 --timeout 300 --log-dir ralph_logs --stop-on-error
 ```
+
+#### Ad-hoc prompts
+
+Use `-p` to pass a prompt directly on the command line, bypassing the prompt file entirely:
+
+```bash
+ralph run -n 1 -p "Add type hints to all public functions in src/"
+```
+
+This is useful for quick one-off tasks where you don't want to create or edit a `PROMPT.md`. The ad-hoc prompt still supports placeholders — contexts and instructions resolve as normal:
+
+```bash
+ralph run -n 1 -p "{{ contexts.git-log }}\n\nFix the failing test."
+```
+
+When `-p` is provided, `PROMPT.md` doesn't need to exist.
 
 ### `ralph status`
 

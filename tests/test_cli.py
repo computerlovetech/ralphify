@@ -269,6 +269,40 @@ class TestRun:
         mock_sleep.assert_not_called()
 
 
+class TestRunAdHocPrompt:
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_uses_provided_prompt_text(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+
+        result = runner.invoke(app, ["run", "-n", "1", "-p", "do something"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["input"] == "do something"
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_skips_prompt_file_check(self, mock_run, tmp_path, monkeypatch):
+        """Works without PROMPT.md when -p is provided."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        # No PROMPT.md created
+
+        result = runner.invoke(app, ["run", "-n", "1", "-p", "ad-hoc prompt"])
+        assert result.exit_code == 0
+        assert mock_run.call_count == 1
+
+    @patch("ralphify.cli.subprocess.run", side_effect=_ok)
+    def test_contexts_and_instructions_resolve_with_ad_hoc_prompt(self, mock_run, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
+        _setup_instruction(tmp_path, "style", content="Use black formatting.")
+
+        result = runner.invoke(app, ["run", "-n", "1", "-p", "Base.\n\n{{ instructions }}"])
+        assert result.exit_code == 0
+        prompt_sent = mock_run.call_args.kwargs["input"]
+        assert "Use black formatting." in prompt_sent
+        assert "{{ instructions }}" not in prompt_sent
+
+
 class TestRunLogging:
     @patch("ralphify.cli.subprocess.run")
     def test_creates_log_files(self, mock_run, tmp_path, monkeypatch):
