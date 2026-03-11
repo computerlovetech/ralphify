@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS check_results (
     passed       INTEGER NOT NULL,
     exit_code    INTEGER,
     timed_out    INTEGER NOT NULL DEFAULT 0,
+    output       TEXT NOT NULL DEFAULT '',
     FOREIGN KEY (run_id) REFERENCES runs(run_id)
 );
 
@@ -98,7 +99,18 @@ class Store:
         self._db = await aiosqlite.connect(str(self._db_path))
         self._db.row_factory = aiosqlite.Row
         await self._db.executescript(_SCHEMA)
+        await self._migrate(self._db)
         await self._db.commit()
+
+    @staticmethod
+    async def _migrate(db: aiosqlite.Connection) -> None:
+        """Apply lightweight schema migrations for existing databases."""
+        cursor = await db.execute("PRAGMA table_info(check_results)")
+        cols = {row[1] for row in await cursor.fetchall()}
+        if "output" not in cols:
+            await db.execute(
+                "ALTER TABLE check_results ADD COLUMN output TEXT NOT NULL DEFAULT ''"
+            )
 
     @property
     def _conn(self) -> aiosqlite.Connection:
@@ -223,8 +235,8 @@ class Store:
         iteration = data.get("iteration", 0)
         await db.execute(
             "INSERT INTO check_results "
-            "(run_id, iteration, check_name, passed, exit_code, timed_out) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "(run_id, iteration, check_name, passed, exit_code, timed_out, output) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 run_id,
                 iteration,
@@ -232,6 +244,7 @@ class Store:
                 1 if event_type == EventType.CHECK_PASSED else 0,
                 data.get("exit_code"),
                 1 if data.get("timed_out") else 0,
+                data.get("output", ""),
             ),
         )
 

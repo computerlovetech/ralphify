@@ -1200,6 +1200,11 @@ function ActivityStream({ runId, iteration }) {
 }
 
 function IterationPanel({ iteration: it }) {
+  const [expandedChecks, setExpandedChecks] = useState({});
+  const toggleCheck = useCallback((name) => {
+    setExpandedChecks(prev => ({ ...prev, [name]: !prev[name] }));
+  }, []);
+
   const statusClass = it.status === 'success' ? 'success' :
                       it.status === 'failure' ? 'failure' :
                       it.status === 'timeout' ? 'timeout' :
@@ -1254,14 +1259,28 @@ function IterationPanel({ iteration: it }) {
             <div class="checks-section-title">Check Results</div>
             ${it.checks.map(c => {
               const checkStatus = c.passed ? 'pass' : c.timed_out ? 'timeout' : 'fail';
+              const hasOutput = c.output && c.output.trim();
+              const isExpanded = expandedChecks[c.name];
               return html`
-                <div class="check-result ${checkStatus}" key=${c.name}>
-                  <span class="check-icon ${checkStatus}">
-                    ${c.passed ? '\u2713' : c.timed_out ? '\u23f1' : '\u2717'}
-                  </span>
-                  <span class="check-name">${c.name}</span>
-                  ${!c.passed && html`
-                    <span class="check-detail">exit ${c.exit_code}</span>
+                <div class="check-result ${checkStatus} ${hasOutput ? 'expandable' : ''}" key=${c.name}>
+                  <div class="check-result-header" onClick=${() => hasOutput && toggleCheck(c.name)}>
+                    <span class="check-icon ${checkStatus}">
+                      ${c.passed ? '\u2713' : c.timed_out ? '\u23f1' : '\u2717'}
+                    </span>
+                    <span class="check-name">${c.name}</span>
+                    ${!c.passed && html`
+                      <span class="check-detail">exit ${c.exit_code}</span>
+                    `}
+                    ${hasOutput && html`
+                      <svg class="check-expand-icon ${isExpanded ? 'expanded' : ''}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    `}
+                  </div>
+                  ${isExpanded && hasOutput && html`
+                    <div class="check-output">
+                      <pre class="check-output-content">${c.output.length > 3000 ? c.output.substring(0, 3000) + '\n... (truncated)' : c.output}</pre>
+                    </div>
                   `}
                 </div>
               `;

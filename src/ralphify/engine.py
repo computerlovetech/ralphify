@@ -394,6 +394,7 @@ def _run_checks_phase(
             "passed": cr.passed,
             "exit_code": cr.exit_code,
             "timed_out": cr.timed_out,
+            "output": cr.output,
         }
         results_data.append(result)
         emit(

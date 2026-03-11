@@ -1,7 +1,5 @@
 """Shared pytest fixtures for ralphify tests."""
 
-from unittest.mock import patch
-
 import pytest
 
 

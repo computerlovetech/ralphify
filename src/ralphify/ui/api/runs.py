@@ -191,10 +191,14 @@ async def get_iterations(run_id: str, store: Store = Depends(_get_store)) -> lis
     all_checks = await store.get_check_results_for_run(run_id)
     checks_by_iter: dict[int, list[dict]] = {}
     for c in all_checks:
-        checks_by_iter.setdefault(c["iteration"], []).append(
-            {"name": c["check_name"], "passed": bool(c["passed"]),
-             "exit_code": c["exit_code"], "timed_out": bool(c["timed_out"])}
-        )
+        check_data = {
+            "name": c["check_name"], "passed": bool(c["passed"]),
+            "exit_code": c["exit_code"], "timed_out": bool(c["timed_out"]),
+        }
+        output = c.get("output", "")
+        if output:
+            check_data["output"] = output
+        checks_by_iter.setdefault(c["iteration"], []).append(check_data)
 
     return [
         {

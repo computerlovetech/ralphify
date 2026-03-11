@@ -900,15 +900,25 @@ body {
 
 .check-result {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  flex-direction: column;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   margin-bottom: 6px;
   background: var(--bg);
   transition: all 0.15s ease;
   border-left: 3px solid var(--border);
+  overflow: hidden;
+}
+
+.check-result-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.check-result.expandable .check-result-header {
+  cursor: pointer;
 }
 
 .check-result:last-child {
@@ -918,6 +928,36 @@ body {
 .check-result:hover {
   border-color: var(--border-hover);
   box-shadow: var(--shadow-sm);
+}
+
+.check-expand-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.check-expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.check-output {
+  border-top: 1px solid var(--border);
+  background: var(--dark);
+  padding: 0;
+}
+
+.check-output-content {
+  margin: 0;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e0dce8;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .check-result.pass {
