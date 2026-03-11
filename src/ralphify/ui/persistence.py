@@ -239,52 +239,51 @@ class Store:
     # Query helpers
     # ------------------------------------------------------------------
 
+    async def _fetch_one(self, query: str, params: tuple = ()) -> dict[str, Any] | None:
+        """Execute *query* and return the first row as a dict, or ``None``."""
+        cursor = await self._conn.execute(query, params)
+        row = await cursor.fetchone()
+        return dict(row) if row is not None else None
+
+    async def _fetch_all(self, query: str, params: tuple = ()) -> list[dict[str, Any]]:
+        """Execute *query* and return all rows as dicts."""
+        cursor = await self._conn.execute(query, params)
+        return [dict(r) for r in await cursor.fetchall()]
+
     async def get_run(self, run_id: str) -> dict[str, Any] | None:
         """Return a run summary dict or ``None``."""
-        cursor = await self._conn.execute(
-            "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+        return await self._fetch_one(
+            "SELECT * FROM runs WHERE run_id = ?", (run_id,),
         )
-        row = await cursor.fetchone()
-        if row is None:
-            return None
-        return dict(row)
 
     async def list_runs(self) -> list[dict[str, Any]]:
         """Return all runs ordered by start time descending."""
-        cursor = await self._conn.execute(
-            "SELECT * FROM runs ORDER BY started_at DESC"
+        return await self._fetch_all(
+            "SELECT * FROM runs ORDER BY started_at DESC",
         )
-        rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
 
     async def get_iterations(self, run_id: str) -> list[dict[str, Any]]:
         """Return iterations for a run ordered by iteration number."""
-        cursor = await self._conn.execute(
+        return await self._fetch_all(
             "SELECT * FROM iterations WHERE run_id = ? ORDER BY iteration",
             (run_id,),
         )
-        rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
 
     async def get_check_results(
-        self, run_id: str, iteration: int
+        self, run_id: str, iteration: int,
     ) -> list[dict[str, Any]]:
         """Return check results for a specific iteration."""
-        cursor = await self._conn.execute(
+        return await self._fetch_all(
             "SELECT * FROM check_results WHERE run_id = ? AND iteration = ? "
             "ORDER BY id",
             (run_id, iteration),
         )
-        rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
 
     async def get_events(
-        self, run_id: str, limit: int = 100, offset: int = 0
+        self, run_id: str, limit: int = 100, offset: int = 0,
     ) -> list[dict[str, Any]]:
         """Return raw events for a run."""
-        cursor = await self._conn.execute(
+        return await self._fetch_all(
             "SELECT * FROM events WHERE run_id = ? ORDER BY id LIMIT ? OFFSET ?",
             (run_id, limit, offset),
         )
-        rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
