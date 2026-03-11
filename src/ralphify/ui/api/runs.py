@@ -4,7 +4,7 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException  # ty: ignore[unresolved-import]
+from fastapi import APIRouter, HTTPException
 
 from ralphify._frontmatter import PROMPT_MARKER
 from ralphify.engine import RunConfig

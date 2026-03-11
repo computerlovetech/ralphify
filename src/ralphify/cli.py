@@ -6,6 +6,7 @@ events to the terminal, reproducing the original terminal output exactly.
 """
 
 import shutil
+import sys
 import tomllib
 import uuid
 from pathlib import Path
@@ -486,7 +487,7 @@ def ui(
     except ImportError:
         rprint("[red]UI deps not installed. Run: pip install ralphify[ui][/red]")
         raise typer.Exit(1)
-    import uvicorn  # ty: ignore[unresolved-import]
+    import uvicorn
 
     rprint(f"[bold]Starting Ralphify UI at http://{host}:{port}[/bold]")
     uvicorn.run(create_app(), host=host, port=port)

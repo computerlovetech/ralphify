@@ -5,8 +5,8 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI  # ty: ignore[unresolved-import]
-from fastapi.staticfiles import StaticFiles  # ty: ignore[unresolved-import]
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from ralphify._events import Event
 from ralphify.manager import RunManager

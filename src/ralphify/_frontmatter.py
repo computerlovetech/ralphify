@@ -9,7 +9,7 @@ don't leak into the assembled prompt.
 """
 
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 
@@ -23,7 +23,7 @@ PROMPT_MARKER = "PROMPT.md"
 
 # Type coercion for known frontmatter fields.
 # To add a new typed field, add an entry here — no other changes needed.
-_FIELD_COERCIONS: dict[str, object] = {
+_FIELD_COERCIONS: dict[str, Callable[[str], object]] = {
     "timeout": int,
     "enabled": lambda v: v.lower() in ("true", "yes", "1"),
 }

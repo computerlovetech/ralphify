@@ -5,7 +5,7 @@ import base64
 import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException  # ty: ignore[unresolved-import]
+from fastapi import APIRouter, HTTPException
 
 from ralphify._frontmatter import (
     CHECK_MARKER,
