@@ -1,3 +1,7 @@
+---
+description: Fix common ralphify issues — setup errors, agent hangs, check failures, missing contexts, output truncation, and permission problems.
+---
+
 # Troubleshooting
 
 Common issues and how to fix them. If your problem isn't listed here, run `ralph status` first — it validates your setup and points out most configuration problems.

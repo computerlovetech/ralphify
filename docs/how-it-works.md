@@ -1,3 +1,7 @@
+---
+description: How ralphify assembles prompts, runs checks, and creates a self-healing feedback loop. Covers the iteration lifecycle, placeholder resolution, and output truncation.
+---
+
 # How It Works
 
 This page explains what ralphify does under the hood during each iteration, how the prompt gets assembled, and how the feedback loop keeps the agent on track. Read this if you want to customize your loop beyond the basics or debug unexpected behavior.

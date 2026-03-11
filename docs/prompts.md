@@ -1,3 +1,7 @@
+---
+description: How to write effective prompts for autonomous AI coding loops. Covers prompt anatomy, placeholder usage, prompt patterns for features, bugs, and docs.
+---
+
 # Writing Your Prompt
 
 Your `PROMPT.md` is the most important file in a ralphify project. It's the only thing the agent reads each iteration — it determines what gets built, how it's validated, and whether the loop produces useful work or noise.

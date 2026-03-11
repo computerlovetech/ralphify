@@ -1,3 +1,7 @@
+---
+description: Frequently asked questions about ralphify — agent compatibility, costs, CI usage, editing while running, parallel loops, and configuration tips.
+---
+
 # FAQ
 
 Common questions about ralphify. For setup problems and error messages, see [Troubleshooting](troubleshooting.md).

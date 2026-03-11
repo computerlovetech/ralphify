@@ -1,3 +1,7 @@
+---
+description: Ralphify release history — new features, bug fixes, and breaking changes across all versions.
+---
+
 # Changelog
 
 All notable changes to ralphify are documented here.

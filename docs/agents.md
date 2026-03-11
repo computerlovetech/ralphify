@@ -1,3 +1,7 @@
+---
+description: Configure ralphify with Claude Code, Aider, Codex CLI, or any custom agent. Includes setup guides, compatibility checklist, and wrapper script examples.
+---
+
 # Using with Different Agents
 
 Ralphify works with **any CLI that reads a prompt from stdin and exits when done**. Claude Code is the default, but you can swap in any tool that follows this contract.

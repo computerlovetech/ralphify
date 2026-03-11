@@ -1,4 +1,5 @@
 ---
+description: Ralphify is a minimal CLI harness for autonomous AI coding loops. Pipe a prompt to an AI agent, validate with checks, and repeat — with a self-healing feedback loop.
 hide:
   - toc
 ---

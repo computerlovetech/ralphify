@@ -1,3 +1,7 @@
+---
+description: Set up a ralphify development environment, run tests, understand the architecture, and submit pull requests.
+---
+
 # Contributing
 
 Ralphify is open source (MIT) and welcomes contributions. This page covers everything you need to set up a development environment, run tests, and submit changes.

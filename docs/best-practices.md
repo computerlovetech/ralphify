@@ -1,3 +1,7 @@
+---
+description: Habits and patterns for productive autonomous coding loops. Covers plan files, cost control, check ordering, failure instructions, and when to intervene.
+---
+
 # Best Practices
 
 You've set up ralphify, the loop is running, and the agent is producing work. Now what? This page covers how experienced users think about autonomous coding loops — the habits and patterns that separate productive loops from noisy ones.

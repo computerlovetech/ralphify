@@ -1,3 +1,7 @@
+---
+description: Full reference for ralphify's three primitives — checks (post-iteration validation), contexts (dynamic data injection), and instructions (reusable prompt rules).
+---
+
 # Primitives
 
 Primitives are reusable building blocks that extend your loop. They live in the `.ralph/` directory and are automatically discovered by ralphify.

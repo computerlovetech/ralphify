@@ -1,3 +1,7 @@
+---
+description: Copy-pasteable ralphify setups for Python, TypeScript, Rust, Go, bug fixing, documentation, GitHub Actions CI, and more.
+---
+
 # Cookbook
 
 Complete, copy-pasteable setups for common use cases. Each example includes the full configuration — `ralph.toml`, `PROMPT.md`, checks, and contexts — so you can get a productive loop running quickly.

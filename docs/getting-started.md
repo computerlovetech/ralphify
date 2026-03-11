@@ -1,3 +1,7 @@
+---
+description: Install ralphify, set up your first autonomous coding loop with checks and contexts, and run a self-healing AI agent in 10 minutes.
+---
+
 # Getting Started
 
 This tutorial walks through setting up ralphify on a project, adding checks and contexts, and running a productive autonomous loop. By the end, you'll have a self-healing coding loop that validates its own work.

@@ -1,3 +1,7 @@
+---
+description: Single-page cheat sheet for ralphify — all CLI commands, options, placeholder syntax, primitive formats, and key defaults.
+---
+
 # Quick Reference
 
 Everything you need to look up on one page. For detailed explanations, follow the links to the relevant guide pages.

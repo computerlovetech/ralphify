@@ -1,3 +1,7 @@
+---
+description: ralph.toml configuration format, all CLI commands (init, run, status, new), and every option with defaults and examples.
+---
+
 # Configuration & CLI Reference
 
 ## `ralph.toml`

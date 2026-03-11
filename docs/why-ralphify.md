@@ -1,3 +1,7 @@
+---
+description: Why use ralphify over a raw shell loop or other autonomous coding frameworks. Covers the self-healing feedback loop, design principles, and when ralphify is the right fit.
+---
+
 # Why Ralphify?
 
 You've used an AI coding agent. You've seen it produce useful work in a single prompt. But what happens when you want it to do *sustained* work — shipping features from a backlog, fixing bugs across a test suite, or writing documentation for an entire codebase?
