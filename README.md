@@ -73,6 +73,34 @@ ralph run -n 10    # Run 10 iterations then stop
 ralph run -p "Fix the login bug"   # Ad-hoc prompt, no PROMPT.md needed
 ```
 
+### What it looks like
+
+```
+$ ralph run -n 3 --log-dir ralph_logs
+
+── Iteration 1 ──
+✓ Iteration 1 completed (52.3s) → ralph_logs/001_20250115-142301.log
+  Checks: 2 passed
+    ✓ lint
+    ✓ tests
+
+── Iteration 2 ──
+✗ Iteration 2 failed with exit code 1 (23.1s)
+  Checks: 1 passed, 1 failed
+    ✓ lint
+    ✗ tests (exit 1)
+
+── Iteration 3 ──
+✓ Iteration 3 completed (41.7s) → ralph_logs/003_20250115-143012.log
+  Checks: 2 passed
+    ✓ lint
+    ✓ tests
+
+Done: 3 iteration(s) — 2 succeeded, 1 failed
+```
+
+Iteration 2 broke a test. Iteration 3 automatically received the failure output and fixed it — that's the self-healing loop in action.
+
 ## The technique
 
 The Ralph Wiggum technique works because:
