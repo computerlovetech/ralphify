@@ -53,6 +53,11 @@ args = ["-p", "--dangerously-skip-permissions"]
 prompt = "PROMPT.md"
 ```
 
+!!! info "What does `--dangerously-skip-permissions` do?"
+    Claude Code normally asks for your approval before running shell commands, editing files, or making git commits. The `--dangerously-skip-permissions` flag disables these interactive prompts so the agent can work autonomously without waiting for input. The `-p` flag enables non-interactive ("print") mode, which reads the prompt from stdin instead of opening a chat session.
+
+    This is safe to use when ralphify is the only thing running the agent, because **checks** act as your guardrails — they validate the agent's work after each iteration and feed failures back for the agent to fix.
+
 **`PROMPT.md`** — the prompt that gets piped to the agent each iteration. The default is a generic starting point — you'll customize it next.
 
 ## Step 3: Write your prompt

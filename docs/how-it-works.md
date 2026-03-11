@@ -280,10 +280,12 @@ When you run `ralph init`, ralphify detects your project type by looking for mar
 
 | File found | Detected type |
 |---|---|
-| `pyproject.toml` | Python |
 | `package.json` | Node.js |
+| `pyproject.toml` | Python |
 | `Cargo.toml` | Rust |
 | `go.mod` | Go |
 | None of the above | Generic |
+
+Files are checked in the order shown above. If a project contains multiple manifest files (e.g. both `package.json` and `pyproject.toml`), the first match wins.
 
 The detected type is displayed during init but doesn't currently change the generated configuration. All project types get the same default `ralph.toml` and `PROMPT.md`.
