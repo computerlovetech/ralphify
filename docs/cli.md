@@ -117,7 +117,7 @@ ralph init --force   # Overwrite existing files
 |---|---|---|---|
 | `--force` | `-f` | off | Overwrite existing `ralph.toml` and `PROMPT.md` |
 
-During init, ralphify detects your project type by looking for manifest files (`pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`). The detected type is displayed but doesn't currently change the generated configuration — all project types get the same defaults.
+During init, ralphify detects your project type by looking for manifest files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`). The detected type is displayed but doesn't currently change the generated configuration — all project types get the same defaults.
 
 ### `ralph run`
 

@@ -88,6 +88,18 @@ flowchart LR
     style I fill:#00897b,color:#fff
 ```
 
+But first — where does the prompt come from? Ralphify resolves the prompt source using a priority chain. The first match wins:
+
+| Priority | Source | How to use |
+|---|---|---|
+| 1 | `-p` flag | `ralph run -p "Fix the login bug"` — inline ad-hoc text |
+| 2 | Positional name | `ralph run docs` — looks up `.ralph/prompts/docs/PROMPT.md` |
+| 3 | `-f` / `--prompt-file` flag | `ralph run -f path/to/prompt.md` — explicit file path |
+| 4 | `ralph.toml` `prompt` field | Can be a [named prompt](primitives.md#prompts) or a file path |
+| 5 | Fallback | `PROMPT.md` in the project root |
+
+Once the prompt text is loaded, the three assembly layers run in order:
+
 ### 1. Context resolution
 
 For each enabled context, ralphify runs its command (if it has one) and combines the static content with the command output. Then it resolves placeholders in the prompt:
