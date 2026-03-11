@@ -12,6 +12,28 @@ All notable changes to ralphify are documented here.
 
 - **Named prompts** — save reusable, task-focused prompts in `.ralph/prompts/<name>/PROMPT.md` and switch between them with `ralph run <name>`. Create with `ralph new prompt <name>`, list with `ralph prompts list`. The `prompt` field in `ralph.toml` also accepts a prompt name.
 - **`--prompt-file` / `-f` flag** — point `ralph run` at any prompt file by path, overriding `ralph.toml`.
+- **Prompts tab** — the web dashboard now opens to a dedicated Prompts tab showing all named prompts as interactive cards with descriptions, content previews, edit buttons, and one-click run.
+- **Redesigned dashboard tabs** — the History tab shows rich run cards with visual pass rates and status badges. The Primitives tab has an overview dashboard with drill-down views and inline editors for creating, editing, and deleting checks, contexts, and instructions.
+- **Dashboard reads `ralph.toml`** — the UI reads `command` and `args` from your project's `ralph.toml` so it no longer hardcodes agent configuration.
+- **WebSocket event type reference** — dashboard docs now include a complete table of all event types and their data fields.
+- **Codebase migration cookbook recipe** — step-by-step guide for automating JavaScript-to-TypeScript migrations, with adaptation tips for Python 2→3, CommonJS→ESM, and more.
+
+### Fixed
+
+- `RUN_STOPPED` event now emits exactly once with the correct stop reason (`completed` vs `user_requested`) for user-requested stops.
+- Windows compatibility fix for Unicode characters in terminal output (contributed by [@mikkel-kaj](https://github.com/mikkel-kaj)).
+
+### Improved
+
+- CI now validates the docs build on pull requests, catching broken documentation before merge.
+- Dashboard prompt cards strip markdown formatting and use line-clamp for cleaner content previews.
+
+### Internal
+
+- Extracted `ConsoleEmitter` from `cli.py` into dedicated `_console_emitter.py` module.
+- Extracted scaffold templates from `cli.py` into `_templates.py`.
+- Centralized primitive marker filenames into constants in `_frontmatter.py`.
+- Major engine refactoring: extracted helper functions, reduced parameter counts, replaced untyped tuples with `NamedTuple`, and encapsulated `RunState` threading internals.
 
 ---
 
