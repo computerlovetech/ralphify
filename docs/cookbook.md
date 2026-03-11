@@ -894,7 +894,7 @@ uv run pytest --cov=src --cov-report=term-missing -q 2>/dev/null || true
 ```
 
 !!! note "Why `|| true`?"
-    Context commands that fail (non-zero exit) produce no output. Appending `|| true` ensures the coverage report is captured even when some tests are currently failing.
+    Context output is captured regardless of exit code, so `|| true` isn't strictly needed for ralphify. However, it ensures the script exits cleanly if you run it manually outside of ralphify (e.g. during debugging), and prevents errors if you later add `set -e` to the script.
 
 ### Setup commands
 
