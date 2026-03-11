@@ -115,6 +115,22 @@ Click **New Run** in the sidebar to open the run modal. It lets you:
 Once a run starts, you can **pause**, **resume**, or **stop** it from the
 sidebar or the controls bar above the Timeline.
 
+## Editing while a run is active
+
+The dashboard lets you edit primitives via the Configure tab while a run is in progress, but not all changes take effect immediately:
+
+| What you change | When it takes effect |
+|---|---|
+| `PROMPT.md` content | Next iteration — the prompt is re-read from disk every iteration |
+| Context command output | Next iteration — context commands re-run every iteration |
+| Check/context/instruction config (frontmatter, body, enable/disable) | After restart — primitive configurations are loaded once when a run starts |
+| New or deleted primitives | After restart — primitive discovery happens once at run start |
+
+To apply primitive configuration changes to a running run, **stop** the run and **start a new one**. The new run will discover the updated primitives from disk.
+
+!!! tip "Prompt edits are always live"
+    The most common adjustment — adding a constraint or changing the task in your prompt — takes effect on the very next iteration without restarting. This is the primary way to steer the agent in real time.
+
 ## Architecture
 
 The dashboard is a single-page app that talks to a FastAPI backend:

@@ -80,19 +80,23 @@ class RunState:
         self._pause_event.set()
 
     def request_stop(self) -> None:
+        """Signal the loop to stop after the current iteration."""
         self._stop_requested = True
         # Unpause so the loop can exit
         self._pause_event.set()
 
     def request_pause(self) -> None:
+        """Pause the loop between iterations until resumed."""
         self.status = RunStatus.PAUSED
         self._pause_event.clear()
 
     def request_resume(self) -> None:
+        """Resume a paused loop."""
         self.status = RunStatus.RUNNING
         self._pause_event.set()
 
     def request_reload(self) -> None:
+        """Request re-discovery of primitives before the next iteration."""
         self._reload_requested = True
 
 
