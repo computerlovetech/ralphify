@@ -17,6 +17,7 @@ All notable changes to ralphify are documented here.
 - **Dashboard reads `ralph.toml`** — the UI reads `command` and `args` from your project's `ralph.toml` so it no longer hardcodes agent configuration.
 - **Responsive dashboard** — the dashboard adapts to tablets (≤ 900px) and phones (≤ 600px) with a collapsible slide-out sidebar, tighter spacing, and adjusted modal widths.
 - **Prompt preview in New Run modal** — expand a preview panel to see the full prompt content before launching a run.
+- **Run buttons in Configure** — each prompt card in the Configure tab has a "Run" button (visible on hover, always on mobile) and the prompt editor has a "Run this prompt" header button. Both open the New Run modal with the prompt pre-selected, connecting the configure and run workflows.
 - **Command and timeout in Configure** — the Configure tab now shows editable command and timeout fields for checks and contexts, so you can see and change what each primitive runs without leaving the browser.
 - **WebSocket event type reference** — dashboard docs now include a complete table of all event types and their data fields.
 - **Codebase migration cookbook recipe** — step-by-step guide for automating JavaScript-to-TypeScript migrations, with adaptation tips for Python 2→3, CommonJS→ESM, and more.

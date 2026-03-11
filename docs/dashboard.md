@@ -115,11 +115,15 @@ Click an item to open its editor, where you can:
 </figure>
 
 The Prompts section works the same way — browse, create, edit, and delete named
-prompts without leaving the browser:
+prompts without leaving the browser. Each prompt card also has a **Run** button
+(visible on hover, always visible on mobile) that opens the New Run modal with
+that prompt pre-selected — so you can go from browsing prompts to launching a run
+in one click. The prompt editor has a **Run this prompt** button in the header
+for the same shortcut.
 
 <figure markdown="span">
   ![Prompts list in Configure](assets/dashboard/configure-prompts.png){ loading=lazy }
-  <figcaption>Drill into Prompts to browse and manage your named prompts.</figcaption>
+  <figcaption>Drill into Prompts to browse and manage your named prompts. Hover over a card to see the Run button.</figcaption>
 </figure>
 
 Changes are written directly to the `.ralph/` directory on disk.
