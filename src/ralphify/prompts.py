@@ -8,7 +8,7 @@ Prompts are reusable task-focused prompt files that users can switch between
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify._frontmatter import discover_primitives
+from ralphify._frontmatter import PROMPT_MARKER, discover_primitives
 
 
 @dataclass
@@ -38,7 +38,7 @@ def discover_prompts(root: Path = Path(".")) -> list[Prompt]:
             enabled=frontmatter.get("enabled", True),
             content=body,
         )
-        for entry, frontmatter, body in discover_primitives(root, "prompts", "PROMPT.md")
+        for entry, frontmatter, body in discover_primitives(root, "prompts", PROMPT_MARKER)
     ]
 
 

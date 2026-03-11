@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException  # ty: ignore[unresolved-import]
 
+from ralphify._frontmatter import PROMPT_MARKER
 from ralphify.engine import RunConfig
 from ralphify.manager import RunManager
 from ralphify.prompts import resolve_prompt_name
@@ -45,7 +46,7 @@ async def create_run(body: RunCreate) -> RunResponse:
             found = resolve_prompt_name(body.prompt_name, root)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-        prompt_file = str(found.path / "PROMPT.md")
+        prompt_file = str(found.path / PROMPT_MARKER)
         resolved_name = found.name
     config = RunConfig(
         command=body.command,

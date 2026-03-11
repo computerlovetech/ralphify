@@ -9,7 +9,7 @@ the body text of the INSTRUCTION.md file.
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify._frontmatter import discover_primitives
+from ralphify._frontmatter import INSTRUCTION_MARKER, discover_primitives
 from ralphify.resolver import resolve_placeholders
 
 
@@ -40,7 +40,7 @@ def discover_instructions(root: Path = Path(".")) -> list[Instruction]:
             enabled=frontmatter.get("enabled", True),
             content=body,
         )
-        for entry, frontmatter, body in discover_primitives(root, "instructions", "INSTRUCTION.md")
+        for entry, frontmatter, body in discover_primitives(root, "instructions", INSTRUCTION_MARKER)
     ]
 
 

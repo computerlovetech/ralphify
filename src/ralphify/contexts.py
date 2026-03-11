@@ -8,7 +8,7 @@ A context can run a command/script, provide static text, or both.
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify._frontmatter import discover_primitives, find_run_script
+from ralphify._frontmatter import CONTEXT_MARKER, discover_primitives, find_run_script
 from ralphify._output import truncate_output
 from ralphify._runner import run_command
 from ralphify.resolver import resolve_placeholders
@@ -50,7 +50,7 @@ class ContextResult:
 def discover_contexts(root: Path = Path(".")) -> list[Context]:
     """Discover contexts in root/.ralph/contexts/ directories."""
     contexts = []
-    for entry, frontmatter, body in discover_primitives(root, "contexts", "CONTEXT.md"):
+    for entry, frontmatter, body in discover_primitives(root, "contexts", CONTEXT_MARKER):
         contexts.append(
             Context(
                 name=entry.name,

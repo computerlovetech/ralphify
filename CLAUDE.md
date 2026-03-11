@@ -40,7 +40,7 @@ Tests are in `tests/` with one file per module. Docs are in `docs/` using MkDocs
 
 ## Traps
 
-- Primitive marker filenames (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are hardcoded in each module's `discover_*()` function AND in scaffold templates in `_templates.py`. Change one → update both.
+- Primitive marker filenames (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are defined as constants in `_frontmatter.py` (`CHECK_MARKER`, `CONTEXT_MARKER`, etc.). All modules import from there — change the constant to rename everywhere.
 - `timeout` and `enabled` frontmatter fields have special type coercion in `_frontmatter.py:parse_frontmatter()`. New typed fields need coercion logic added there.
 - Both contexts and instructions share `resolver.py:resolve_placeholders()`. Changes affect both.
 - Output is truncated to 5000 chars in `_output.py`. This is intentional.

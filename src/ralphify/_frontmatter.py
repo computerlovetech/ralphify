@@ -13,6 +13,14 @@ from collections.abc import Iterator
 from pathlib import Path
 
 
+# Single source of truth for primitive marker filenames.
+# Every module that needs a marker name should import from here.
+CHECK_MARKER = "CHECK.md"
+CONTEXT_MARKER = "CONTEXT.md"
+INSTRUCTION_MARKER = "INSTRUCTION.md"
+PROMPT_MARKER = "PROMPT.md"
+
+
 def parse_frontmatter(text: str) -> tuple[dict, str]:
     """Parse a markdown file with optional YAML-like frontmatter.
 

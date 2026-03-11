@@ -16,6 +16,7 @@ from rich.console import Console
 
 from ralphify import __version__
 from ralphify._events import Event, EventType
+from ralphify._frontmatter import CHECK_MARKER, CONTEXT_MARKER, INSTRUCTION_MARKER, PROMPT_MARKER
 from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
 from ralphify.engine import RunConfig, RunState, _format_duration, run_loop
@@ -202,7 +203,7 @@ def check(
     name: str = typer.Argument(help="Name of the new check."),
 ) -> None:
     """Create a new check. Checks are scripts that run after each iteration to validate the agent's work (e.g. tests, linters)."""
-    _scaffold_primitive("checks", name, "CHECK.md", CHECK_MD_TEMPLATE)
+    _scaffold_primitive("checks", name, CHECK_MARKER, CHECK_MD_TEMPLATE)
 
 
 @new_app.command()
@@ -210,7 +211,7 @@ def instruction(
     name: str = typer.Argument(help="Name of the new instruction."),
 ) -> None:
     """Create a new instruction. Instructions are template-based prompts injected into the agent's context each iteration."""
-    _scaffold_primitive("instructions", name, "INSTRUCTION.md", INSTRUCTION_MD_TEMPLATE)
+    _scaffold_primitive("instructions", name, INSTRUCTION_MARKER, INSTRUCTION_MD_TEMPLATE)
 
 
 @new_app.command()
@@ -218,7 +219,7 @@ def context(
     name: str = typer.Argument(help="Name of the new context."),
 ) -> None:
     """Create a new context. Contexts are dynamic data sources (scripts or static text) injected before each iteration."""
-    _scaffold_primitive("contexts", name, "CONTEXT.md", CONTEXT_MD_TEMPLATE)
+    _scaffold_primitive("contexts", name, CONTEXT_MARKER, CONTEXT_MD_TEMPLATE)
 
 
 @new_app.command()
@@ -226,7 +227,7 @@ def prompt(
     name: str = typer.Argument(help="Name of the new prompt."),
 ) -> None:
     """Create a new prompt. Prompts are reusable task-focused prompt files you can switch between."""
-    _scaffold_primitive("prompts", name, "PROMPT.md", PROMPT_MD_TEMPLATE)
+    _scaffold_primitive("prompts", name, PROMPT_MARKER, PROMPT_MD_TEMPLATE)
 
 
 @app.command()
@@ -405,7 +406,7 @@ def run(
         except ValueError as e:
             rprint(f"[red]{e}[/red]")
             raise typer.Exit(1)
-        prompt_file_path = str(found.path / "PROMPT.md")
+        prompt_file_path = str(found.path / PROMPT_MARKER)
         resolved_prompt_name = found.name
     elif prompt_file:
         prompt_file_path = prompt_file
@@ -416,7 +417,7 @@ def run(
             # Try as a prompt name first, fall back to file path
             try:
                 found = resolve_prompt_name(toml_prompt)
-                prompt_file_path = str(found.path / "PROMPT.md")
+                prompt_file_path = str(found.path / PROMPT_MARKER)
                 resolved_prompt_name = found.name
             except ValueError:
                 prompt_file_path = toml_prompt

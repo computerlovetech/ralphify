@@ -10,7 +10,7 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
-from ralphify._frontmatter import discover_primitives, find_run_script
+from ralphify._frontmatter import CHECK_MARKER, discover_primitives, find_run_script
 from ralphify._output import truncate_output
 from ralphify._runner import run_command
 
@@ -55,7 +55,7 @@ def discover_checks(root: Path = Path(".")) -> list[Check]:
     are skipped with a warning.  Defaults: ``timeout=60``, ``enabled=True``.
     """
     checks = []
-    for entry, frontmatter, body in discover_primitives(root, "checks", "CHECK.md"):
+    for entry, frontmatter, body in discover_primitives(root, "checks", CHECK_MARKER):
         script = find_run_script(entry)
         command = frontmatter.get("command")
 

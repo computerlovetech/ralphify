@@ -7,7 +7,14 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException  # ty: ignore[unresolved-import]
 
-from ralphify._frontmatter import parse_frontmatter, serialize_frontmatter
+from ralphify._frontmatter import (
+    CHECK_MARKER,
+    CONTEXT_MARKER,
+    INSTRUCTION_MARKER,
+    PROMPT_MARKER,
+    parse_frontmatter,
+    serialize_frontmatter,
+)
 from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
 from ralphify.instructions import discover_instructions
@@ -18,10 +25,10 @@ router = APIRouter()
 
 # Mapping from kind to (discover function, marker filename)
 _KIND_MAP = {
-    "checks": (discover_checks, "CHECK.md"),
-    "contexts": (discover_contexts, "CONTEXT.md"),
-    "instructions": (discover_instructions, "INSTRUCTION.md"),
-    "prompts": (discover_prompts, "PROMPT.md"),
+    "checks": (discover_checks, CHECK_MARKER),
+    "contexts": (discover_contexts, CONTEXT_MARKER),
+    "instructions": (discover_instructions, INSTRUCTION_MARKER),
+    "prompts": (discover_prompts, PROMPT_MARKER),
 }
 
 
