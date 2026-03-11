@@ -202,7 +202,7 @@ body {
   flex-shrink: 0;
 }
 
-.run-badge.running { background: var(--green); box-shadow: 0 0 6px rgba(74, 222, 128, 0.5); }
+.run-badge.running { background: var(--green); box-shadow: 0 0 6px rgba(74, 222, 128, 0.5); animation: pulse 1.5s infinite; }
 .run-badge.paused { background: var(--yellow); }
 .run-badge.stopped, .run-badge.completed { background: var(--text-muted); }
 .run-badge.failed { background: var(--red); }

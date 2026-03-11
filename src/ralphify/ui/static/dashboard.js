@@ -558,7 +558,7 @@ function RunOverview({ run }) {
         ? (run.lastError || (total > 0 ? `Run failed after ${total} iterations.` : 'Run failed.'))
     : run.status === 'completed'
         ? `Run completed with ${passRate}% pass rate across ${total} iterations.`
-        : `Run ${run.status}. ${total} iterations completed.`;
+        : `Run ${run.status}. ${run.iteration || total} iteration${(run.iteration || total) !== 1 ? 's' : ''} ran.`;
 
   return html`
     <div class="run-overview">
