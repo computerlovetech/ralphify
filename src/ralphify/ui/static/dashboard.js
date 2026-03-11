@@ -19,8 +19,14 @@ const wsConnected = signal(false);
 const showNewRunModal = signal(false);
 const preSelectedPrompt = signal(null);
 const activeTab = signal('runs');  // runs | configure | history
+const toastMessage = signal(null);  // { text, type: 'error' | 'info' }
 
 const activeRun = computed(() => runs.value.find(r => r.run_id === activeRunId.value));
+
+function showToast(text, type = 'error') {
+  toastMessage.value = { text, type };
+  globalThis.setTimeout(() => { toastMessage.value = null; }, 4000);
+}
 
 // ── WebSocket ──────────────────────────────────────────────────────
 
@@ -34,6 +40,8 @@ function connectWs() {
   ws.onopen = () => {
     wsConnected.value = true;
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    // Re-fetch runs on reconnect to restore any state missed while disconnected
+    loadRuns();
   };
 
   ws.onclose = () => {
@@ -58,7 +66,10 @@ function handleEvent(event) {
 
   if (type === 'run_started') {
     const existing = runs.value.find(r => r.run_id === run_id);
-    if (!existing) {
+    if (existing) {
+      // Merge extra data (prompt_name, check counts, etc.) from the event
+      updateRun(run_id, { status: 'running', ...data });
+    } else {
       runs.value = [...runs.value, {
         run_id,
         status: 'running',
@@ -159,21 +170,45 @@ async function api(method, path, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`/api${path}`, opts);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    let detail = `Request failed (${res.status})`;
+    try { const err = await res.json(); if (err.detail) detail = err.detail; } catch {}
+    throw new Error(detail);
+  }
   if (res.status === 204) return null;
   return res.json();
 }
 
 async function createRun(config) {
-  const run = await api('POST', '/runs', config);
-  showNewRunModal.value = false;
-  activeRunId.value = run.run_id;
-  activeTab.value = 'runs';
+  try {
+    const run = await api('POST', '/runs', config);
+    // Add run to state immediately so UI doesn't flash empty state
+    // while waiting for the run_started WebSocket event.
+    const existing = runs.value.find(r => r.run_id === run.run_id);
+    if (!existing) {
+      runs.value = [...runs.value, { ...run, status: run.status || 'running' }];
+    }
+    showNewRunModal.value = false;
+    activeRunId.value = run.run_id;
+    activeTab.value = 'runs';
+  } catch (e) {
+    showToast(e.message);
+    throw e;
+  }
 }
 
-async function pauseRun(run_id) { await api('POST', `/runs/${run_id}/pause`); }
-async function resumeRun(run_id) { await api('POST', `/runs/${run_id}/resume`); }
-async function stopRun(run_id) { await api('POST', `/runs/${run_id}/stop`); }
+async function pauseRun(run_id) {
+  try { await api('POST', `/runs/${run_id}/pause`); }
+  catch (e) { showToast(e.message); }
+}
+async function resumeRun(run_id) {
+  try { await api('POST', `/runs/${run_id}/resume`); }
+  catch (e) { showToast(e.message); }
+}
+async function stopRun(run_id) {
+  try { await api('POST', `/runs/${run_id}/stop`); }
+  catch (e) { showToast(e.message); }
+}
 
 function startRunWithPrompt(name) {
   preSelectedPrompt.value = name;
@@ -200,6 +235,20 @@ function App() {
     <${Sidebar} />
     <${Main} />
     ${showNewRunModal.value && html`<${NewRunModal} />`}
+    ${toastMessage.value && html`<${Toast} ...${toastMessage.value} />`}
+  `;
+}
+
+function Toast({ text, type }) {
+  return html`
+    <div class="toast toast-${type}" onClick=${() => toastMessage.value = null}>
+      ${type === 'error' && html`
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+        </svg>
+      `}
+      ${text}
+    </div>
   `;
 }
 
@@ -1134,6 +1183,7 @@ function NewRunModal() {
   const [prompts, setPrompts] = useState([]);
   const [promptsLoaded, setPromptsLoaded] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     preSelectedPrompt.value = null;
@@ -1163,7 +1213,9 @@ function NewRunModal() {
 
   const canSubmit = promptMode === 'named' ? !!selectedPrompt : adhocText.trim().length > 0;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     const body = {
       prompt_name: selectedPrompt || null,
       prompt_text: promptMode === 'adhoc' ? adhocText : null,
@@ -1172,7 +1224,11 @@ function NewRunModal() {
       timeout: timeout ? parseFloat(timeout) : null,
       stop_on_error: stopOnError,
     };
-    createRun(body);
+    try {
+      await createRun(body);
+    } catch {
+      setSubmitting(false);
+    }
   };
 
   const hasPrompts = promptsLoaded && prompts.length > 0;
@@ -1303,12 +1359,17 @@ function NewRunModal() {
         `}
 
         <div class="modal-actions">
-          <button class="btn" onClick=${() => showNewRunModal.value = false}>Cancel</button>
-          <button class="btn btn-primary" disabled=${!canSubmit} onClick=${handleSubmit}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-            Start Run
+          <button class="btn" onClick=${() => showNewRunModal.value = false} disabled=${submitting}>Cancel</button>
+          <button class="btn btn-primary" disabled=${!canSubmit || submitting} onClick=${handleSubmit}>
+            ${submitting ? html`
+              <div class="btn-spinner"></div>
+              Starting...
+            ` : html`
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              Start Run
+            `}
           </button>
         </div>
       </div>

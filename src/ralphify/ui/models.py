@@ -31,6 +31,7 @@ class RunResponse(BaseModel):
     completed: int
     failed: int
     timed_out: int
+    prompt_name: str | None = None
 
 
 class IterationResponse(BaseModel):

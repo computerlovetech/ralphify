@@ -56,6 +56,7 @@ def _run_response(managed: ManagedRun) -> RunResponse:
         completed=managed.state.completed,
         failed=managed.state.failed,
         timed_out=managed.state.timed_out,
+        prompt_name=managed.config.prompt_name,
     )
 
 
