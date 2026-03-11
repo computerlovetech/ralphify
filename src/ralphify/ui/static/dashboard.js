@@ -149,6 +149,16 @@ function handleEvent(event) {
                  : data.reason === 'error' ? 'failed'
                  : 'stopped';
     updateRun(run_id, { status, ...data });
+    // Mark any in-progress iterations as crashed/stopped
+    if (status !== 'completed') {
+      const runIters = iterations.value[run_id] || [];
+      const updated = runIters.map(it =>
+        it.status === 'running' ? { ...it, status: status === 'failed' ? 'failure' : 'stopped' } : it
+      );
+      if (updated !== runIters) {
+        iterations.value = { ...iterations.value, [run_id]: updated };
+      }
+    }
     if (data.reason === 'error') {
       showToast('Run failed — check the timeline for details.', 'error');
     }
@@ -649,16 +659,19 @@ function Timeline({ iterations: iters, selectedIteration, run }) {
 function IterationPanel({ iteration: it }) {
   const statusClass = it.status === 'success' ? 'success' :
                       it.status === 'failure' ? 'failure' :
-                      it.status === 'timeout' ? 'timeout' : '';
+                      it.status === 'timeout' ? 'timeout' :
+                      it.status === 'stopped' ? 'failure' : '';
 
   const statusLabel = it.status === 'success' ? 'Passed' :
                       it.status === 'failure' ? 'Failed' :
                       it.status === 'timeout' ? 'Timed out' :
+                      it.status === 'stopped' ? 'Stopped' :
                       it.status === 'running' ? 'Running' : it.status;
 
   const statusIcon = it.status === 'success' ? '\u2713' :
                      it.status === 'failure' ? '\u2717' :
-                     it.status === 'timeout' ? '\u23f1' : '\u2022';
+                     it.status === 'timeout' ? '\u23f1' :
+                     it.status === 'stopped' ? '\u25a0' : '\u2022';
 
   const passedCount = it.checks ? it.checks.filter(c => c.passed).length : 0;
   const totalChecks = it.checks ? it.checks.length : 0;
