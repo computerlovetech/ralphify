@@ -2,7 +2,7 @@
 
 Project context for Claude Code when working on this repository.
 
-For full architecture details, see `agent_docs/CODEBASE_MAP.md`.
+For full architecture details, see `docs/contributing/codebase-map.md`.
 
 ## What this is
 

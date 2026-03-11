@@ -98,5 +98,7 @@ nav:
   - Help:
     - FAQ: faq.md
     - Troubleshooting: troubleshooting.md
-    - Contributing: contributing.md
     - Changelog: changelog.md
+  - Contributing:
+    - Overview: contributing/index.md
+    - Codebase Map: contributing/codebase-map.md

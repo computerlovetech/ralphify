@@ -6,6 +6,8 @@ description: Set up a ralphify development environment, run tests, understand th
 
 Ralphify is open source (MIT) and welcomes contributions. This page covers everything you need to set up a development environment, run tests, and submit changes.
 
+For architecture details and codebase orientation, see the [Codebase Map](codebase-map.md).
+
 ## Development setup
 
 Clone the repository and install dependencies with [uv](https://docs.astral.sh/uv/):
@@ -90,75 +92,17 @@ docs/
 ├── quick-reference.md    # Single-page lookup of all commands and syntax
 ├── primitives.md         # Checks, contexts, instructions reference
 ├── cli.md                # Configuration and CLI reference
+├── dashboard.md          # Web dashboard guide
 ├── faq.md                # Common questions
 ├── troubleshooting.md    # Debugging guide
-├── contributing.md       # This page
+├── contributing/         # Contributor docs (this section)
+│   ├── index.md          # This page
+│   └── codebase-map.md   # Architecture and module guide
 ├── changelog.md          # Version history
 └── assets/               # Images
 ```
 
 Navigation is configured in `mkdocs.yml`. If you add a new page, add it to the `nav` section there.
-
-## Project architecture
-
-All source code lives in `src/ralphify/`. Here's how the pieces fit together:
-
-```
-src/ralphify/
-├── __init__.py         # Version detection + entry point
-├── cli.py              # CLI commands (init, run, status, new, prompts) — delegates to engine
-├── engine.py           # Core run loop with structured event emission
-├── manager.py          # Multi-run orchestration for the UI layer
-├── checks.py           # Check discovery, execution, failure formatting
-├── contexts.py         # Context discovery, execution, prompt injection
-├── instructions.py     # Instruction discovery and prompt injection
-├── prompts.py          # Named prompt discovery and resolution
-├── resolver.py         # Shared template placeholder resolution
-├── detector.py         # Project type auto-detection
-├── _runner.py          # Shell command execution with timeout
-├── _frontmatter.py     # YAML frontmatter parsing and primitive discovery
-├── _events.py          # Event types and emitter protocol
-└── _output.py          # Output combining and truncation
-```
-
-**Key entry points:**
-
-- **`engine.py`** contains the core run loop (`run_loop()`). It accepts a `RunConfig`, `RunState`, and `EventEmitter`, making it reusable from both CLI and UI.
-- **`cli.py`** has all CLI commands and scaffold templates. The `run()` command resolves the prompt and delegates to `engine.run_loop()`.
-- **`_frontmatter.py`** handles primitive discovery — scanning `.ralph/` directories for marker files and parsing their frontmatter.
-- **`resolver.py`** handles template placeholder resolution (`{{ contexts.name }}`, `{{ instructions }}`), shared by both contexts and instructions.
-
-### How the loop works
-
-```
-ralph run
-  ├── cli.py:run() — parse options, resolve prompt, print banner
-  │   ├── Load config from ralph.toml
-  │   ├── Resolve prompt via priority chain (--prompt > name > --prompt-file > toml > root)
-  │   └── Build RunConfig and call engine.run_loop()
-  │
-  └── engine.py:run_loop(config, state, emitter)
-       ├── Discover checks, contexts, instructions from .ralph/
-       └── Loop:
-            ├── Read PROMPT.md from disk (or use ad-hoc text)
-            ├── Run context commands → resolve {{ contexts.* }} placeholders
-            ├── Resolve {{ instructions.* }} placeholders
-            ├── Append check failures from previous iteration
-            ├── Pipe assembled prompt to agent via subprocess stdin
-            ├── Emit structured events for each step
-            ├── Run checks → store failures for next iteration
-            └── Repeat
-```
-
-### Things to know before making changes
-
-**Primitive marker filenames** (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are defined as constants in `_frontmatter.py` (`CHECK_MARKER`, `CONTEXT_MARKER`, `INSTRUCTION_MARKER`, `PROMPT_MARKER`). All modules import from there — change the constant to rename everywhere.
-
-**Frontmatter field types** — the `timeout` and `enabled` fields get special type coercion in `_frontmatter.py:parse_frontmatter()`. Adding a new typed field requires updating the coercion logic there.
-
-**Placeholder resolution** — both contexts and instructions use the same `resolver.py:resolve_placeholders()` function. Changes here affect both.
-
-**Output truncation** — `_output.py:truncate_output()` caps check and context output at 5,000 characters. This is intentional to prevent context window bloat.
 
 ## Submitting changes
 
