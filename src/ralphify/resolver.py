@@ -29,12 +29,10 @@ def resolve_placeholders(
     named_pattern = re.compile(r"\{\{\s*" + re.escape(kind) + r"\.([a-zA-Z0-9_-]+)\s*\}\}")
     bulk_pattern = re.compile(r"\{\{\s*" + re.escape(kind) + r"\s*\}\}")
 
+    has_named = bool(named_pattern.search(prompt))
     placed: set[str] = set()
-    has_named = False
 
     def _replace_named(match: re.Match) -> str:
-        nonlocal has_named
-        has_named = True
         name = match.group(1)
         if name in available:
             placed.add(name)
@@ -43,14 +41,12 @@ def resolve_placeholders(
 
     result = named_pattern.sub(_replace_named, prompt)
 
-    has_bulk = bulk_pattern.search(result) is not None
-
     remaining = [content for name, content in sorted(available.items()) if name not in placed]
     bulk_text = "\n\n".join(remaining)
 
-    if has_bulk:
+    if bulk_pattern.search(result):
         result = bulk_pattern.sub(bulk_text, result)
-    elif not has_named and not has_bulk:
+    elif not has_named:
         # No placeholders found at all -> append
         if bulk_text:
             result = result + "\n\n" + bulk_text
