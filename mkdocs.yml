@@ -69,6 +69,9 @@ plugins:
       separator: '[\s\-\.]+'
       lang: en
 
+extra_css:
+  - stylesheets/extra.css
+
 extra:
   social:
     - icon: fontawesome/brands/github
