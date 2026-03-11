@@ -25,7 +25,7 @@ async def _drain_events(manager: RunManager) -> None:
     """
     while True:
         for managed in manager.list_runs():
-            while not managed.emitter.queue.empty():
+            while True:
                 try:
                     event: Event = managed.emitter.queue.get_nowait()
                 except Empty:

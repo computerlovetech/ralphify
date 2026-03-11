@@ -15,6 +15,13 @@ from rich.console import Console
 from ralphify._events import Event, EventType
 from ralphify._output import format_duration
 
+# Status icons shared by iteration and check result rendering.
+_ICON_SUCCESS = "\u2713"  # ✓
+_ICON_FAILURE = "\u2717"  # ✗
+_ICON_TIMEOUT = "\u23f1"  # ⏱
+_ICON_ARROW = "\u2192"    # →
+_ICON_DASH = "\u2014"     # —
+
 
 class ConsoleEmitter:
     """Renders engine events to the Rich console, reproducing original CLI output."""
@@ -54,15 +61,15 @@ class ConsoleEmitter:
     def _on_iteration_ended(self, data: dict) -> None:
         returncode = data.get("returncode")
         if returncode is None:
-            color, icon = "yellow", "\u23f1"
+            color, icon = "yellow", _ICON_TIMEOUT
         elif returncode == 0:
-            color, icon = "green", "\u2713"
+            color, icon = "green", _ICON_SUCCESS
         else:
-            color, icon = "red", "\u2717"
+            color, icon = "red", _ICON_FAILURE
 
         status_msg = f"[{color}]{icon} Iteration {data['iteration']} {data['detail']}"
         if data.get("log_file"):
-            status_msg += f" \u2192 {data['log_file']}"
+            status_msg += f" {_ICON_ARROW} {data['log_file']}"
         status_msg += f"[/{color}]"
         self._rprint(status_msg)
 
@@ -75,11 +82,11 @@ class ConsoleEmitter:
         self._rprint(f"  [bold]Checks:[/bold] {', '.join(parts)}")
         for r in data["results"]:
             if r["passed"]:
-                self._rprint(f"    [green]\u2713[/green] {r['name']}")
+                self._rprint(f"    [green]{_ICON_SUCCESS}[/green] {r['name']}")
             elif r["timed_out"]:
-                self._rprint(f"    [yellow]\u23f1[/yellow] {r['name']} (timed out)")
+                self._rprint(f"    [yellow]{_ICON_TIMEOUT}[/yellow] {r['name']} (timed out)")
             else:
-                self._rprint(f"    [red]\u2717[/red] {r['name']} (exit {r['exit_code']})")
+                self._rprint(f"    [red]{_ICON_FAILURE}[/red] {r['name']} (exit {r['exit_code']})")
 
     def _on_log_message(self, data: dict) -> None:
         msg = data.get("message", "")
@@ -98,7 +105,7 @@ class ConsoleEmitter:
             completed = data.get("completed", 0)
             failed = data.get("failed", 0)
             timed_out_count = data.get("timed_out", 0)
-            summary = f"\n[green]Done: {total} iteration(s) \u2014 {completed} succeeded"
+            summary = f"\n[green]Done: {total} iteration(s) {_ICON_DASH} {completed} succeeded"
             if failed:
                 summary += f", {failed} failed"
             if timed_out_count:
