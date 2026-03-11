@@ -32,6 +32,10 @@ from ralphify._templates import (
     RALPH_TOML_TEMPLATE,
 )
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 _console = Console(highlight=False)
 rprint = _console.print
 
