@@ -100,6 +100,13 @@ ls ralph_logs/
 cat ralph_logs/001_*.log
 ```
 
+!!! tip "Add `ralph_logs/` to `.gitignore`"
+    Log files are useful for debugging but shouldn't be committed. Add them to your `.gitignore`:
+
+    ```bash
+    echo "ralph_logs/" >> .gitignore
+    ```
+
 If the agent produced useful work, you're ready to add guardrails.
 
 ## Step 5: Add a test check

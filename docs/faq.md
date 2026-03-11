@@ -119,6 +119,23 @@ Each loop operates independently with its own prompt and checks.
 
 ## Configuration
 
+### What files should I commit?
+
+Ralphify creates several files and directories. Here's what belongs in version control and what doesn't:
+
+| File / directory | Commit? | Why |
+|---|---|---|
+| `ralph.toml` | **Yes** | Loop configuration — shared across your team |
+| `PROMPT.md` | **Yes** | The prompt is the core of your loop |
+| `.ralph/` | **Yes** | Checks, contexts, and instructions — project config your team should share |
+| `ralph_logs/` | **No** | Iteration output logs — large, machine-specific, regenerated every run |
+
+Add `ralph_logs/` to your `.gitignore`:
+
+```bash
+echo "ralph_logs/" >> .gitignore
+```
+
 ### Should I commit the `.ralph/` directory?
 
 Yes. It contains your checks, contexts, and instructions — this is project configuration that your team should share:
