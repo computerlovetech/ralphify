@@ -685,6 +685,153 @@ body {
   gap: 6px;
 }
 
+/* ── Compact Run Overview ─────────────────────────────────────────── */
+
+.run-overview-compact {
+  margin-bottom: 16px;
+}
+
+.run-overview-compact-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+}
+
+.run-overview-compact-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.run-overview-compact-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.run-overview-compact-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.run-overview-compact-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.run-overview-compact-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.run-overview-compact-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.compact-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.compact-stat-value.green { color: #16a34a; }
+.compact-stat-value.red { color: #dc2626; }
+.compact-stat-value.yellow { color: #d97706; }
+.compact-stat-value.primary { color: var(--primary); }
+
+.compact-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.run-overview-compact-rate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+  margin-left: 2px;
+}
+
+.compact-rate-bar {
+  width: 48px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.compact-rate-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.compact-rate-pct {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  min-width: 32px;
+}
+
+.run-overview-compact-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.btn-icon:hover {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.settings-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
 /* ── Run Settings (mid-run) ──────────────────────────────────────── */
 
 .run-settings-toggle {
@@ -706,8 +853,10 @@ body {
 }
 
 .run-settings-panel {
-  padding: 0 24px 16px;
+  padding: 0 20px 16px;
   animation: slideDown 0.15s ease;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
 }
 
 @keyframes slideDown {
@@ -2809,31 +2958,16 @@ body {
     padding: 0 16px;
   }
 
-  .run-overview-body {
-    padding: 16px;
-    gap: 20px;
+  .run-overview-compact-row {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
   }
 
-  .run-progress-ring {
-    width: 80px;
-    height: 80px;
-  }
-
-  .run-progress-ring svg {
-    width: 80px;
-    height: 80px;
-  }
-
-  .run-progress-pct {
-    font-size: 18px;
-  }
-
-  .run-stats-grid {
-    gap: 16px;
-  }
-
-  .run-stat-value {
-    font-size: 22px;
+  .run-overview-compact-stats {
+    margin-left: 0;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .prim-overview-grid {
@@ -2950,69 +3084,33 @@ body {
     padding: 12px;
   }
 
-  /* Run overview */
-  .run-overview-header {
-    padding: 14px 16px;
-    flex-wrap: wrap;
+  /* Run overview compact - mobile */
+  .run-overview-compact-row {
+    padding: 10px 12px;
     gap: 8px;
   }
 
-  .run-overview-header h2 {
-    font-size: 16px;
-  }
-
-  .run-overview-body {
-    flex-direction: column;
-    align-items: center;
-    padding: 16px;
-    gap: 16px;
-  }
-
-  .run-progress-ring {
-    width: 72px;
-    height: 72px;
-  }
-
-  .run-progress-ring svg {
-    width: 72px;
-    height: 72px;
-  }
-
-  .run-progress-pct {
-    font-size: 16px;
-  }
-
-  .run-progress-sub {
-    font-size: 10px;
-  }
-
-  .run-stats-grid {
-    width: 100%;
-    justify-content: center;
-    gap: 20px;
+  .run-overview-compact-left {
     flex-wrap: wrap;
+    gap: 6px;
   }
 
-  .run-stat {
-    align-items: center;
-    min-width: 60px;
+  .run-overview-compact-title {
+    font-size: 14px;
   }
 
-  .run-stat-value {
-    font-size: 20px;
+  .run-overview-compact-stats {
+    gap: 8px;
+    width: 100%;
+    justify-content: flex-start;
   }
 
-  .run-stat-label {
-    font-size: 11px;
+  .compact-stat-value {
+    font-size: 14px;
   }
 
-  .run-overview-hint {
-    font-size: 12px;
-    padding: 10px 16px;
-  }
-
-  .run-overview-actions {
-    padding: 12px 16px;
+  .run-overview-compact-rate {
+    margin-left: auto;
   }
 
   .history-run-again-btn {

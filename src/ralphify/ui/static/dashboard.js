@@ -711,29 +711,8 @@ function RunOverview({ run }) {
   const timedOut = run.timed_out || 0;
   const failedOnly = run.failed - timedOut;
 
-  // SVG ring calculations
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-  const passOffset = total > 0 ? circumference * (1 - run.completed / total) : circumference;
-  const failOffset = total > 0 ? circumference * (1 - run.failed / total) : circumference;
-
-  // Hint text based on run state
-  const isRunning = run.status === 'running';
-  const isHealthy = run.failed === 0 || passRate >= 80;
-  const iterWord = (n) => n === 1 ? 'iteration' : 'iterations';
-  const hint = isRunning
-    ? (isHealthy
-        ? 'All looking good — your agent is making progress.'
-        : `Pass rate is ${passRate}%. Check the health sparklines below for stuck checks.`)
-    : run.status === 'failed'
-        ? (run.lastError || (total > 0 ? `Run failed after ${total} ${iterWord(total)}.` : 'Run failed.'))
-    : run.status === 'completed'
-        ? (passRate === 0 && total > 0
-            ? `Run completed but all ${total} ${iterWord(total)} failed. Check iteration details below.`
-            : `Run completed with ${passRate}% pass rate across ${total} ${iterWord(total)}.`)
-        : `Run ${run.status}. ${run.iteration || total} ${iterWord(run.iteration || total)} ran.`;
-
   const isActive = ['running', 'paused', 'pending'].includes(run.status);
+  const isFinished = ['completed', 'stopped', 'failed'].includes(run.status);
 
   // Live elapsed time for active runs
   const [elapsed, setElapsed] = useState(formatElapsed(run.started_at));
@@ -743,10 +722,8 @@ function RunOverview({ run }) {
     return () => clearInterval(timer);
   }, [isActive, run.started_at]);
 
-  // For finished runs, show total duration if we have both timestamps
-  const duration = !isActive && run.started_at && run.stopped_at
-    ? formatElapsed(run.started_at)  // stopped_at - started_at would be better, but this shows total from start
-    : null;
+  // Expandable details
+  const [showDetails, setShowDetails] = useState(false);
 
   // Mid-run settings
   const [showRunSettings, setShowRunSettings] = useState(false);
@@ -763,6 +740,7 @@ function RunOverview({ run }) {
     setSTimeout(run.timeout != null ? String(run.timeout) : '');
     setSStopOnError(run.stop_on_error || false);
     setShowRunSettings(false);
+    setShowDetails(false);
   }, [run.run_id]);
 
   const settingsChanged = (sMaxIter !== (run.max_iterations != null ? String(run.max_iterations) : ''))
@@ -783,126 +761,98 @@ function RunOverview({ run }) {
     setSSaving(false);
   }
 
+  // Compact pass rate bar color
+  const rateColor = passRate >= 80 ? 'var(--green)' : passRate >= 50 ? 'var(--yellow)' : total > 0 ? 'var(--red)' : 'var(--border)';
+
   return html`
-    <div class="run-overview">
-      <div class="run-overview-header">
-        <div class="run-overview-title">
-          <h2>${run.prompt_name || 'Ad-hoc run'}</h2>
+    <div class="run-overview run-overview-compact">
+      <div class="run-overview-compact-row">
+        <div class="run-overview-compact-left">
+          <h2 class="run-overview-compact-title">${run.prompt_name || 'Ad-hoc run'}</h2>
           <span class="run-status-badge ${run.status}">${run.status}</span>
-        </div>
-        <div class="run-overview-meta">
-          <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted)">${run.run_id.length > 8 ? run.run_id.slice(0, 8) : run.run_id}</span>
+          <span class="run-overview-compact-id">${run.run_id.length > 8 ? run.run_id.slice(0, 8) : run.run_id}</span>
           ${run.started_at && html`
-            <span class="run-overview-time">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-              </svg>
+            <span class="run-overview-compact-time">
               ${isActive
-                ? html`<span>Running for <strong>${elapsed}</strong></span>`
+                ? html`<span>${elapsed}</span>`
                 : html`<span title=${formatDateTime(run.started_at)}>${formatTimeAgo(run.started_at)}</span>`
               }
             </span>
           `}
         </div>
-      </div>
-      <div class="run-overview-body">
-        <div class="run-progress-ring">
-          <svg width="96" height="96" viewBox="0 0 96 96">
-            <circle class="ring-bg" cx="48" cy="48" r="${radius}" />
-            <circle class="ring-pass" cx="48" cy="48" r="${radius}"
-                    stroke-dasharray="${circumference}"
-                    stroke-dashoffset="${passOffset}" />
-          </svg>
-          <div class="run-progress-label">
-            <span class="run-progress-pct">${total > 0 ? `${passRate}%` : '—'}</span>
-            <span class="run-progress-sub">pass rate</span>
+        <div class="run-overview-compact-stats">
+          <div class="run-overview-compact-stat">
+            <span class="compact-stat-value primary">${run.iteration || 0}</span>
+            <span class="compact-stat-label">iter</span>
           </div>
-        </div>
-        <div class="run-stats-grid">
-          <div class="run-stat">
-            <span class="run-stat-value primary">${run.iteration || 0}</span>
-            <span class="run-stat-label">Iterations</span>
+          <div class="run-overview-compact-stat">
+            <span class="compact-stat-value green">${run.completed}</span>
+            <span class="compact-stat-label">pass</span>
           </div>
-          <div class="run-stat">
-            <span class="run-stat-value green">${run.completed}</span>
-            <span class="run-stat-label">Passed</span>
+          <div class="run-overview-compact-stat">
+            <span class="compact-stat-value red">${run.failed}</span>
+            <span class="compact-stat-label">fail</span>
           </div>
-          <div class="run-stat">
-            <span class="run-stat-value red">${failedOnly > 0 ? failedOnly : 0}</span>
-            <span class="run-stat-label">Failed</span>
-          </div>
-          <div class="run-stat">
-            <span class="run-stat-value yellow">${timedOut}</span>
-            <span class="run-stat-label">Timed Out</span>
-          </div>
-        </div>
-      </div>
-      <div class="run-overview-hint">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 16v-4"/>
-          <path d="M12 8h.01"/>
-        </svg>
-        ${hint}
-      </div>
-      ${isActive && html`
-        <div class="run-settings-toggle" onClick=${() => setShowRunSettings(!showRunSettings)}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-               style="transform: rotate(${showRunSettings ? '90deg' : '0deg'}); transition: transform 0.15s ease">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
-          Run Settings
-          ${settingsChanged && html`<span class="settings-badge">modified</span>`}
-        </div>
-        ${showRunSettings && html`
-          <div class="run-settings-panel">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Max iterations</label>
-                <input class="form-input" type="number" value=${sMaxIter}
-                       onInput=${(e) => setSMaxIter(e.target.value)} placeholder="unlimited" min="1" />
+          ${total > 0 && html`
+            <div class="run-overview-compact-rate" title="${passRate}% pass rate">
+              <div class="compact-rate-bar">
+                <div class="compact-rate-bar-fill" style="width: ${passRate}%; background: ${rateColor}"></div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Delay (s)</label>
-                <input class="form-input" type="number" value=${sDelay}
-                       onInput=${(e) => setSDelay(e.target.value)} placeholder="0" min="0" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Timeout (s)</label>
-                <input class="form-input" type="number" value=${sTimeout}
-                       onInput=${(e) => setSTimeout(e.target.value)} placeholder="none" min="1" />
-              </div>
+              <span class="compact-rate-pct" style="color: ${rateColor}">${passRate}%</span>
             </div>
-            <div class="run-settings-footer">
-              <label class="checkbox-row">
-                <input type="checkbox" checked=${sStopOnError}
-                       onChange=${(e) => setSStopOnError(e.target.checked)} />
-                <span>Stop on first error</span>
-              </label>
-              <button class="btn btn-primary btn-sm" onClick=${handleApplySettings} disabled=${!settingsChanged || sSaving}>
-                ${sSaving ? 'Applying...' : 'Apply'}
-              </button>
+          `}
+        </div>
+        <div class="run-overview-compact-actions">
+          ${isFinished && html`
+            <button class="btn btn-sm btn-primary" onClick=${() => {
+              if (run.prompt_name) { startRunWithPrompt(run.prompt_name); }
+              else { showNewRunModal.value = true; }
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+              </svg>
+              Run Again
+            </button>
+          `}
+          ${isActive && html`
+            <button class="btn btn-sm btn-icon" onClick=${() => { setShowDetails(!showDetails); setShowRunSettings(false); }} title="Run settings">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              ${settingsChanged && html`<span class="settings-dot"></span>`}
+            </button>
+          `}
+        </div>
+      </div>
+      ${showDetails && isActive && html`
+        <div class="run-settings-panel">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Max iterations</label>
+              <input class="form-input" type="number" value=${sMaxIter}
+                     onInput=${(e) => setSMaxIter(e.target.value)} placeholder="unlimited" min="1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Delay (s)</label>
+              <input class="form-input" type="number" value=${sDelay}
+                     onInput=${(e) => setSDelay(e.target.value)} placeholder="0" min="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Timeout (s)</label>
+              <input class="form-input" type="number" value=${sTimeout}
+                     onInput=${(e) => setSTimeout(e.target.value)} placeholder="none" min="1" />
             </div>
           </div>
-        `}
-      `}
-      ${['completed', 'stopped', 'failed'].includes(run.status) && html`
-        <div class="run-overview-actions">
-          <button class="btn btn-primary" onClick=${() => {
-            if (run.prompt_name) {
-              startRunWithPrompt(run.prompt_name);
-            } else {
-              showNewRunModal.value = true;
-            }
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-            </svg>
-            Run Again
-          </button>
+          <div class="run-settings-footer">
+            <label class="checkbox-row">
+              <input type="checkbox" checked=${sStopOnError}
+                     onChange=${(e) => setSStopOnError(e.target.checked)} />
+              <span>Stop on first error</span>
+            </label>
+            <button class="btn btn-primary btn-sm" onClick=${handleApplySettings} disabled=${!settingsChanged || sSaving}>
+              ${sSaving ? 'Applying...' : 'Apply'}
+            </button>
+          </div>
         </div>
       `}
     </div>
