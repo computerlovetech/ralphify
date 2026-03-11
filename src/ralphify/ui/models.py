@@ -33,6 +33,10 @@ class RunResponse(BaseModel):
     timed_out: int
     prompt_name: str | None = None
     started_at: str | None = None
+    max_iterations: int | None = None
+    delay: float = 0
+    timeout: float | None = None
+    stop_on_error: bool = False
 
 
 class PrimitiveResponse(BaseModel):

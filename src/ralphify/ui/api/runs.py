@@ -57,6 +57,10 @@ def _run_response(managed: ManagedRun) -> RunResponse:
         timed_out=managed.state.timed_out,
         prompt_name=managed.config.prompt_name,
         started_at=started_at,
+        max_iterations=managed.config.max_iterations,
+        delay=managed.config.delay,
+        timeout=managed.config.timeout,
+        stop_on_error=managed.config.stop_on_error,
     )
 
 

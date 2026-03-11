@@ -288,6 +288,16 @@ async function stopRun(run_id) {
   catch (e) { showToast(e.message); }
 }
 
+async function updateRunSettings(run_id, settings) {
+  try {
+    const data = await api('PATCH', `/runs/${run_id}/settings`, settings);
+    updateRun(run_id, data);
+    showToast('Settings updated', 'success');
+  } catch (e) {
+    showToast(e.message);
+  }
+}
+
 function startRunWithPrompt(name) {
   preSelectedPrompt.value = name;
   showNewRunModal.value = true;
@@ -661,6 +671,41 @@ function RunOverview({ run }) {
     ? formatElapsed(run.started_at)  // stopped_at - started_at would be better, but this shows total from start
     : null;
 
+  // Mid-run settings
+  const [showRunSettings, setShowRunSettings] = useState(false);
+  const [sMaxIter, setSMaxIter] = useState(run.max_iterations != null ? String(run.max_iterations) : '');
+  const [sDelay, setSDelay] = useState(run.delay != null ? String(run.delay) : '0');
+  const [sTimeout, setSTimeout] = useState(run.timeout != null ? String(run.timeout) : '');
+  const [sStopOnError, setSStopOnError] = useState(run.stop_on_error || false);
+  const [sSaving, setSSaving] = useState(false);
+
+  // Sync settings when switching runs
+  useEffect(() => {
+    setSMaxIter(run.max_iterations != null ? String(run.max_iterations) : '');
+    setSDelay(run.delay != null ? String(run.delay) : '0');
+    setSTimeout(run.timeout != null ? String(run.timeout) : '');
+    setSStopOnError(run.stop_on_error || false);
+    setShowRunSettings(false);
+  }, [run.run_id]);
+
+  const settingsChanged = (sMaxIter !== (run.max_iterations != null ? String(run.max_iterations) : ''))
+    || (sDelay !== (run.delay != null ? String(run.delay) : '0'))
+    || (sTimeout !== (run.timeout != null ? String(run.timeout) : ''))
+    || (sStopOnError !== (run.stop_on_error || false));
+
+  async function handleApplySettings() {
+    setSSaving(true);
+    const settings = {};
+    if (sMaxIter.trim()) settings.max_iterations = parseInt(sMaxIter);
+    else settings.max_iterations = null;
+    settings.delay = sDelay.trim() ? parseFloat(sDelay) : 0;
+    if (sTimeout.trim()) settings.timeout = parseFloat(sTimeout);
+    else settings.timeout = null;
+    settings.stop_on_error = sStopOnError;
+    await updateRunSettings(run.run_id, settings);
+    setSSaving(false);
+  }
+
   return html`
     <div class="run-overview">
       <div class="run-overview-header">
@@ -723,6 +768,50 @@ function RunOverview({ run }) {
         </svg>
         ${hint}
       </div>
+      ${isActive && html`
+        <div class="run-settings-toggle" onClick=${() => setShowRunSettings(!showRunSettings)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+               style="transform: rotate(${showRunSettings ? '90deg' : '0deg'}); transition: transform 0.15s ease">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Run Settings
+          ${settingsChanged && html`<span class="settings-badge">modified</span>`}
+        </div>
+        ${showRunSettings && html`
+          <div class="run-settings-panel">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Max iterations</label>
+                <input class="form-input" type="number" value=${sMaxIter}
+                       onInput=${(e) => setSMaxIter(e.target.value)} placeholder="unlimited" min="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Delay (s)</label>
+                <input class="form-input" type="number" value=${sDelay}
+                       onInput=${(e) => setSDelay(e.target.value)} placeholder="0" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Timeout (s)</label>
+                <input class="form-input" type="number" value=${sTimeout}
+                       onInput=${(e) => setSTimeout(e.target.value)} placeholder="none" min="1" />
+              </div>
+            </div>
+            <div class="run-settings-footer">
+              <label class="checkbox-row">
+                <input type="checkbox" checked=${sStopOnError}
+                       onChange=${(e) => setSStopOnError(e.target.checked)} />
+                <span>Stop on first error</span>
+              </label>
+              <button class="btn btn-primary btn-sm" onClick=${handleApplySettings} disabled=${!settingsChanged || sSaving}>
+                ${sSaving ? 'Applying...' : 'Apply'}
+              </button>
+            </div>
+          </div>
+        `}
+      `}
       ${['completed', 'stopped', 'failed'].includes(run.status) && html`
         <div class="run-overview-actions">
           <button class="btn btn-primary" onClick=${() => {

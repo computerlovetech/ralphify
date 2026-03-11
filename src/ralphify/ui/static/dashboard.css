@@ -671,6 +671,49 @@ body {
   gap: 6px;
 }
 
+/* ── Run Settings (mid-run) ──────────────────────────────────────── */
+
+.run-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+  user-select: none;
+  border-top: 1px solid var(--border);
+}
+
+.run-settings-toggle:hover {
+  color: var(--text);
+}
+
+.run-settings-panel {
+  padding: 0 24px 16px;
+  animation: slideDown 0.15s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.run-settings-panel .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.run-settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* ── Timeline ────────────────────────────────────────────────────── */
 
 .timeline {
