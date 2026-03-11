@@ -1211,65 +1211,304 @@ body {
   margin-top: 24px;
 }
 
-/* ── Prompt picker ──────────────────────────────────────────────── */
+/* ── Redesigned New Run Modal ───────────────────────────────────── */
 
-.prompt-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
+.modal-new-run {
+  width: 540px;
+  padding: 0;
 }
 
-.prompt-chip {
+.modal-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px 0;
+}
+
+.modal-header-row .modal-title {
+  margin-bottom: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.modal-close:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.modal-section {
+  padding: 0 28px;
+}
+
+.modal-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 20px 0 12px;
+}
+
+.modal-section-label svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.prompt-loading {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 12px 0;
+}
+
+.prompt-card-grid {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  padding: 8px 14px;
+  gap: 8px;
+}
+
+.prompt-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
   background: var(--bg);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   font-family: var(--font-sans);
-  font-size: 13px;
   text-align: left;
+  width: 100%;
 }
 
-.prompt-chip:hover {
+.prompt-card:hover {
   border-color: var(--primary-border);
   background: var(--primary-light);
+  box-shadow: var(--shadow-sm);
 }
 
-.prompt-chip.selected {
+.prompt-card.selected {
   border-color: var(--primary);
   background: var(--primary-light);
   box-shadow: 0 0 0 3px rgba(109, 74, 232, 0.1);
 }
 
-.prompt-chip-name {
+.prompt-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.prompt-card.selected .prompt-card-icon {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.prompt-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.prompt-card-name {
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.prompt-chip-desc {
-  font-size: 11px;
+.prompt-card-desc {
+  font-size: 12px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.prompt-selected-note {
+.prompt-card-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prompt-empty-hint {
   font-size: 13px;
   color: var(--text-secondary);
-  padding: 8px 12px;
+  padding: 16px;
+  background: var(--bg);
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  line-height: 1.6;
+}
+
+.prompt-empty-hint code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--primary);
+}
+
+.modal-divider {
+  display: flex;
+  align-items: center;
+  padding: 16px 28px;
+  gap: 16px;
+}
+
+.modal-divider::before,
+.modal-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.modal-divider-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.modal-divider-text:hover {
+  color: var(--primary);
+}
+
+.adhoc-textarea {
+  width: 100%;
+  min-height: 100px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 14px 16px;
+  resize: vertical;
+  line-height: 1.6;
+  transition: all 0.15s ease;
+}
+
+.adhoc-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.adhoc-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.prompt-selected-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 10px 14px;
   background: var(--primary-light);
-  border-radius: var(--radius);
+  border-radius: 8px;
   border: 1px solid var(--primary-border);
 }
 
-.prompt-selected-note strong {
+.prompt-selected-banner svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.prompt-selected-banner strong {
   color: var(--primary);
   font-family: var(--font-mono);
   font-size: 12px;
+}
+
+.modal-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 28px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.modal-settings-toggle:hover {
+  color: var(--text);
+}
+
+.settings-badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.modal-settings {
+  padding: 0 28px 8px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.checkbox-row input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.modal-new-run .modal-actions {
+  padding: 16px 28px 24px;
+  margin-top: 0;
+  border-top: 1px solid var(--border);
 }
 
 .run-prompt-tag {

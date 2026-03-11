@@ -699,23 +699,19 @@ function HistoryView() {
 // ── New Run Modal ──────────────────────────────────────────────────
 
 function NewRunModal() {
-  const [config, setConfig] = useState({
-    command: 'claude',
-    args: ['-p', '--dangerously-skip-permissions'],
-    prompt_file: 'PROMPT.md',
-    prompt_text: '',
-    prompt_name: null,
-    max_iterations: '',
-    delay: '0',
-    timeout: '',
-    stop_on_error: false,
-    project_dir: '.',
-  });
+  const [promptMode, setPromptMode] = useState('named'); // 'named' | 'adhoc'
+  const [selectedPrompt, setSelectedPrompt] = useState(null);
+  const [adhocText, setAdhocText] = useState('');
+  const [maxIterations, setMaxIterations] = useState('');
+  const [delay, setDelay] = useState('0');
+  const [timeout, setTimeout] = useState('');
+  const [stopOnError, setStopOnError] = useState(false);
   const [prompts, setPrompts] = useState([]);
   const [promptsLoaded, setPromptsLoaded] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
-    const projectDir = btoa(config.project_dir);
+    const projectDir = btoa('.');
     api('GET', `/projects/${projectDir}/primitives`)
       .then(data => {
         const found = (data || []).filter(p => p.kind === 'prompts' && p.enabled);
@@ -725,98 +721,173 @@ function NewRunModal() {
       .catch(() => setPromptsLoaded(true));
   }, []);
 
-  const updateField = (field) => (e) => {
-    setConfig({ ...config, [field]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
-  };
-
   const selectPrompt = (name) => {
-    if (config.prompt_name === name) {
-      // Deselect — go back to default prompt file
-      setConfig({ ...config, prompt_name: null, prompt_file: 'PROMPT.md' });
+    if (selectedPrompt === name) {
+      setSelectedPrompt(null);
     } else {
-      setConfig({ ...config, prompt_name: name, prompt_file: '' });
+      setSelectedPrompt(name);
+      setPromptMode('named');
     }
   };
 
+  const switchToAdhoc = () => {
+    setPromptMode('adhoc');
+    setSelectedPrompt(null);
+  };
+
+  const canSubmit = promptMode === 'named' ? !!selectedPrompt : adhocText.trim().length > 0;
+
   const handleSubmit = () => {
     const body = {
-      command: config.command,
-      args: config.args,
-      prompt_file: config.prompt_name ? '' : config.prompt_file,
-      prompt_name: config.prompt_name || null,
-      prompt_text: config.prompt_text || null,
-      max_iterations: config.max_iterations ? parseInt(config.max_iterations) : null,
-      delay: parseFloat(config.delay) || 0,
-      timeout: config.timeout ? parseFloat(config.timeout) : null,
-      stop_on_error: config.stop_on_error,
-      project_dir: config.project_dir,
+      command: 'claude',
+      args: ['-p', '--dangerously-skip-permissions'],
+      prompt_file: selectedPrompt ? '' : 'PROMPT.md',
+      prompt_name: selectedPrompt || null,
+      prompt_text: promptMode === 'adhoc' ? adhocText : null,
+      max_iterations: maxIterations ? parseInt(maxIterations) : null,
+      delay: parseFloat(delay) || 0,
+      timeout: timeout ? parseFloat(timeout) : null,
+      stop_on_error: stopOnError,
+      project_dir: '.',
     };
     createRun(body);
   };
 
+  const hasPrompts = promptsLoaded && prompts.length > 0;
+
   return html`
     <div class="modal-overlay" onClick=${(e) => { if (e.target === e.currentTarget) showNewRunModal.value = false; }}>
-      <div class="modal">
-        <div class="modal-title">New Run</div>
-        <div class="form-group">
-          <label class="form-label">Command</label>
-          <input class="form-input mono" value=${config.command} onInput=${updateField('command')} />
+      <div class="modal modal-new-run">
+        <div class="modal-header-row">
+          <div class="modal-title">Start a New Run</div>
+          <button class="modal-close" onClick=${() => showNewRunModal.value = false}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M18 6L6 18"/><path d="M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
-        <div class="form-group">
-          <label class="form-label">Prompt</label>
-          ${promptsLoaded && prompts.length > 0 && html`
-            <div class="prompt-picker">
+
+        <div class="modal-section">
+          <div class="modal-section-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Choose a prompt
+          </div>
+
+          ${!promptsLoaded && html`
+            <div class="prompt-loading">Loading prompts...</div>
+          `}
+
+          ${hasPrompts && html`
+            <div class="prompt-card-grid">
               ${prompts.map(p => html`
                 <button key=${p.name}
-                        class="prompt-chip ${config.prompt_name === p.name ? 'selected' : ''}"
-                        onClick=${() => selectPrompt(p.name)}
-                        title=${p.description || p.name}>
-                  <span class="prompt-chip-name">${p.name}</span>
-                  ${p.description && html`<span class="prompt-chip-desc">${p.description}</span>`}
+                        class="prompt-card ${selectedPrompt === p.name ? 'selected' : ''}"
+                        onClick=${() => selectPrompt(p.name)}>
+                  <div class="prompt-card-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                  </div>
+                  <div class="prompt-card-body">
+                    <span class="prompt-card-name">${p.name}</span>
+                    ${(p.frontmatter?.description || p.description) && html`
+                      <span class="prompt-card-desc">${p.frontmatter?.description || p.description}</span>
+                    `}
+                  </div>
+                  ${selectedPrompt === p.name && html`
+                    <div class="prompt-card-check">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                  `}
                 </button>
               `)}
             </div>
           `}
-          ${!config.prompt_name && html`
-            <input class="form-input mono" value=${config.prompt_file}
-                   onInput=${updateField('prompt_file')}
-                   placeholder="PROMPT.md" />
-          `}
-          ${config.prompt_name && html`
-            <div class="prompt-selected-note">
-              Using prompt: <strong>${config.prompt_name}</strong>
+
+          ${promptsLoaded && prompts.length === 0 && promptMode === 'named' && html`
+            <div class="prompt-empty-hint">
+              No saved prompts yet. Write an ad-hoc prompt below, or create prompts in <code>.ralph/prompts/</code>.
             </div>
           `}
         </div>
-        <div class="form-group">
-          <label class="form-label">Project Directory</label>
-          <input class="form-input mono" value=${config.project_dir} onInput=${updateField('project_dir')} />
+
+        <div class="modal-divider">
+          <span class="modal-divider-text" onClick=${switchToAdhoc}>or write an ad-hoc prompt</span>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Max Iterations</label>
-            <input class="form-input" type="number" value=${config.max_iterations}
-                   onInput=${updateField('max_iterations')} placeholder="unlimited" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Delay (s)</label>
-            <input class="form-input" type="number" value=${config.delay}
-                   onInput=${updateField('delay')} />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Timeout (s)</label>
-            <input class="form-input" type="number" value=${config.timeout}
-                   onInput=${updateField('timeout')} placeholder="none" />
-          </div>
+
+        <div class="modal-section">
+          ${promptMode === 'adhoc' && html`
+            <textarea class="adhoc-textarea"
+                      value=${adhocText}
+                      onInput=${(e) => setAdhocText(e.target.value)}
+                      placeholder="Describe what you want the agent to do..."
+                      rows="4"></textarea>
+          `}
+          ${promptMode === 'named' && selectedPrompt && html`
+            <div class="prompt-selected-banner">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Using prompt: <strong>${selectedPrompt}</strong>
+            </div>
+          `}
         </div>
-        <div class="form-group" style="display: flex; align-items: center; gap: 8px">
-          <input type="checkbox" checked=${config.stop_on_error}
-                 onChange=${updateField('stop_on_error')} />
-          <label class="form-label" style="margin: 0">Stop on error</label>
+
+        <div class="modal-settings-toggle" onClick=${() => setShowSettings(!showSettings)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+               style="transform: rotate(${showSettings ? '90deg' : '0deg'}); transition: transform 0.15s ease">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          Settings
+          ${(maxIterations || timeout || delay !== '0' || stopOnError) && html`
+            <span class="settings-badge">customised</span>
+          `}
         </div>
+
+        ${showSettings && html`
+          <div class="modal-settings">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Iterations</label>
+                <input class="form-input" type="number" value=${maxIterations}
+                       onInput=${(e) => setMaxIterations(e.target.value)} placeholder="unlimited" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Delay (s)</label>
+                <input class="form-input" type="number" value=${delay}
+                       onInput=${(e) => setDelay(e.target.value)} />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Timeout (s)</label>
+                <input class="form-input" type="number" value=${timeout}
+                       onInput=${(e) => setTimeout(e.target.value)} placeholder="none" />
+              </div>
+            </div>
+            <label class="checkbox-row">
+              <input type="checkbox" checked=${stopOnError}
+                     onChange=${(e) => setStopOnError(e.target.checked)} />
+              <span>Stop on first error</span>
+            </label>
+          </div>
+        `}
+
         <div class="modal-actions">
           <button class="btn" onClick=${() => showNewRunModal.value = false}>Cancel</button>
-          <button class="btn btn-primary" onClick=${handleSubmit}>Start Run</button>
+          <button class="btn btn-primary" disabled=${!canSubmit} onClick=${handleSubmit}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            Start Run
+          </button>
         </div>
       </div>
     </div>
