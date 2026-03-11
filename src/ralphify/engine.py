@@ -136,6 +136,198 @@ def _discover_enabled_primitives(
     return enabled_checks, enabled_contexts, enabled_instructions
 
 
+def _wait_for_resume(state: RunState, emitter: EventEmitter) -> bool:
+    """Block until the run is resumed or a stop is requested.
+
+    Returns ``True`` if the run should continue, ``False`` if a stop was
+    requested while paused.
+    """
+    emitter.emit(Event(
+        type=EventType.RUN_PAUSED,
+        run_id=state.run_id,
+    ))
+    while not state._pause_event.wait(timeout=0.25):
+        if state._stop_requested:
+            break
+    if state._stop_requested:
+        state.status = RunStatus.STOPPED
+        emitter.emit(Event(
+            type=EventType.RUN_STOPPED,
+            run_id=state.run_id,
+            data={"reason": "user_requested"},
+        ))
+        return False
+    emitter.emit(Event(
+        type=EventType.RUN_RESUMED,
+        run_id=state.run_id,
+    ))
+    return True
+
+
+def _assemble_prompt(
+    config: RunConfig,
+    prompt_path: Path,
+    enabled_contexts: list,
+    enabled_instructions: list,
+    check_failures_text: str,
+    iteration: int,
+    state: RunState,
+    emitter: EventEmitter,
+) -> str:
+    """Build the full prompt for one iteration.
+
+    Reads the prompt source, resolves contexts and instructions, and
+    appends any check-failure feedback from the previous iteration.
+    """
+    if config.prompt_text:
+        prompt = config.prompt_text
+    else:
+        raw = prompt_path.read_text()
+        _, prompt = parse_frontmatter(raw)
+    if enabled_contexts:
+        context_results = run_all_contexts(enabled_contexts, config.project_root)
+        prompt = resolve_contexts(prompt, context_results)
+        emitter.emit(Event(
+            type=EventType.CONTEXTS_RESOLVED,
+            run_id=state.run_id,
+            data={"iteration": iteration, "count": len(enabled_contexts)},
+        ))
+    if enabled_instructions:
+        prompt = resolve_instructions(prompt, enabled_instructions)
+    if check_failures_text:
+        prompt = prompt + "\n\n" + check_failures_text
+
+    emitter.emit(Event(
+        type=EventType.PROMPT_ASSEMBLED,
+        run_id=state.run_id,
+        data={"iteration": iteration, "prompt_length": len(prompt)},
+    ))
+    return prompt
+
+
+def _execute_agent(
+    cmd: list[str],
+    prompt: str,
+    config: RunConfig,
+    state: RunState,
+    iteration: int,
+    log_path_dir: Path | None,
+    emitter: EventEmitter,
+) -> int | None:
+    """Run the agent subprocess and emit the result event.
+
+    Updates ``state`` counters (completed / failed / timed_out) and returns
+    the process return code, or ``None`` if the process timed out.
+    """
+    start = time.monotonic()
+    log_file: Path | None = None
+    returncode: int | None = None
+
+    try:
+        result = subprocess.run(
+            cmd,
+            input=prompt,
+            text=True,
+            timeout=config.timeout,
+            capture_output=bool(log_path_dir),
+        )
+        if log_path_dir:
+            log_file = _write_log(log_path_dir, iteration, result.stdout, result.stderr)
+            if result.stdout:
+                sys.stdout.write(result.stdout)
+            if result.stderr:
+                sys.stderr.write(result.stderr)
+        returncode = result.returncode
+    except subprocess.TimeoutExpired as e:
+        state.timed_out += 1
+        state.failed += 1
+        if log_path_dir:
+            log_file = _write_log(log_path_dir, iteration, e.stdout, e.stderr)
+
+    elapsed = time.monotonic() - start
+    duration = _format_duration(elapsed)
+
+    if returncode is None:
+        event_type = EventType.ITERATION_TIMED_OUT
+        state_detail = f"timed out after {duration}"
+    elif returncode == 0:
+        state.completed += 1
+        event_type = EventType.ITERATION_COMPLETED
+        state_detail = f"completed ({duration})"
+    else:
+        state.failed += 1
+        event_type = EventType.ITERATION_FAILED
+        state_detail = f"failed with exit code {returncode} ({duration})"
+
+    emitter.emit(Event(
+        type=event_type,
+        run_id=state.run_id,
+        data={
+            "iteration": iteration,
+            "returncode": returncode,
+            "duration": elapsed,
+            "duration_formatted": duration,
+            "detail": state_detail,
+            "log_file": str(log_file) if log_file else None,
+        },
+    ))
+    return returncode
+
+
+def _run_checks_phase(
+    enabled_checks: list,
+    project_root: Path,
+    state: RunState,
+    iteration: int,
+    emitter: EventEmitter,
+) -> str:
+    """Execute all checks, emit per-check and summary events.
+
+    Returns the formatted check-failure text to feed back into the next
+    iteration's prompt (empty string when all checks pass).
+    """
+    emitter.emit(Event(
+        type=EventType.CHECKS_STARTED,
+        run_id=state.run_id,
+        data={"iteration": iteration, "count": len(enabled_checks)},
+    ))
+
+    check_results = run_all_checks(enabled_checks, project_root)
+
+    for cr in check_results:
+        emitter.emit(Event(
+            type=EventType.CHECK_PASSED if cr.passed else EventType.CHECK_FAILED,
+            run_id=state.run_id,
+            data={
+                "iteration": iteration,
+                "check_name": cr.check.name,
+                "exit_code": cr.exit_code,
+                "timed_out": cr.timed_out,
+            },
+        ))
+
+    emitter.emit(Event(
+        type=EventType.CHECKS_COMPLETED,
+        run_id=state.run_id,
+        data={
+            "iteration": iteration,
+            "passed": sum(1 for r in check_results if r.passed),
+            "failed": sum(1 for r in check_results if not r.passed),
+            "results": [
+                {
+                    "name": r.check.name,
+                    "passed": r.passed,
+                    "exit_code": r.exit_code,
+                    "timed_out": r.timed_out,
+                }
+                for r in check_results
+            ],
+        },
+    ))
+
+    return format_check_failures(check_results)
+
+
 def run_loop(
     config: RunConfig,
     state: RunState,
@@ -181,7 +373,6 @@ def run_loop(
 
     try:
         while True:
-            # Check stop
             if state._stop_requested:
                 state.status = RunStatus.STOPPED
                 emitter.emit(Event(
@@ -191,29 +382,11 @@ def run_loop(
                 ))
                 break
 
-            # Check pause — block until resumed or stopped
             if not state._pause_event.is_set():
-                emitter.emit(Event(
-                    type=EventType.RUN_PAUSED,
-                    run_id=state.run_id,
-                ))
-                while not state._pause_event.wait(timeout=0.25):
-                    if state._stop_requested:
-                        break
-                if state._stop_requested:
-                    state.status = RunStatus.STOPPED
-                    emitter.emit(Event(
-                        type=EventType.RUN_STOPPED,
-                        run_id=state.run_id,
-                        data={"reason": "user_requested"},
-                    ))
+                if not _wait_for_resume(state, emitter):
                     break
-                emitter.emit(Event(
-                    type=EventType.RUN_RESUMED,
-                    run_id=state.run_id,
-                ))
 
-            # Check hot-reload
+            # Hot-reload primitives if requested mid-run
             if state._reload_requested:
                 state._reload_requested = False
                 enabled_checks, enabled_contexts, enabled_instructions = (
@@ -241,84 +414,14 @@ def run_loop(
                 data={"iteration": iteration},
             ))
 
-            # Assemble prompt
-            if config.prompt_text:
-                prompt = config.prompt_text
-            else:
-                raw = prompt_path.read_text()
-                _, prompt = parse_frontmatter(raw)
-            if enabled_contexts:
-                context_results = run_all_contexts(enabled_contexts, config.project_root)
-                prompt = resolve_contexts(prompt, context_results)
-                emitter.emit(Event(
-                    type=EventType.CONTEXTS_RESOLVED,
-                    run_id=state.run_id,
-                    data={"iteration": iteration, "count": len(enabled_contexts)},
-                ))
-            if enabled_instructions:
-                prompt = resolve_instructions(prompt, enabled_instructions)
-            if check_failures_text:
-                prompt = prompt + "\n\n" + check_failures_text
+            prompt = _assemble_prompt(
+                config, prompt_path, enabled_contexts, enabled_instructions,
+                check_failures_text, iteration, state, emitter,
+            )
 
-            emitter.emit(Event(
-                type=EventType.PROMPT_ASSEMBLED,
-                run_id=state.run_id,
-                data={"iteration": iteration, "prompt_length": len(prompt)},
-            ))
-
-            # Run agent
-            start = time.monotonic()
-            log_file: Path | None = None
-            returncode: int | None = None
-
-            try:
-                result = subprocess.run(
-                    cmd,
-                    input=prompt,
-                    text=True,
-                    timeout=config.timeout,
-                    capture_output=bool(log_path_dir),
-                )
-                if log_path_dir:
-                    log_file = _write_log(log_path_dir, iteration, result.stdout, result.stderr)
-                    if result.stdout:
-                        sys.stdout.write(result.stdout)
-                    if result.stderr:
-                        sys.stderr.write(result.stderr)
-                returncode = result.returncode
-            except subprocess.TimeoutExpired as e:
-                state.timed_out += 1
-                state.failed += 1
-                if log_path_dir:
-                    log_file = _write_log(log_path_dir, iteration, e.stdout, e.stderr)
-
-            elapsed = time.monotonic() - start
-            duration = _format_duration(elapsed)
-
-            if returncode is None:
-                event_type = EventType.ITERATION_TIMED_OUT
-                state_detail = f"timed out after {duration}"
-            elif returncode == 0:
-                state.completed += 1
-                event_type = EventType.ITERATION_COMPLETED
-                state_detail = f"completed ({duration})"
-            else:
-                state.failed += 1
-                event_type = EventType.ITERATION_FAILED
-                state_detail = f"failed with exit code {returncode} ({duration})"
-
-            emitter.emit(Event(
-                type=event_type,
-                run_id=state.run_id,
-                data={
-                    "iteration": iteration,
-                    "returncode": returncode,
-                    "duration": elapsed,
-                    "duration_formatted": duration,
-                    "detail": state_detail,
-                    "log_file": str(log_file) if log_file else None,
-                },
-            ))
+            returncode = _execute_agent(
+                cmd, prompt, config, state, iteration, log_path_dir, emitter,
+            )
 
             if returncode != 0 and config.stop_on_error:
                 emitter.emit(Event(
@@ -328,50 +431,12 @@ def run_loop(
                 ))
                 break
 
-            # Run checks
             if enabled_checks:
-                emitter.emit(Event(
-                    type=EventType.CHECKS_STARTED,
-                    run_id=state.run_id,
-                    data={"iteration": iteration, "count": len(enabled_checks)},
-                ))
+                check_failures_text = _run_checks_phase(
+                    enabled_checks, config.project_root, state, iteration, emitter,
+                )
 
-                check_results = run_all_checks(enabled_checks, config.project_root)
-
-                for cr in check_results:
-                    emitter.emit(Event(
-                        type=EventType.CHECK_PASSED if cr.passed else EventType.CHECK_FAILED,
-                        run_id=state.run_id,
-                        data={
-                            "iteration": iteration,
-                            "check_name": cr.check.name,
-                            "exit_code": cr.exit_code,
-                            "timed_out": cr.timed_out,
-                        },
-                    ))
-
-                emitter.emit(Event(
-                    type=EventType.CHECKS_COMPLETED,
-                    run_id=state.run_id,
-                    data={
-                        "iteration": iteration,
-                        "passed": sum(1 for r in check_results if r.passed),
-                        "failed": sum(1 for r in check_results if not r.passed),
-                        "results": [
-                            {
-                                "name": r.check.name,
-                                "passed": r.passed,
-                                "exit_code": r.exit_code,
-                                "timed_out": r.timed_out,
-                            }
-                            for r in check_results
-                        ],
-                    },
-                ))
-
-                check_failures_text = format_check_failures(check_results)
-
-            # Delay
+            # Delay between iterations
             if config.delay > 0 and (
                 config.max_iterations is None or iteration < config.max_iterations
             ):
