@@ -360,10 +360,10 @@ Events are JSON objects with this shape:
 
 ```json
 {
-  "type": "iteration_start",
+  "type": "iteration_started",
   "run_id": "a1b2c3d4",
   "timestamp": "2026-03-11T14:23:01.123456",
-  "data": { }
+  "data": { "iteration": 1 }
 }
 ```
 
@@ -375,3 +375,55 @@ ws.send(JSON.stringify({ "action": "subscribe", "run_id": "a1b2c3d4" }));
 
 Send `{"action": "subscribe", "run_id": "*"}` to receive events from all runs
 (this is the default on connect).
+
+To unsubscribe from a specific run:
+
+```javascript
+ws.send(JSON.stringify({ "action": "unsubscribe", "run_id": "a1b2c3d4" }));
+```
+
+#### Event types
+
+Every event has `type`, `run_id`, `timestamp`, and `data`. The table below lists all event types and their `data` fields.
+
+**Run lifecycle**
+
+| Event type | When | Data fields |
+|---|---|---|
+| `run_started` | Run begins | `checks`, `contexts`, `instructions` (int counts), `max_iterations`, `timeout`, `delay`, `prompt_name` |
+| `run_stopped` | Run ends for any reason | `reason` (`"completed"`, `"user_requested"`), `total`, `completed`, `failed`, `timed_out` |
+| `run_paused` | Run is paused | — |
+| `run_resumed` | Run is resumed | — |
+
+**Iteration lifecycle**
+
+| Event type | When | Data fields |
+|---|---|---|
+| `iteration_started` | Iteration begins | `iteration` |
+| `iteration_completed` | Agent exits with code 0 | `iteration`, `returncode`, `duration` (seconds), `duration_formatted`, `detail`, `log_file` |
+| `iteration_failed` | Agent exits non-zero | `iteration`, `returncode`, `duration`, `duration_formatted`, `detail`, `log_file` |
+| `iteration_timed_out` | Agent exceeds timeout | `iteration`, `returncode` (null), `duration`, `duration_formatted`, `detail`, `log_file` |
+
+**Checks**
+
+| Event type | When | Data fields |
+|---|---|---|
+| `checks_started` | Check phase begins | `iteration`, `count` |
+| `check_passed` | A single check passes | `iteration`, `check_name`, `exit_code`, `timed_out` |
+| `check_failed` | A single check fails | `iteration`, `check_name`, `exit_code`, `timed_out` |
+| `checks_completed` | All checks finish | `iteration`, `passed`, `failed`, `results` (array of `{name, passed, exit_code, timed_out}`) |
+
+**Prompt assembly**
+
+| Event type | When | Data fields |
+|---|---|---|
+| `contexts_resolved` | Contexts injected into prompt | `iteration`, `count` |
+| `prompt_assembled` | Full prompt built | `iteration`, `prompt_length` |
+
+**Other**
+
+| Event type | When | Data fields |
+|---|---|---|
+| `primitives_reloaded` | Primitives re-discovered mid-run | `checks`, `contexts`, `instructions` (int counts) |
+| `settings_changed` | Reserved for future use | — |
+| `log_message` | General log from the engine | `message`, `level` (`"info"`, `"error"`) |
