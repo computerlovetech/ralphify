@@ -26,8 +26,10 @@ theme:
   features:
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
     - navigation.instant
     - navigation.tracking
+    - navigation.sections
     - navigation.top
     - navigation.footer
     - search.suggest
@@ -60,11 +62,14 @@ extra:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - How It Works: how-it-works.md
-  - Writing Your Prompt: prompts.md
-  - Cookbook: cookbook.md
-  - Primitives: primitives.md
-  - Configuration & CLI: cli.md
-  - FAQ: faq.md
-  - Troubleshooting: troubleshooting.md
+  - Guide:
+    - Getting Started: getting-started.md
+    - How It Works: how-it-works.md
+    - Writing Your Prompt: prompts.md
+    - Cookbook: cookbook.md
+  - Reference:
+    - Primitives: primitives.md
+    - Configuration & CLI: cli.md
+  - Help:
+    - FAQ: faq.md
+    - Troubleshooting: troubleshooting.md

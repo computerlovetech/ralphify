@@ -142,15 +142,19 @@ If `ralph status` warns that a check has neither a `run.*` script nor a `command
 
 ## Context and instruction issues
 
-### Placeholders not resolving
+### Placeholder produces no output
 
-If you see raw `{{ contexts.my-context }}` text in the agent's output, the placeholder name doesn't match any discovered context. Check:
+If a `{{ contexts.my-context }}` placeholder silently disappears (the prompt has nothing where you expected content), the context name doesn't match any discovered context. Ralphify replaces unmatched named placeholders with an empty string — you won't see raw placeholder text. Check:
 
 1. The directory name matches: `.ralph/contexts/my-context/CONTEXT.md`
 2. The placeholder uses the exact directory name: `{{ contexts.my-context }}`
 3. The context is enabled (check with `ralph status`)
+4. If the context has a command, verify the command produces output by running it manually
 
 Same rules apply for `{{ instructions.name }}`.
+
+!!! note "Raw placeholder text still visible?"
+    If you see literal `{{ contexts.name }}` in the agent's output, the placeholder syntax wasn't recognized — usually a typo in the keyword (e.g. `{{ context.name }}` instead of `{{ contexts.name }}`). It must be `contexts` (plural) and `instructions` (plural).
 
 ### Context command failing
 
