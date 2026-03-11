@@ -16,9 +16,23 @@ Ralphify is a minimal CLI harness for autonomous AI coding loops, inspired by th
 
 ## Install
 
-```bash
-uv tool install ralphify
-```
+=== "uv (recommended)"
+
+    ```bash
+    uv tool install ralphify
+    ```
+
+=== "pipx"
+
+    ```bash
+    pipx install ralphify
+    ```
+
+=== "pip"
+
+    ```bash
+    pip install ralphify
+    ```
 
 ## Two commands to start
 

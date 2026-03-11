@@ -10,9 +10,23 @@ This tutorial walks through setting up ralphify on a project, adding checks and 
 
 ## Step 1: Install ralphify
 
-```bash
-uv tool install ralphify
-```
+=== "uv (recommended)"
+
+    ```bash
+    uv tool install ralphify
+    ```
+
+=== "pipx"
+
+    ```bash
+    pipx install ralphify
+    ```
+
+=== "pip"
+
+    ```bash
+    pip install ralphify
+    ```
 
 Verify it's working:
 

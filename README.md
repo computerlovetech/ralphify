@@ -15,10 +15,17 @@ Ralphify wraps this pattern into a proper tool with config, iteration tracking, 
 ## Install
 
 ```bash
-uv tool install ralphify
+uv tool install ralphify    # recommended
 ```
 
-This gives you the `ralph` command.
+Or if you don't have `uv`:
+
+```bash
+pipx install ralphify       # isolated install via pipx
+pip install ralphify         # plain pip (use a virtualenv or --user)
+```
+
+Any of these gives you the `ralph` command.
 
 ## Quickstart
 

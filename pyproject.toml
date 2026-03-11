@@ -15,6 +15,11 @@ dev = [
     "pytest>=8.0",
 ]
 
+[project.urls]
+Documentation = "https://computerlovetech.github.io/ralphify/"
+Repository = "https://github.com/computerlovetech/ralphify"
+Issues = "https://github.com/computerlovetech/ralphify/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
