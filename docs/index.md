@@ -3,9 +3,13 @@ hide:
   - toc
 ---
 
-# Ralphify
+<p align="center">
+  <img src="assets/cli-banner.png" alt="Ralphify CLI banner" style="max-width: 500px;" />
+</p>
 
-**Put your AI coding agent in a `while True` loop and let it ship.**
+<p align="center" style="font-size: 1.3em; margin-top: -0.5em;">
+<strong>Put your AI coding agent in a <code>while True</code> loop and let it ship.</strong>
+</p>
 
 Ralphify is a minimal CLI harness for autonomous AI coding loops, inspired by the [Ralph Wiggum technique](https://ghuntley.com/ralph/). It pipes a prompt to an AI coding agent, validates the work with checks, and repeats — each iteration starts with a fresh context window.
 
@@ -42,6 +46,34 @@ ralph run       # Starts the loop (Ctrl+C to stop)
 ```
 
 `ralph init` creates a config file and a starter prompt. `ralph run` reads the prompt, pipes it to the agent, waits for it to finish, and does it again. Edit `PROMPT.md` while the loop is running — changes take effect on the next iteration.
+
+### What it looks like
+
+```
+$ ralph run -n 3 --log-dir ralph_logs
+
+── Iteration 1 ──
+✓ Iteration 1 completed (52.3s) → ralph_logs/001_20250115-142301.log
+  Checks: 2 passed
+    ✓ lint
+    ✓ tests
+
+── Iteration 2 ──
+✗ Iteration 2 failed with exit code 1 (23.1s)
+  Checks: 1 passed, 1 failed
+    ✓ lint
+    ✗ tests (exit 1)
+
+── Iteration 3 ──
+✓ Iteration 3 completed (41.7s) → ralph_logs/003_20250115-143012.log
+  Checks: 2 passed
+    ✓ lint
+    ✓ tests
+
+Done: 3 iteration(s) — 2 succeeded, 1 failed
+```
+
+Iteration 2 broke a test. Iteration 3 automatically received the failure output and fixed it — that's the self-healing loop in action.
 
 ---
 
