@@ -49,7 +49,11 @@ class CheckResult:
 
 
 def discover_checks(root: Path = Path(".")) -> list[Check]:
-    """Discover checks in root/.ralph/checks/ directories."""
+    """Scan ``.ralph/checks/`` for subdirectories containing a ``CHECK.md``.
+
+    Checks without both a ``run.*`` script and a ``command`` in frontmatter
+    are skipped with a warning.  Defaults: ``timeout=60``, ``enabled=True``.
+    """
     checks = []
     for entry, frontmatter, body in discover_primitives(root, "checks", "CHECK.md"):
         script = find_run_script(entry)
@@ -75,7 +79,12 @@ def discover_checks(root: Path = Path(".")) -> list[Check]:
 
 
 def run_check(check: Check, project_root: Path) -> CheckResult:
-    """Run a single check and return the result."""
+    """Run a single check and return the result.
+
+    The check's script or command executes with *project_root* as the
+    working directory.  On timeout, ``exit_code`` is ``-1`` and
+    ``timed_out`` is ``True``.
+    """
     r = run_command(
         script=check.script,
         command=check.command,

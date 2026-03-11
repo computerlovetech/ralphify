@@ -35,7 +35,11 @@ def run_command(
     """Run a script or shell command and return the result.
 
     If *script* is set it takes precedence; otherwise *command* is
-    split with ``shlex`` and executed.
+    split with :func:`shlex.split` and executed directly (no shell).
+    Pipes, redirections, and ``&&`` chaining are not supported in
+    commands — use a ``run.*`` script for complex logic.
+
+    On timeout, returns ``exit_code=-1`` and ``timed_out=True``.
     """
     if script:
         cmd = [str(script)]

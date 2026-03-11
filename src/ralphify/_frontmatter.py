@@ -16,8 +16,12 @@ from pathlib import Path
 def parse_frontmatter(text: str) -> tuple[dict, str]:
     """Parse a markdown file with optional YAML-like frontmatter.
 
-    Frontmatter is delimited by --- lines. Only flat key: value pairs
-    are supported. Returns (frontmatter_dict, body_text).
+    Frontmatter is delimited by ``---`` lines.  Only flat ``key: value``
+    pairs are supported.  The ``timeout`` field is coerced to ``int``
+    and ``enabled`` to ``bool``.  HTML comments are stripped from the
+    body so they don't leak into the assembled prompt.
+
+    Returns ``(frontmatter_dict, body_text)``.
     """
     frontmatter: dict = {}
     body = text
@@ -58,7 +62,11 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def find_run_script(directory: Path) -> Path | None:
-    """Find the first run.* script in a primitive directory."""
+    """Find the first ``run.*`` script in a primitive directory.
+
+    Returns the first match in sorted order (e.g. ``run.py`` before
+    ``run.sh``), or ``None`` if no ``run.*`` file exists.
+    """
     for f in sorted(directory.iterdir()):
         if f.name.startswith("run.") and f.is_file():
             return f

@@ -28,7 +28,11 @@ class Instruction:
 
 
 def discover_instructions(root: Path = Path(".")) -> list[Instruction]:
-    """Discover instructions in root/.ralph/instructions/ directories."""
+    """Scan ``.ralph/instructions/`` for subdirectories containing ``INSTRUCTION.md``.
+
+    Unlike checks and contexts, instructions have no command or script —
+    just static content.  Default: ``enabled=True``.
+    """
     return [
         Instruction(
             name=entry.name,

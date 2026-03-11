@@ -67,7 +67,12 @@ def discover_contexts(root: Path = Path(".")) -> list[Context]:
 
 
 def run_context(context: Context, project_root: Path) -> ContextResult:
-    """Run a single context command and return the result."""
+    """Run a single context and return the result.
+
+    Static-only contexts (no script or command) return immediately with
+    ``success=True`` and empty output.  The static content is combined
+    with command output later during prompt resolution.
+    """
     if not context.script and not context.command:
         # Static-only context, no command to run
         return ContextResult(context=context, output="", success=True)

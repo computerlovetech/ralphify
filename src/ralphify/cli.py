@@ -349,7 +349,13 @@ def run(
     log_dir: Optional[str] = typer.Option(None, "--log-dir", "-l", help="Save iteration output to log files in this directory."),
     timeout: Optional[float] = typer.Option(None, "--timeout", "-t", help="Max seconds per iteration. Kill agent if exceeded."),
 ) -> None:
-    """Run the autonomous coding loop."""
+    """Run the autonomous coding loop.
+
+    Each iteration: read PROMPT.md, resolve context placeholders, resolve
+    instruction placeholders, append any check failures from the previous
+    iteration, pipe the assembled prompt to the agent, then run checks.
+    Repeat until *n* iterations or Ctrl+C.
+    """
     _print_banner()
     config = _load_config()
     agent = config["agent"]

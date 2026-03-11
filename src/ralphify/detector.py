@@ -9,7 +9,12 @@ from pathlib import Path
 
 
 def detect_project(path: Path = Path(".")) -> str:
-    """Detect project type based on manifest files."""
+    """Detect project type by checking for manifest files.
+
+    Checks for ``package.json`` (node), ``pyproject.toml`` (python),
+    ``Cargo.toml`` (rust), ``go.mod`` (go) in order.  Returns the
+    first match, or ``"generic"`` if none are found.
+    """
     markers = {
         "package.json": "node",
         "pyproject.toml": "python",
