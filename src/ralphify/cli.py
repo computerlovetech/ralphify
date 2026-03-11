@@ -370,6 +370,42 @@ class ConsoleEmitter:
     }
 
 
+def _resolve_prompt_source(
+    *,
+    prompt_text: str | None,
+    prompt_name: str | None,
+    prompt_file: str | None,
+    toml_prompt: str,
+) -> tuple[str, str | None]:
+    """Resolve which prompt file to use, returning ``(file_path, prompt_name)``.
+
+    Priority chain: inline text > positional name > --prompt-file > ralph.toml.
+    The ``toml_prompt`` value from ``ralph.toml`` may be either a file path or
+    a named prompt — names are tried first, falling back to a literal path.
+
+    Raises ``ValueError`` if a named prompt lookup fails.
+    """
+    if prompt_text:
+        return toml_prompt, None
+
+    if prompt_name:
+        found = resolve_prompt_name(prompt_name)
+        return str(found.path / PROMPT_MARKER), found.name
+
+    if prompt_file:
+        return prompt_file, None
+
+    # Fall back to ralph.toml agent.prompt — could be a name or a path
+    if is_prompt_name(toml_prompt):
+        try:
+            found = resolve_prompt_name(toml_prompt)
+            return str(found.path / PROMPT_MARKER), found.name
+        except ValueError:
+            return toml_prompt, None
+
+    return toml_prompt, None
+
+
 @app.command()
 def run(
     prompt_name: str | None = typer.Argument(None, help="Name of a prompt in .ralph/prompts/."),
@@ -399,39 +435,18 @@ def run(
         rprint("[red]Cannot use both a prompt name and --prompt-file.[/red]")
         raise typer.Exit(1)
 
-    # Resolve prompt file path using priority chain:
-    # --prompt (inline text) > positional name > --prompt-file > ralph.toml > root PROMPT.md
-    resolved_prompt_name: str | None = None
-    if prompt_text:
-        # Inline text — no file needed
-        prompt_file_path = agent.get("prompt", "PROMPT.md")
-    elif prompt_name:
-        # Positional arg — look up in .ralph/prompts/
-        try:
-            found = resolve_prompt_name(prompt_name)
-        except ValueError as e:
-            rprint(f"[red]{e}[/red]")
-            raise typer.Exit(1)
-        prompt_file_path = str(found.path / PROMPT_MARKER)
-        resolved_prompt_name = found.name
-    elif prompt_file:
-        prompt_file_path = prompt_file
-    else:
-        # Fall back to ralph.toml agent.prompt — could be a name or a path
-        toml_prompt = agent.get("prompt", "PROMPT.md")
-        if is_prompt_name(toml_prompt):
-            # Try as a prompt name first, fall back to file path
-            try:
-                found = resolve_prompt_name(toml_prompt)
-                prompt_file_path = str(found.path / PROMPT_MARKER)
-                resolved_prompt_name = found.name
-            except ValueError:
-                prompt_file_path = toml_prompt
-        else:
-            prompt_file_path = toml_prompt
+    try:
+        prompt_file_path, resolved_prompt_name = _resolve_prompt_source(
+            prompt_text=prompt_text,
+            prompt_name=prompt_name,
+            prompt_file=prompt_file,
+            toml_prompt=agent.get("prompt", "PROMPT.md"),
+        )
+    except ValueError as e:
+        rprint(f"[red]{e}[/red]")
+        raise typer.Exit(1)
 
-    prompt_path = Path(prompt_file_path)
-    if not prompt_text and not prompt_path.exists():
+    if not prompt_text and not Path(prompt_file_path).exists():
         rprint(f"[red]Prompt file '{prompt_file_path}' not found.[/red]")
         raise typer.Exit(1)
 
