@@ -165,6 +165,33 @@ Click **New Run** in the sidebar to open the run modal. It lets you:
 Once a run starts, you can **pause**, **resume**, or **stop** it from the
 sidebar or the controls bar above the iteration view on the Runs tab.
 
+## Adjusting settings mid-run
+
+You don't have to stop and restart a run to change its settings. While a run is
+active, click the **Run Settings** gear icon below the run overview to expand
+the settings panel. From there you can adjust:
+
+- **Max iterations** — increase or decrease the remaining iteration limit
+- **Delay** — change the pause between iterations (in seconds)
+- **Timeout** — change the per-iteration timeout (in seconds)
+- **Stop on first error** — toggle whether the loop halts on agent failure
+
+Make your changes and click **Apply**. A "modified" badge appears next to the
+gear icon when you have unapplied changes. All settings take effect on the
+**next iteration** — the currently running iteration (if any) is not
+interrupted.
+
+This is useful when you see the loop is working well and want to extend it
+(raise the iteration limit), or when you notice iterations are taking too long
+and want to add a timeout — all without losing the run's progress or history.
+
+!!! tip "Settings vs. primitives"
+    Run settings (iterations, delay, timeout, stop-on-error) can be changed
+    mid-run and take effect immediately. Primitive configurations (checks,
+    contexts, instructions) are loaded once at run start and require a restart
+    to pick up changes. See [Editing while a run is active](#editing-while-a-run-is-active)
+    for the full breakdown.
+
 ## Editing while a run is active
 
 The dashboard lets you edit primitives via the Configure tab while a run is in progress, but not all changes take effect immediately:
@@ -173,6 +200,7 @@ The dashboard lets you edit primitives via the Configure tab while a run is in p
 |---|---|
 | `PROMPT.md` content | Next iteration — the prompt is re-read from disk every iteration |
 | Context command output | Next iteration — context commands re-run every iteration |
+| Run settings (iterations, delay, timeout, stop-on-error) | Next iteration — applied via the [settings panel](#adjusting-settings-mid-run) |
 | Check/context/instruction config (frontmatter, body, enable/disable) | After restart — primitive configurations are loaded once when a run starts |
 | New or deleted primitives | After restart — primitive discovery happens once at run start |
 
