@@ -20,6 +20,8 @@ CONTEXT_MARKER = "CONTEXT.md"
 INSTRUCTION_MARKER = "INSTRUCTION.md"
 PROMPT_MARKER = "PROMPT.md"
 
+# Pre-compiled pattern to strip HTML comments from body text.
+_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
 # Type coercion for known frontmatter fields.
 # To add a new typed field, add an entry here — no other changes needed.
@@ -80,7 +82,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     else:
         frontmatter, body = {}, text
 
-    body = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL).strip()
+    body = _HTML_COMMENT_RE.sub("", body).strip()
     return frontmatter, body
 
 

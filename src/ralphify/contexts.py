@@ -49,21 +49,18 @@ class ContextResult:
 
 def discover_contexts(root: Path = Path(".")) -> list[Context]:
     """Discover contexts in root/.ralph/contexts/ directories."""
-    contexts = []
-    for entry, frontmatter, body in discover_primitives(root, "contexts", CONTEXT_MARKER):
-        contexts.append(
-            Context(
-                name=entry.name,
-                path=entry,
-                command=frontmatter.get("command"),
-                script=find_run_script(entry),
-                timeout=frontmatter.get("timeout", 30),
-                enabled=frontmatter.get("enabled", True),
-                static_content=body,
-            )
+    return [
+        Context(
+            name=entry.name,
+            path=entry,
+            command=frontmatter.get("command"),
+            script=find_run_script(entry),
+            timeout=frontmatter.get("timeout", 30),
+            enabled=frontmatter.get("enabled", True),
+            static_content=body,
         )
-
-    return contexts
+        for entry, frontmatter, body in discover_primitives(root, "contexts", CONTEXT_MARKER)
+    ]
 
 
 def run_context(context: Context, project_root: Path) -> ContextResult:
