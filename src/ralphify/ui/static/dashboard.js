@@ -1262,6 +1262,19 @@ function PrimEditForm({ primitive, kind, meta, onBack, onSaved }) {
     (hasCommand && command !== (primitive.frontmatter?.command || '')) ||
     (hasCommand && timeoutVal !== (primitive.frontmatter?.timeout != null ? String(primitive.frontmatter.timeout) : ''));
 
+  // Cmd+S / Ctrl+S to save
+  const saveRef = useRef(null);
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveRef.current?.();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -1282,6 +1295,8 @@ function PrimEditForm({ primitive, kind, meta, onBack, onSaved }) {
     }
     setSaving(false);
   }
+  // Keep ref in sync so Cmd+S always calls the latest handleSave (with current form state)
+  saveRef.current = hasChanges && !saving ? handleSave : null;
 
   async function handleDelete() {
     if (!confirm(`Delete "${primitive.name}"? This cannot be undone.`)) return;
@@ -1436,7 +1451,7 @@ function PrimEditForm({ primitive, kind, meta, onBack, onSaved }) {
         <div style="flex: 1"></div>
         <button class="btn" onClick=${onBack}>Cancel</button>
         <button class="btn btn-primary" onClick=${handleSave} disabled=${!hasChanges || saving}>
-          ${saving ? 'Saving...' : 'Save Changes'}
+          ${saving ? 'Saving...' : html`Save Changes <kbd class="btn-kbd">${navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}S</kbd>`}
         </button>
       </div>
     </div>
@@ -1454,6 +1469,19 @@ function PrimCreateForm({ kind, meta, onBack, onCreated }) {
 
   const hasCommand = kind === 'checks' || kind === 'contexts';
   const canCreate = name.trim().length > 0 && (!hasCommand || command.trim().length > 0);
+
+  // Cmd+S / Ctrl+S to create
+  const createRef = useRef(null);
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        createRef.current?.();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   async function handleCreate() {
     setCreating(true);
@@ -1474,6 +1502,7 @@ function PrimCreateForm({ kind, meta, onBack, onCreated }) {
     }
     setCreating(false);
   }
+  createRef.current = canCreate && !creating ? handleCreate : null;
 
   return html`
     <div class="prim-editor">
@@ -1541,7 +1570,7 @@ function PrimCreateForm({ kind, meta, onBack, onCreated }) {
         <div style="flex: 1"></div>
         <button class="btn" onClick=${onBack}>Cancel</button>
         <button class="btn btn-primary" onClick=${handleCreate} disabled=${!canCreate || creating}>
-          ${creating ? 'Creating...' : `Create ${meta.label.replace(/s$/, '')}`}
+          ${creating ? 'Creating...' : html`Create ${meta.label.replace(/s$/, '')} <kbd class="btn-kbd">${navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}S</kbd>`}
         </button>
       </div>
     </div>
