@@ -74,6 +74,10 @@ The generated `PROMPT.md` is a starting point. A good prompt for autonomous loop
 
 The agent reads this prompt fresh every iteration, so you can edit it while the loop is running.
 
+## Documentation
+
+Full documentation at **[computerlovetech.github.io/ralphify](https://computerlovetech.github.io/ralphify/)** — tutorials, cookbook, prompt writing guide, and troubleshooting.
+
 ## Requirements
 
 - Python 3.11+

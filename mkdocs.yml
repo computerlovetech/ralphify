@@ -56,3 +56,4 @@ nav:
   - Cookbook: cookbook.md
   - Primitives: primitives.md
   - CLI Reference: cli.md
+  - Troubleshooting: troubleshooting.md
