@@ -41,6 +41,12 @@ class ConsoleEmitter:
         }
 
     def emit(self, event: Event) -> None:
+        """Dispatch an engine event to the appropriate Rich renderer.
+
+        Implements the :class:`~ralphify._events.EventEmitter` protocol.
+        Only event types registered in ``_handlers`` produce terminal output;
+        all others are silently ignored.
+        """
         handler = self._handlers.get(event.type)
         if handler:
             handler(event.data)
