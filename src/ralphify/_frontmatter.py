@@ -11,6 +11,7 @@ don't leak into the assembled prompt.
 import re
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import NamedTuple
 
 
 # Single source of truth for well-known filenames.
@@ -116,10 +117,18 @@ def find_run_script(directory: Path) -> Path | None:
     return None
 
 
+class PrimitiveEntry(NamedTuple):
+    """A discovered primitive's directory, parsed frontmatter, and body text."""
+
+    path: Path
+    frontmatter: dict
+    body: str
+
+
 def discover_primitives(
     root: Path, kind: str, marker: str
-) -> Iterator[tuple[Path, dict, str]]:
-    """Yield (directory, frontmatter, body) for each primitive found.
+) -> Iterator[PrimitiveEntry]:
+    """Yield a :class:`PrimitiveEntry` for each primitive found.
 
     Scans ``root/.ralph/{kind}/`` for subdirectories containing a
     *marker* file (e.g. ``CHECK.md``), parses its frontmatter, and
@@ -139,4 +148,4 @@ def discover_primitives(
 
         text = marker_file.read_text()
         frontmatter, body = parse_frontmatter(text)
-        yield entry, frontmatter, body
+        yield PrimitiveEntry(entry, frontmatter, body)
