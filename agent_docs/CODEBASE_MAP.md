@@ -118,7 +118,7 @@ The CLI uses a `ConsoleEmitter` (defined in `cli.py`) that renders events to the
 ## Traps and gotchas
 
 ### If you change the primitive marker filenames...
-The marker file names (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are hardcoded in each module's `discover_*()` function AND in the scaffold templates in `_templates.py`. You must update both.
+The marker file names (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are defined as constants in `_frontmatter.py` (`CHECK_MARKER`, `CONTEXT_MARKER`, `INSTRUCTION_MARKER`, `PROMPT_MARKER`). All modules — `checks.py`, `contexts.py`, `instructions.py`, `prompts.py`, `cli.py`, and the UI layer — import from there. Change the constant to rename everywhere.
 
 ### If you change frontmatter fields...
 Frontmatter parsing is in `_frontmatter.py:parse_frontmatter()` but the field names are consumed in each module's `discover_*()` function. The `timeout` and `enabled` fields get special type coercion in `parse_frontmatter()` — adding a new typed field requires updating the coercion logic there.
