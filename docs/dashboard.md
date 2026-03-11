@@ -1,3 +1,7 @@
+---
+description: How to install, launch, and use the ralphify web dashboard to manage runs, browse prompts, edit primitives, and review history.
+---
+
 # Web Dashboard
 
 Ralphify includes a web-based orchestration dashboard that lets you manage
@@ -8,16 +12,24 @@ your browser.
 
 The dashboard requires optional dependencies:
 
-=== "uv"
+=== "uv tool (recommended)"
+
+    If you installed ralphify with `uv tool install`, reinstall with the UI extra:
 
     ```bash
-    uv pip install ralphify[ui]
+    uv tool install "ralphify[ui]"
+    ```
+
+=== "pipx"
+
+    ```bash
+    pipx install "ralphify[ui]"
     ```
 
 === "pip"
 
     ```bash
-    pip install ralphify[ui]
+    pip install "ralphify[ui]"
     ```
 
 This adds FastAPI, uvicorn, and WebSocket support.
@@ -41,52 +53,67 @@ To expose the dashboard on your network:
 ralph ui --host 0.0.0.0 --port 9000
 ```
 
-## What you can do
+## Dashboard tabs
 
-### Start and manage runs
+The dashboard has four tabs. **Prompts** is the default landing page.
 
-Click **New Run** in the sidebar to start an autonomous loop. The modal lets you:
+### Prompts
 
-- **Pick a named prompt** — cards show every prompt discovered in `.ralph/prompts/`
-- **Enter an ad-hoc prompt** — type a one-off task without creating a file
-- **Configure settings** — max iterations, delay between iterations, timeout, and stop-on-error
+The Prompts tab shows every named prompt discovered in `.ralph/prompts/` as a
+card grid. Each card displays:
 
-Once a run starts, you can **pause**, **resume**, or **stop** it from the sidebar or the run view.
+- **Name** and **description** (from the prompt's frontmatter)
+- A **content preview** of the prompt body
+- An **Edit** button that opens an inline editor
+- A **Run** button that opens the New Run modal with that prompt pre-selected
 
-### Watch iterations live
+Use this tab to quickly browse your prompts, start a run from a specific one,
+or create new prompts without leaving the browser.
 
-The **Timeline** tab shows each iteration as it completes:
+### Timeline
+
+Select a run in the sidebar to see its iterations as they complete:
 
 - Pass/fail status with color-coded badges
 - Agent output (truncated to 5,000 characters, same as the CLI)
 - Check results with individual pass/fail/timeout indicators
 - Duration and return codes
 
+Each check gets a **sparkline bar** showing its pass/fail history across
+iterations. Green means pass, red means fail, yellow means timeout — useful for
+spotting flaky checks or regressions at a glance.
+
 Events stream over WebSocket, so the page updates without refreshing.
 
-### Track check health
+### Configure
 
-Each check gets a sparkline bar showing its pass/fail history across iterations.
-Green means pass, red means fail, yellow means timeout. This makes it easy to
-spot flaky checks or regressions at a glance.
-
-### Browse and edit primitives
-
-The **Primitives** tab lists all checks, contexts, instructions, and prompts in
-your project. You can:
+The Configure tab lists all checks, contexts, and instructions in your project.
+You can:
 
 - View the frontmatter and body of each primitive
+- Toggle primitives on and off with enable/disable badges
 - Create new primitives
 - Edit existing ones
 - Delete primitives you no longer need
 
 Changes are written directly to the `.ralph/` directory on disk.
 
-### Review run history
+### History
 
-The **History** tab shows all past runs organized by status — completed,
-stopped, and failed. Click any run to see its full iteration timeline and
-check results.
+Shows all past runs organized by status — completed, stopped, and failed. Each
+run displays its pass rate and iteration count. Click any run to jump to the
+Timeline view and see its full iteration details.
+
+## Starting a run
+
+Click **New Run** in the sidebar to open the run modal. It lets you:
+
+- **Pick a named prompt** — cards show every prompt discovered in `.ralph/prompts/`
+- **Enter an ad-hoc prompt** — toggle to ad-hoc mode and type a one-off task
+- **Configure settings** — expand the settings panel to set max iterations, delay between iterations, timeout, and stop-on-error
+
+Once a run starts, you can **pause**, **resume**, or **stop** it from the
+sidebar or the controls bar above the Timeline.
 
 ## Architecture
 
