@@ -1,8 +1,6 @@
-from pathlib import Path
-
 import pytest
 
-from ralphify.prompts import Prompt, discover_prompts, is_prompt_name, resolve_prompt_name
+from ralphify.prompts import discover_prompts, is_prompt_name, resolve_prompt_name
 
 
 class TestDiscoverPrompts:

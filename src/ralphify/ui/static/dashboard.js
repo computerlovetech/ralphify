@@ -204,23 +204,30 @@ function Sidebar() {
   return html`
     <div class="sidebar">
       <div class="sidebar-header">
-        <div class="logo-mark">R</div>
-        <h1>Ralphify</h1>
-        <span class="version">UI</span>
+        <div class="sidebar-header-inner">
+          <div class="logo-mark">R</div>
+          <h1>Ralphify</h1>
+          <span class="version">UI</span>
+        </div>
+        <button class="sidebar-new-run-btn" onClick=${() => showNewRunModal.value = true}>
+          + New Run
+        </button>
       </div>
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Active Runs</div>
-        ${active.length === 0 && html`
-          <div style="padding: 8px 12px; font-size: 13px; color: var(--text-secondary)">No active runs</div>
-        `}
-        ${active.map(r => html`<${RunCard} key=${r.run_id} run=${r} />`)}
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Recent</div>
-        ${recent.length === 0 && html`
-          <div style="padding: 8px 12px; font-size: 13px; color: var(--text-secondary)">No recent runs</div>
-        `}
-        ${recent.map(r => html`<${RunCard} key=${r.run_id} run=${r} />`)}
+      <div class="sidebar-runs">
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Active Runs</div>
+          ${active.length === 0 && html`
+            <div style="padding: 8px 12px; font-size: 13px; color: var(--text-muted)">No active runs</div>
+          `}
+          ${active.map(r => html`<${RunCard} key=${r.run_id} run=${r} />`)}
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Recent</div>
+          ${recent.length === 0 && html`
+            <div style="padding: 8px 12px; font-size: 13px; color: var(--text-muted)">No recent runs</div>
+          `}
+          ${recent.map(r => html`<${RunCard} key=${r.run_id} run=${r} />`)}
+        </div>
       </div>
     </div>
   `;
@@ -230,17 +237,23 @@ function RunCard({ run }) {
   const isActive = activeRunId.value === run.run_id;
   const total = run.completed + run.failed;
   const passRate = total > 0 ? (run.completed / total) * 100 : 0;
+  const shortId = run.run_id.length > 12 ? run.run_id.slice(0, 12) : run.run_id;
 
   return html`
     <div class="run-card ${isActive ? 'active' : ''}" onClick=${() => activeRunId.value = run.run_id}>
       <div class="run-badge ${run.status}"></div>
       <div class="run-card-info">
-        <div class="run-card-title">${run.run_id}</div>
-        <div class="run-card-meta">iter ${run.iteration || 0} · ${run.status}</div>
+        <div class="run-card-title">${shortId}</div>
+        <div class="run-card-meta">
+          iter ${run.iteration || 0}${total > 0 ? ` · ${Math.round(passRate)}% pass` : ` · ${run.status}`}
+        </div>
       </div>
+      ${run.prompt_name && html`
+        <span class="run-card-tag">${run.prompt_name}</span>
+      `}
       ${total > 0 && html`
         <div class="run-card-bar">
-          <div class="run-card-bar-fill pass" style="width: ${passRate}%"></div>
+          <div class="run-card-bar-fill ${passRate >= 50 ? 'pass' : 'fail'}" style="width: ${passRate}%"></div>
         </div>
       `}
     </div>

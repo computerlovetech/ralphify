@@ -76,35 +76,79 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 1px 0 8px rgba(46, 42, 66, 0.04);
 }
 
 .sidebar-header {
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #2a2045 0%, #1C1730 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 70% 20%, rgba(109, 74, 232, 0.25) 0%, transparent 60%),
+              radial-gradient(ellipse at 20% 80%, rgba(232, 123, 74, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.sidebar-header-inner {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 20px 20px 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-header h1 {
   font-size: 18px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
+  letter-spacing: -0.01em;
 }
 
 .sidebar-header .version {
   font-size: 10px;
-  color: var(--text-secondary);
   font-family: var(--font-sans);
-  font-weight: 500;
-  background: var(--primary-light);
-  color: var(--primary);
-  padding: 2px 6px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 2px 8px;
   border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-new-run-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 16px 16px;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-sans);
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(4px);
+}
+
+.sidebar-new-run-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 
 .sidebar-section {
@@ -112,17 +156,18 @@ body {
 }
 
 .sidebar-section-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--text-secondary);
-  padding: 12px 8px 6px;
-  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  padding: 14px 8px 6px;
+  letter-spacing: 0.8px;
 }
 
 .sidebar-runs {
   flex: 1;
   overflow-y: auto;
+  border-top: 1px solid var(--border);
 }
 
 /* ── Run cards ───────────────────────────────────────────────────── */
@@ -134,17 +179,20 @@ body {
   padding: 10px 12px;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   margin-bottom: 2px;
+  border: 1px solid transparent;
 }
 
 .run-card:hover {
   background: var(--primary-light);
+  border-color: var(--primary-border);
 }
 
 .run-card.active {
   background: var(--primary-light);
-  box-shadow: inset 3px 0 0 var(--primary);
+  border-color: var(--primary-border);
+  box-shadow: inset 3px 0 0 var(--primary), var(--shadow-sm);
 }
 
 .run-badge {
@@ -197,6 +245,19 @@ body {
 
 .run-card-bar-fill.pass { background: var(--green); }
 .run-card-bar-fill.fail { background: var(--red); }
+
+.run-card-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  letter-spacing: 0.02em;
+}
 
 /* ── Main area ───────────────────────────────────────────────────── */
 
@@ -876,18 +937,19 @@ body {
 /* ── Logo mark ──────────────────────────────────────────────────── */
 
 .logo-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #8B6CF0, #E87B4A);
   color: white;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   letter-spacing: -0.5px;
+  box-shadow: 0 2px 8px rgba(139, 108, 240, 0.3);
 }
 
 /* ── Empty state ─────────────────────────────────────────────────── */
