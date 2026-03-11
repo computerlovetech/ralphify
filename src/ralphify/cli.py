@@ -1,16 +1,13 @@
 """CLI commands for ralphify — init, run, status, and scaffold new primitives.
 
-This is the main module.  The ``run`` command implements the core autonomous
-loop: read prompt, resolve contexts and instructions, pipe to the agent,
-run checks, and repeat.
+This is the main module.  The ``run`` command delegates to the engine module
+for the core autonomous loop.  It provides a ``ConsoleEmitter`` that renders
+events to the terminal, reproducing the original terminal output exactly.
 """
 
 import shutil
-import subprocess
-import sys
-import time
 import tomllib
-from datetime import datetime
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -18,10 +15,11 @@ import typer
 from rich.console import Console
 
 from ralphify import __version__
-from ralphify._output import collect_output
-from ralphify.checks import CheckResult, discover_checks, run_all_checks, format_check_failures
-from ralphify.contexts import discover_contexts, run_all_contexts, resolve_contexts
-from ralphify.instructions import discover_instructions, resolve_instructions
+from ralphify._events import Event, EventType
+from ralphify.checks import discover_checks
+from ralphify.contexts import discover_contexts
+from ralphify.engine import RunConfig, RunState, _format_duration, run_loop
+from ralphify.instructions import discover_instructions
 from ralphify.detector import detect_project
 
 _console = Console(highlight=False)
@@ -53,12 +51,12 @@ TAGLINE = "Harness toolkit for autonomous AI coding loops"
 
 
 BANNER_COLORS = [
-    "#FFD90F",  # Simpsons yellow
-    "#FFD90F",
-    "#D4D86A",  # transition
-    "#7EBFA0",  # transition
-    "#4DC8D9",  # Ralph's teal shirt
-    "#4DC8D9",
+    "#8B6CF0",  # light violet
+    "#A78BF5",  # soft violet
+    "#D4A0E0",  # pink-violet transition
+    "#E8956B",  # warm transition
+    "#E87B4A",  # orange accent
+    "#E06030",  # deep orange
 ]
 
 
@@ -83,7 +81,7 @@ def _print_banner() -> None:
     for line, color in zip(BANNER_LINES, BANNER_COLORS):
         rprint(f"[bold {color}]{prefix}{line}[/bold {color}]")
     rprint()
-    rprint(f"[italic cyan]{TAGLINE:^{width}}[/italic cyan]")
+    rprint(f"[italic #A78BF5]{TAGLINE:^{width}}[/italic #A78BF5]")
     rprint(f"{'':^{width}}")
     help_text = "Run 'ralph --help' for usage information"
     rprint(f"[dim]{help_text:^{width}}[/dim]")
@@ -299,52 +297,93 @@ def status() -> None:
         rprint("\n[green]Ready to run.[/green]")
 
 
-def _format_duration(seconds: float) -> str:
-    """Format duration in human-readable form."""
-    if seconds < 60:
-        return f"{seconds:.1f}s"
-    minutes = int(seconds // 60)
-    secs = seconds % 60
-    if minutes < 60:
-        return f"{minutes}m {secs:.0f}s"
-    hours = minutes // 60
-    mins = minutes % 60
-    return f"{hours}h {mins}m"
+class ConsoleEmitter:
+    """Renders engine events to the Rich console, reproducing original CLI output."""
 
+    def __init__(self, console: Console) -> None:
+        self._console = console
+        self._rprint = console.print
 
-def _write_log(log_path_dir: Path, iteration: int, stdout: str | bytes | None, stderr: str | bytes | None) -> Path:
-    """Write iteration output to a timestamped log file and return the path."""
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    log_file = log_path_dir / f"{iteration:03d}_{timestamp}.log"
-    log_file.write_text(collect_output(stdout, stderr))
-    return log_file
+    def emit(self, event: Event) -> None:
+        d = event.data
+        t = event.type
 
+        if t == EventType.RUN_STARTED:
+            if d.get("timeout"):
+                self._rprint(f"[dim]Timeout: {_format_duration(d['timeout'])} per iteration[/dim]")
+            if d.get("checks"):
+                self._rprint(f"[dim]Checks: {d['checks']} enabled[/dim]")
+            if d.get("contexts"):
+                self._rprint(f"[dim]Contexts: {d['contexts']} enabled[/dim]")
+            if d.get("instructions"):
+                self._rprint(f"[dim]Instructions: {d['instructions']} enabled[/dim]")
 
-def _print_check_summary(results: list[CheckResult]) -> None:
-    """Print a summary line for check results."""
-    passed = sum(1 for r in results if r.passed)
-    failed = sum(1 for r in results if not r.passed)
+        elif t == EventType.ITERATION_STARTED:
+            self._rprint(f"\n[bold blue]── Iteration {d['iteration']} ──[/bold blue]")
 
-    parts = []
-    if passed:
-        parts.append(f"{passed} passed")
-    if failed:
-        parts.append(f"{failed} failed")
-    rprint(f"  [bold]Checks:[/bold] {', '.join(parts)}")
+        elif t in (EventType.ITERATION_COMPLETED, EventType.ITERATION_FAILED, EventType.ITERATION_TIMED_OUT):
+            iteration = d["iteration"]
+            returncode = d.get("returncode")
+            detail = d["detail"]
+            log_file = d.get("log_file")
 
-    for r in results:
-        if r.passed:
-            rprint(f"    [green]✓[/green] {r.check.name}")
-        elif r.timed_out:
-            rprint(f"    [yellow]⏱[/yellow] {r.check.name} (timed out)")
-        else:
-            rprint(f"    [red]✗[/red] {r.check.name} (exit {r.exit_code})")
+            if returncode is None:
+                color, icon = "yellow", "\u23f1"
+            elif returncode == 0:
+                color, icon = "green", "\u2713"
+            else:
+                color, icon = "red", "\u2717"
+
+            status_msg = f"[{color}]{icon} Iteration {iteration} {detail}"
+            if log_file:
+                status_msg += f" \u2192 {log_file}"
+            status_msg += f"[/{color}]"
+            self._rprint(status_msg)
+
+        elif t == EventType.CHECKS_COMPLETED:
+            passed = d["passed"]
+            failed = d["failed"]
+            parts = []
+            if passed:
+                parts.append(f"{passed} passed")
+            if failed:
+                parts.append(f"{failed} failed")
+            self._rprint(f"  [bold]Checks:[/bold] {', '.join(parts)}")
+            for r in d["results"]:
+                if r["passed"]:
+                    self._rprint(f"    [green]\u2713[/green] {r['name']}")
+                elif r["timed_out"]:
+                    self._rprint(f"    [yellow]\u23f1[/yellow] {r['name']} (timed out)")
+                else:
+                    self._rprint(f"    [red]\u2717[/red] {r['name']} (exit {r['exit_code']})")
+
+        elif t == EventType.LOG_MESSAGE:
+            msg = d.get("message", "")
+            if "Stopping" in msg:
+                self._rprint(f"[red]{msg}[/red]")
+            elif "Waiting" in msg:
+                self._rprint(f"[dim]{msg}[/dim]")
+
+        elif t == EventType.RUN_STOPPED:
+            if d.get("reason") == "completed":
+                total = d.get("total", 0)
+                completed = d.get("completed", 0)
+                failed = d.get("failed", 0)
+                timed_out_count = d.get("timed_out", 0)
+                summary = f"\n[green]Done: {total} iteration(s) \u2014 {completed} succeeded"
+                if failed:
+                    summary += f", {failed} failed"
+                if timed_out_count:
+                    summary += f" ({timed_out_count} timed out)"
+                summary += "[/green]"
+                self._rprint(summary)
 
 
 @app.command()
 def run(
     n: Optional[int] = typer.Option(None, "-n", help="Max number of iterations. Infinite if not set."),
     prompt_text: Optional[str] = typer.Option(None, "-p", "--prompt", help="Ad-hoc prompt text. Overrides the prompt file."),
+    prompt_file: Optional[str] = typer.Option(None, "--prompt-file", "-f", help="Path to prompt file. Overrides ralph.toml."),
     stop_on_error: bool = typer.Option(False, "--stop-on-error", "-s", help="Stop if the agent exits with non-zero."),
     delay: float = typer.Option(0, "--delay", "-d", help="Seconds to wait between iterations."),
     log_dir: Optional[str] = typer.Option(None, "--log-dir", "-l", help="Save iteration output to log files in this directory."),
@@ -358,130 +397,49 @@ def run(
     Repeat until *n* iterations or Ctrl+C.
     """
     _print_banner()
-    config = _load_config()
-    agent = config["agent"]
+    toml_config = _load_config()
+    agent = toml_config["agent"]
     command = agent["command"]
     args = agent.get("args", [])
-    prompt_file = agent["prompt"]
+    prompt_file_path = prompt_file if prompt_file else agent["prompt"]
 
-    prompt_path = Path(prompt_file)
+    prompt_path = Path(prompt_file_path)
     if not prompt_text and not prompt_path.exists():
-        rprint(f"[red]Prompt file '{prompt_file}' not found.[/red]")
+        rprint(f"[red]Prompt file '{prompt_file_path}' not found.[/red]")
         raise typer.Exit(1)
 
-    log_path_dir = None
     if log_dir:
-        log_path_dir = Path(log_dir)
-        log_path_dir.mkdir(parents=True, exist_ok=True)
-        rprint(f"[dim]Logging output to {log_path_dir}/[/dim]")
+        rprint(f"[dim]Logging output to {log_dir}/[/dim]")
 
-    if timeout is not None:
-        rprint(f"[dim]Timeout: {_format_duration(timeout)} per iteration[/dim]")
+    config = RunConfig(
+        command=command,
+        args=args,
+        prompt_file=prompt_file_path,
+        prompt_text=prompt_text,
+        max_iterations=n,
+        delay=delay,
+        timeout=timeout,
+        stop_on_error=stop_on_error,
+        log_dir=log_dir,
+    )
+    state = RunState(run_id=uuid.uuid4().hex[:12])
+    emitter = ConsoleEmitter(_console)
 
-    cmd = [command] + args
-    completed = 0
-    failed = 0
-    timed_out = 0
+    run_loop(config, state, emitter)
 
-    check_failures_text = ""
-    enabled_checks = [c for c in discover_checks() if c.enabled]
-    if enabled_checks:
-        rprint(f"[dim]Checks: {len(enabled_checks)} enabled[/dim]")
 
-    contexts = discover_contexts()
-    enabled_contexts = [c for c in contexts if c.enabled] if contexts else []
-    if enabled_contexts:
-        rprint(f"[dim]Contexts: {len(enabled_contexts)} enabled[/dim]")
-
-    instructions = discover_instructions()
-    if instructions:
-        enabled_inst = [i for i in instructions if i.enabled]
-        rprint(f"[dim]Instructions: {len(enabled_inst)} enabled[/dim]")
-
+@app.command()
+def ui(
+    port: int = typer.Option(8765, "--port", help="Port to serve the UI on."),
+    host: str = typer.Option("127.0.0.1", "--host", help="Host to bind to."),
+) -> None:
+    """Launch the web-based orchestration dashboard."""
     try:
-        iteration = 0
-        while True:
-            iteration += 1
-            if n is not None and iteration > n:
-                break
+        from ralphify.ui.app import create_app
+    except ImportError:
+        rprint("[red]UI deps not installed. Run: pip install ralphify[ui][/red]")
+        raise typer.Exit(1)
+    import uvicorn
 
-            rprint(f"\n[bold blue]── Iteration {iteration} ──[/bold blue]")
-            prompt = prompt_text if prompt_text else prompt_path.read_text()
-            if enabled_contexts:
-                context_results = run_all_contexts(enabled_contexts, Path("."))
-                prompt = resolve_contexts(prompt, context_results)
-            if instructions:
-                prompt = resolve_instructions(prompt, instructions)
-            if check_failures_text:
-                prompt = prompt + "\n\n" + check_failures_text
-
-            start = time.monotonic()
-            log_file = None
-            returncode = None
-
-            try:
-                result = subprocess.run(
-                    cmd,
-                    input=prompt,
-                    text=True,
-                    timeout=timeout,
-                    capture_output=bool(log_path_dir),
-                )
-                if log_path_dir:
-                    log_file = _write_log(log_path_dir, iteration, result.stdout, result.stderr)
-                    if result.stdout:
-                        sys.stdout.write(result.stdout)
-                    if result.stderr:
-                        sys.stderr.write(result.stderr)
-                returncode = result.returncode
-            except subprocess.TimeoutExpired as e:
-                timed_out += 1
-                failed += 1
-                if log_path_dir:
-                    log_file = _write_log(log_path_dir, iteration, e.stdout, e.stderr)
-
-            elapsed = time.monotonic() - start
-            duration = _format_duration(elapsed)
-
-            if returncode is None:
-                color, icon = "yellow", "⏱"
-                detail = f"timed out after {duration}"
-            elif returncode == 0:
-                completed += 1
-                color, icon = "green", "✓"
-                detail = f"completed ({duration})"
-            else:
-                failed += 1
-                color, icon = "red", "✗"
-                detail = f"failed with exit code {returncode} ({duration})"
-
-            status_msg = f"[{color}]{icon} Iteration {iteration} {detail}"
-            if log_file:
-                status_msg += f" → {log_file}"
-            status_msg += f"[/{color}]"
-            rprint(status_msg)
-
-            if returncode != 0 and stop_on_error:
-                rprint("[red]Stopping due to --stop-on-error.[/red]")
-                break
-
-            if enabled_checks:
-                check_results = run_all_checks(enabled_checks, Path("."))
-                _print_check_summary(check_results)
-                check_failures_text = format_check_failures(check_results)
-
-            if delay > 0 and (n is None or iteration < n):
-                rprint(f"[dim]Waiting {delay}s...[/dim]")
-                time.sleep(delay)
-
-    except KeyboardInterrupt:
-        pass
-
-    total = completed + failed
-    summary = f"\n[green]Done: {total} iteration(s) — {completed} succeeded"
-    if failed:
-        summary += f", {failed} failed"
-    if timed_out:
-        summary += f" ({timed_out} timed out)"
-    summary += "[/green]"
-    rprint(summary)
+    rprint(f"[bold]Starting Ralphify UI at http://{host}:{port}[/bold]")
+    uvicorn.run(create_app(), host=host, port=port)

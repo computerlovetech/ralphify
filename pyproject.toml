@@ -20,11 +20,15 @@ classifiers = [
 ]
 dependencies = ["typer>=0.9", "rich>=13.0"]
 
+[project.optional-dependencies]
+ui = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "aiosqlite>=0.20", "websockets>=12.0"]
+
 [project.scripts]
 ralph = "ralphify:main"
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.20",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.5",
     "pytest>=8.0",
@@ -41,6 +45,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ralphify"]
+exclude = ["src/ralphify/ui/frontend/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
