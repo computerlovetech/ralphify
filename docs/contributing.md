@@ -40,13 +40,17 @@ Tests use temporary directories and have no external dependencies — no API key
 
 ```
 tests/
-├── test_cli.py           # CLI commands (init, run, status, new)
+├── test_cli.py           # CLI commands (init, run, status, new, prompts)
+├── test_engine.py        # Core run loop and RunState/RunConfig
+├── test_manager.py       # Multi-run orchestration
 ├── test_checks.py        # Check discovery and execution
 ├── test_contexts.py      # Context discovery and injection
 ├── test_instructions.py  # Instruction discovery and resolution
+├── test_prompts.py       # Named prompt discovery and resolution
 ├── test_runner.py        # Command execution with timeout
 ├── test_detector.py      # Project type detection
-└── test_output.py        # Output combining and truncation
+├── test_output.py        # Output combining and truncation
+└── test_persistence.py   # UI persistence layer (SQLite)
 ```
 
 When adding a new feature, add tests in the corresponding file. If you're adding a new module, create a matching `test_<module>.py` file.
@@ -102,20 +106,25 @@ All source code lives in `src/ralphify/`. Here's how the pieces fit together:
 ```
 src/ralphify/
 ├── __init__.py         # Version detection + entry point
-├── cli.py              # All CLI commands and the main loop
+├── cli.py              # CLI commands (init, run, status, new, prompts) — delegates to engine
+├── engine.py           # Core run loop with structured event emission
+├── manager.py          # Multi-run orchestration for the UI layer
 ├── checks.py           # Check discovery, execution, failure formatting
 ├── contexts.py         # Context discovery, execution, prompt injection
 ├── instructions.py     # Instruction discovery and prompt injection
+├── prompts.py          # Named prompt discovery and resolution
 ├── resolver.py         # Shared template placeholder resolution
 ├── detector.py         # Project type auto-detection
 ├── _runner.py          # Shell command execution with timeout
 ├── _frontmatter.py     # YAML frontmatter parsing and primitive discovery
+├── _events.py          # Event types and emitter protocol
 └── _output.py          # Output combining and truncation
 ```
 
 **Key entry points:**
 
-- **`cli.py`** is the main file. The `run()` function (the core loop) lives here, along with all CLI commands and scaffold templates.
+- **`engine.py`** contains the core run loop (`run_loop()`). It accepts a `RunConfig`, `RunState`, and `EventEmitter`, making it reusable from both CLI and UI.
+- **`cli.py`** has all CLI commands and scaffold templates. The `run()` command resolves the prompt and delegates to `engine.run_loop()`.
 - **`_frontmatter.py`** handles primitive discovery — scanning `.ralph/` directories for marker files and parsing their frontmatter.
 - **`resolver.py`** handles template placeholder resolution (`{{ contexts.name }}`, `{{ instructions }}`), shared by both contexts and instructions.
 
@@ -123,21 +132,27 @@ src/ralphify/
 
 ```
 ralph run
-  ├── Load config from ralph.toml
-  ├── Discover checks, contexts, instructions from .ralph/
-  └── Loop:
-       ├── Read PROMPT.md from disk
-       ├── Run context commands → resolve {{ contexts.* }} placeholders
-       ├── Resolve {{ instructions.* }} placeholders
-       ├── Append check failures from previous iteration
-       ├── Pipe assembled prompt to agent via subprocess stdin
-       ├── Run checks → store failures for next iteration
-       └── Repeat
+  ├── cli.py:run() — parse options, resolve prompt, print banner
+  │   ├── Load config from ralph.toml
+  │   ├── Resolve prompt via priority chain (--prompt > name > --prompt-file > toml > root)
+  │   └── Build RunConfig and call engine.run_loop()
+  │
+  └── engine.py:run_loop(config, state, emitter)
+       ├── Discover checks, contexts, instructions from .ralph/
+       └── Loop:
+            ├── Read PROMPT.md from disk (or use ad-hoc text)
+            ├── Run context commands → resolve {{ contexts.* }} placeholders
+            ├── Resolve {{ instructions.* }} placeholders
+            ├── Append check failures from previous iteration
+            ├── Pipe assembled prompt to agent via subprocess stdin
+            ├── Emit structured events for each step
+            ├── Run checks → store failures for next iteration
+            └── Repeat
 ```
 
 ### Things to know before making changes
 
-**Primitive marker filenames** (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`) are hardcoded in each module's `discover_*()` function AND in the scaffold templates in `cli.py`. If you change one, update both.
+**Primitive marker filenames** (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are hardcoded in each module's `discover_*()` function AND in the scaffold templates in `cli.py`. If you change one, update both.
 
 **Frontmatter field types** — the `timeout` and `enabled` fields get special type coercion in `_frontmatter.py:parse_frontmatter()`. Adding a new typed field requires updating the coercion logic there.
 
