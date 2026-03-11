@@ -60,24 +60,16 @@ ralph ui --host 0.0.0.0 --port 9000
 
 ## Dashboard tabs
 
-The dashboard has four tabs. **Prompts** is the default landing page.
+The dashboard has three tabs: **Runs**, **Configure**, and **History**.
 
-### Prompts
+### Runs
 
-The Prompts tab shows every named prompt discovered in `.ralph/prompts/` as a
-card grid. Each card displays:
+The Runs tab is the default landing page. When no runs are active, it shows an
+onboarding view with three steps — Configure, Launch, Monitor — and a prominent
+**+ New Run** button to get you started.
 
-- **Name** and **description** (from the prompt's frontmatter)
-- A **content preview** of the prompt body
-- An **Edit** button that opens an inline editor
-- A **Run** button that opens the New Run modal with that prompt pre-selected
-
-Use this tab to quickly browse your prompts, start a run from a specific one,
-or create new prompts without leaving the browser.
-
-### Timeline
-
-Select a run in the sidebar to see its iterations as they complete:
+Once a run is active, select it in the sidebar to see its iterations as they
+complete:
 
 - Pass/fail status with color-coded badges
 - Agent output (truncated to 5,000 characters, same as the CLI)
@@ -92,41 +84,51 @@ Events stream over WebSocket, so the page updates without refreshing.
 
 ### Configure
 
-The Configure tab lists all checks, contexts, and instructions in your project.
+The Configure tab is your central hub for managing all primitives. The overview
+shows four cards — **Prompts**, **Checks**, **Contexts**, and **Instructions** —
+each displaying how many items exist.
 
 <figure markdown="span">
   ![Configure tab overview](assets/dashboard/configure-tab.png){ loading=lazy }
   <figcaption>The Configure overview shows all four primitive types with counts. Click any card to drill in.</figcaption>
 </figure>
 
-You can:
-
-- View the frontmatter and body of each primitive
-- Edit the **command** and **timeout** fields for checks and contexts directly in the form
-- Toggle primitives on and off with enable/disable badges
-- Create new primitives
-- Edit existing ones
-- Delete primitives you no longer need
-
-Click into a primitive type to see its items and edit them inline:
+Click into any primitive type to see its items. Each list shows the name,
+command (for checks and contexts), and enabled status:
 
 <figure markdown="span">
   ![Checks list in Configure](assets/dashboard/configure-checks.png){ loading=lazy }
   <figcaption>Drill into Checks to see each check's command and enabled status.</figcaption>
 </figure>
 
+Click an item to open its editor, where you can:
+
+- Edit the **description**, **command**, and **timeout** fields
+- Toggle the **enabled** switch
+- Edit the **content** (failure instructions for checks, static content for contexts)
+- **Delete** the primitive entirely
+- **Create new** primitives with the button at the top of each list
+
 <figure markdown="span">
   ![Editing a check](assets/dashboard/check-editor.png){ loading=lazy }
   <figcaption>Click a check to edit its command, timeout, failure instruction, and enabled toggle.</figcaption>
+</figure>
+
+The Prompts section works the same way — browse, create, edit, and delete named
+prompts without leaving the browser:
+
+<figure markdown="span">
+  ![Prompts list in Configure](assets/dashboard/configure-prompts.png){ loading=lazy }
+  <figcaption>Drill into Prompts to browse and manage your named prompts.</figcaption>
 </figure>
 
 Changes are written directly to the `.ralph/` directory on disk.
 
 ### History
 
-Shows all past runs organized by status — completed, stopped, and failed. Each
-run displays its pass rate and iteration count. Click any run to jump to the
-Timeline view and see its full iteration details.
+Shows all past runs — completed, stopped, and failed. Each run displays its
+pass rate and iteration count. Click any run to review its full iteration
+details.
 
 ## Starting a run
 
@@ -148,7 +150,7 @@ Click **New Run** in the sidebar to open the run modal. It lets you:
 </figure>
 
 Once a run starts, you can **pause**, **resume**, or **stop** it from the
-sidebar or the controls bar above the Timeline.
+sidebar or the controls bar above the iteration view on the Runs tab.
 
 ## Editing while a run is active
 

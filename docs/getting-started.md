@@ -346,10 +346,10 @@ ralph ui
 
 Open [http://127.0.0.1:8765](http://127.0.0.1:8765) in your browser. From there you can:
 
-- **Browse and edit named prompts** on the Prompts tab
-- **Start, pause, and stop runs** with a click
-- **Watch iterations complete in real time** via the Timeline tab — check results stream in over WebSocket
-- **Toggle primitives on/off** and edit their configuration on the Configure tab
+- **Start, pause, and stop runs** with a click from the Runs tab
+- **Watch iterations complete in real time** — check results stream in over WebSocket
+- **Browse and edit all primitives** (prompts, checks, contexts, instructions) on the Configure tab
+- **Review past runs** on the History tab
 
 The dashboard uses the same `run_loop()` engine as the CLI, so everything works exactly the same — it's just a different interface.
 
