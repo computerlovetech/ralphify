@@ -3,6 +3,8 @@ site_description: Harness toolkit for autonomous AI coding loops
 site_url: https://computerlovetech.github.io/ralphify/
 repo_url: https://github.com/computerlovetech/ralphify
 repo_name: computerlovetech/ralphify
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2025 Computerlove Technologies
 
 theme:
   name: material
@@ -51,6 +53,11 @@ markdown_extensions:
   - toc:
       permalink: true
 
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/computerlovetech/ralphify
+
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
@@ -59,4 +66,5 @@ nav:
   - Cookbook: cookbook.md
   - Primitives: primitives.md
   - Configuration & CLI: cli.md
+  - FAQ: faq.md
   - Troubleshooting: troubleshooting.md
