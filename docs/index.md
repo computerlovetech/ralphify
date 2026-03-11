@@ -116,9 +116,9 @@ Iteration 2 broke a test. Iteration 3 automatically received the failure output 
 
 ---
 
-## Three primitives
+## Four primitives
 
-Ralphify extends the basic loop with three building blocks that live in the `.ralph/` directory:
+Ralphify extends the basic loop with four building blocks that live in the `.ralph/` directory:
 
 <div class="grid cards" markdown>
 
@@ -145,6 +145,14 @@ Ralphify extends the basic loop with three building blocks that live in the `.ra
     Reusable rules and coding standards injected into the prompt. Toggle them on and off without editing `PROMPT.md` — useful for style guides, commit conventions, or safety constraints.
 
     [:octicons-arrow-right-24: Learn more](primitives.md#instructions)
+
+-   :material-text-box-multiple-outline:{ .lg .middle } **Prompts**
+
+    ---
+
+    Named, task-focused prompts you can switch between without editing your root `PROMPT.md`. Keep a `docs` prompt, a `refactor` prompt, and a `bug-fix` prompt — select the one you need at run time with `ralph run docs`.
+
+    [:octicons-arrow-right-24: Learn more](primitives.md#prompts)
 
 </div>
 

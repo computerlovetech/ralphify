@@ -1,5 +1,5 @@
 ---
-description: Full reference for ralphify's three primitives — checks (post-iteration validation), contexts (dynamic data injection), and instructions (reusable prompt rules).
+description: Full reference for ralphify's four primitives — checks (post-iteration validation), contexts (dynamic data injection), instructions (reusable prompt rules), and prompts (named task-focused prompts).
 ---
 
 # Primitives

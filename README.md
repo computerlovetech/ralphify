@@ -86,7 +86,7 @@ Read the full writeup: [Ralph Wiggum as a "software engineer"](https://ghuntley.
 
 ## Beyond the basic loop
 
-The simple loop works, but ralphify's real power comes from three primitives that live in the `.ralph/` directory.
+The simple loop works, but ralphify's real power comes from four primitives that live in the `.ralph/` directory.
 
 ### Checks — the self-healing loop
 
@@ -144,6 +144,24 @@ ralph new instruction code-style
 ```
 
 Drop `{{ instructions }}` into `PROMPT.md` to inject all enabled instructions.
+
+### Prompts — named task switcher
+
+Keep multiple prompts for different jobs and switch between them at run time:
+
+```bash
+ralph new prompt docs
+ralph new prompt refactor
+```
+
+Edit `.ralph/prompts/docs/PROMPT.md` with your documentation-focused prompt, then:
+
+```bash
+ralph run docs           # Use the "docs" prompt
+ralph run refactor -n 5  # Use "refactor" for 5 iterations
+```
+
+List available prompts with `ralph prompts list`.
 
 ## Customizing your prompt
 
