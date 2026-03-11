@@ -9,7 +9,11 @@ dependencies = ["typer>=0.9", "rich>=13.0"]
 ralph = "ralphify:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.5",
+    "pytest>=8.0",
+]
 
 [build-system]
 requires = ["hatchling"]
