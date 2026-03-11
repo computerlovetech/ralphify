@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-from ralphify._frontmatter import parse_frontmatter
+from ralphify._frontmatter import parse_frontmatter, serialize_frontmatter
 from ralphify._output import MAX_OUTPUT_LEN
 from ralphify.checks import (
     Check,
@@ -90,6 +90,30 @@ class TestParseFrontmatter:
         text = "---\ncommand: echo foo:bar:baz\n---\n"
         fm, _ = parse_frontmatter(text)
         assert fm["command"] == "echo foo:bar:baz"
+
+
+class TestSerializeFrontmatter:
+    def test_with_frontmatter(self):
+        result = serialize_frontmatter({"command": "ruff check ."}, "Fix lint.")
+        assert result == "---\ncommand: ruff check .\n---\n\nFix lint."
+
+    def test_empty_frontmatter(self):
+        result = serialize_frontmatter({}, "Just body.")
+        assert result == "Just body."
+
+    def test_roundtrip(self):
+        fm = {"command": "echo hi", "description": "Say hello"}
+        body = "Run the greeting."
+        text = serialize_frontmatter(fm, body)
+        parsed_fm, parsed_body = parse_frontmatter(text)
+        assert parsed_fm == fm
+        assert parsed_body == body
+
+    def test_body_only_roundtrip(self):
+        text = serialize_frontmatter({}, "Plain body.")
+        parsed_fm, parsed_body = parse_frontmatter(text)
+        assert parsed_fm == {}
+        assert parsed_body == "Plain body."
 
 
 class TestDiscoverChecks:

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException  # ty: ignore[unresolved-import]
 
-from ralphify._frontmatter import parse_frontmatter
+from ralphify._frontmatter import parse_frontmatter, serialize_frontmatter
 from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
 from ralphify.instructions import discover_instructions
@@ -97,16 +97,7 @@ async def update_primitive(
     if not marker_file.exists():
         raise HTTPException(status_code=404, detail="Primitive not found")
 
-    # Build new file content
-    parts: list[str] = []
-    if body.frontmatter:
-        parts.append("---")
-        for key, value in body.frontmatter.items():
-            parts.append(f"{key}: {value}")
-        parts.append("---")
-        parts.append("")
-    parts.append(body.content)
-    marker_file.write_text("\n".join(parts))
+    marker_file.write_text(serialize_frontmatter(body.frontmatter or {}, body.content))
 
     # Re-read to return updated state
     text = marker_file.read_text()
@@ -150,15 +141,7 @@ async def create_primitive(
     prim_dir.mkdir(parents=True)
     marker_file = prim_dir / marker
 
-    parts: list[str] = []
-    if body.frontmatter:
-        parts.append("---")
-        for key, value in body.frontmatter.items():
-            parts.append(f"{key}: {value}")
-        parts.append("---")
-        parts.append("")
-    parts.append(body.content)
-    marker_file.write_text("\n".join(parts))
+    marker_file.write_text(serialize_frontmatter(body.frontmatter or {}, body.content))
 
     fm, content = parse_frontmatter(marker_file.read_text())
     return PrimitiveResponse(

@@ -61,6 +61,23 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return frontmatter, body
 
 
+def serialize_frontmatter(frontmatter: dict, body: str) -> str:
+    """Serialize frontmatter and body back to a markdown string.
+
+    This is the inverse of :func:`parse_frontmatter`.  If *frontmatter*
+    is empty the body is returned as-is (no ``---`` delimiters).
+    """
+    parts: list[str] = []
+    if frontmatter:
+        parts.append("---")
+        for key, value in frontmatter.items():
+            parts.append(f"{key}: {value}")
+        parts.append("---")
+        parts.append("")
+    parts.append(body)
+    return "\n".join(parts)
+
+
 def find_run_script(directory: Path) -> Path | None:
     """Find the first ``run.*`` script in a primitive directory.
 
