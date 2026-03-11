@@ -50,7 +50,12 @@ class ContextResult:
 
 
 def discover_contexts(root: Path = Path(".")) -> list[Context]:
-    """Discover contexts in root/.ralph/contexts/ directories."""
+    """Scan ``.ralph/contexts/`` for subdirectories containing a ``CONTEXT.md``.
+
+    Returns all discovered contexts (both enabled and disabled) sorted
+    alphabetically by name.  The caller is responsible for filtering by
+    ``enabled`` before execution.
+    """
     return [
         Context(
             name=prim.path.name,
@@ -91,7 +96,12 @@ def run_context(context: Context, project_root: Path) -> ContextResult:
 
 
 def run_all_contexts(contexts: list[Context], project_root: Path) -> list[ContextResult]:
-    """Run all contexts and return results."""
+    """Run every context sequentially and return all results.
+
+    Each context's command (or script) executes with *project_root* as the
+    working directory.  Static-only contexts return immediately.  Results
+    are passed to :func:`resolve_contexts` for prompt injection.
+    """
     return [run_context(ctx, project_root) for ctx in contexts]
 
 

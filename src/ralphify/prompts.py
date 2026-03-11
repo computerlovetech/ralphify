@@ -28,7 +28,9 @@ class Prompt:
 def discover_prompts(root: Path = Path(".")) -> list[Prompt]:
     """Scan ``.ralph/prompts/`` for subdirectories containing ``PROMPT.md``.
 
-    Returns prompts in alphabetical order by name.
+    Returns all discovered prompts (both enabled and disabled) sorted
+    alphabetically by name.  Used by ``ralph prompts list`` and the
+    dashboard's Configure tab.
     """
     return [
         Prompt(

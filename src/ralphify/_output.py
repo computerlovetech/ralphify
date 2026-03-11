@@ -33,7 +33,12 @@ def truncate_output(text: str, max_len: int = MAX_OUTPUT_LEN) -> str:
 
 
 def format_duration(seconds: float) -> str:
-    """Format duration in human-readable form."""
+    """Format *seconds* as a compact human-readable duration string.
+
+    Returns ``"12.3s"`` for sub-minute, ``"2m 30s"`` for sub-hour,
+    and ``"1h 15m"`` for longer durations.  Used in CLI output and
+    event data for iteration timing.
+    """
     if seconds < 60:
         return f"{seconds:.1f}s"
     minutes = int(seconds // 60)

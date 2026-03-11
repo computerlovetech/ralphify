@@ -103,7 +103,11 @@ def run_check(check: Check, project_root: Path) -> CheckResult:
 
 
 def run_all_checks(checks: list[Check], project_root: Path) -> list[CheckResult]:
-    """Run all checks and return results."""
+    """Run every check sequentially and return all results.
+
+    Checks execute in the order given (the engine sorts alphabetically by
+    name).  Failures do not short-circuit — all checks run regardless.
+    """
     return [run_check(check, project_root) for check in checks]
 
 
