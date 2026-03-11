@@ -111,14 +111,15 @@ def _render_context(result: ContextResult) -> str:
 def resolve_contexts(prompt: str, results: list[ContextResult]) -> str:
     """Replace context placeholders in a prompt string.
 
+    Callers are responsible for passing only the results they want
+    resolved (the engine pre-filters via ``_discover_enabled_primitives``).
+
     - {{ contexts.<name> }} → specific context content
-    - {{ contexts }} → all enabled contexts not already placed
+    - {{ contexts }} → all contexts not already placed
     - If no placeholders found → append all at end
     """
     available: dict[str, str] = {}
     for r in results:
-        if not r.context.enabled:
-            continue
         rendered = _render_context(r)
         if rendered:
             available[r.context.name] = rendered

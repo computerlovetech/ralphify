@@ -154,8 +154,10 @@ class EnabledPrimitives(NamedTuple):
 def _discover_enabled_primitives(root: Path) -> EnabledPrimitives:
     """Discover all primitives and return only the enabled ones.
 
-    Centralises the discover-then-filter pattern so every call site uses
-    consistent filtering logic.
+    This is the **single layer** responsible for enabled filtering.
+    Downstream functions (``resolve_contexts``, ``resolve_instructions``,
+    ``run_all_contexts``, ``run_all_checks``) trust that they receive
+    only enabled primitives and do not re-filter.
     """
     return EnabledPrimitives(
         checks=[c for c in discover_checks(root) if c.enabled],

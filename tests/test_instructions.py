@@ -156,16 +156,6 @@ class TestResolveInstructions:
         result = resolve_instructions(prompt, instructions)
         assert result == ""
 
-    def test_disabled_instruction_not_injected(self):
-        instructions = self._make_instructions(
-            ("on", "Enabled content.", True),
-            ("off", "Disabled content.", False),
-        )
-        prompt = "{{ instructions }}"
-        result = resolve_instructions(prompt, instructions)
-        assert "Enabled content." in result
-        assert "Disabled content." not in result
-
     def test_whitespace_in_placeholder(self):
         instructions = self._make_instructions(("foo", "Foo text."))
         prompt = "{{  instructions.foo  }}"

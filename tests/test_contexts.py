@@ -374,16 +374,6 @@ class TestResolveContexts:
         result = resolve_contexts(prompt, results)
         assert result == ""
 
-    def test_disabled_context_not_injected(self):
-        results = self._make_results(
-            ("on", "Enabled output\n", True),
-            ("off", "Disabled output\n", False),
-        )
-        prompt = "{{ contexts }}"
-        result = resolve_contexts(prompt, results)
-        assert "Enabled output" in result
-        assert "Disabled output" not in result
-
     def test_whitespace_in_placeholder(self):
         results = self._make_results(("foo", "Foo data\n"))
         prompt = "{{  contexts.foo  }}"

@@ -47,9 +47,13 @@ def discover_instructions(root: Path = Path(".")) -> list[Instruction]:
 def resolve_instructions(prompt: str, instructions: list[Instruction]) -> str:
     """Replace instruction placeholders in a prompt string.
 
+    Callers are responsible for passing only the instructions they want
+    resolved (the engine pre-filters via ``_discover_enabled_primitives``).
+    Instructions with empty content are silently excluded.
+
     - {{ instructions.<name> }} → specific instruction content
-    - {{ instructions }} → all enabled instructions not already placed
+    - {{ instructions }} → all instructions not already placed
     - If no placeholders found → append all at end
     """
-    available = {i.name: i.content for i in instructions if i.enabled and i.content}
+    available = {i.name: i.content for i in instructions if i.content}
     return resolve_placeholders(prompt, available, "instructions")
