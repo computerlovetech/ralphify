@@ -25,6 +25,7 @@ src/ralphify/           # All source code
 ├── _runner.py          # Execute shell commands with timeout and capture output
 ├── _frontmatter.py     # Parse YAML frontmatter from markdown primitives, discover primitives
 ├── _templates.py       # Scaffold templates for init and new commands
+├── _console_emitter.py # Rich console renderer for run-loop events (ConsoleEmitter)
 ├── _events.py          # Event types and emitter protocol (NullEmitter, QueueEmitter)
 ├── _output.py          # Combine/truncate stdout+stderr
 └── ui/                 # Web UI layer (optional — not part of the core CLI)
@@ -98,7 +99,7 @@ The run loop communicates via structured events (`_events.py`). Each event has a
 - **`NullEmitter`** — discards events (used in tests)
 - **`QueueEmitter`** — pushes events into a `queue.Queue` for async consumption (used by the UI)
 
-The CLI uses a `ConsoleEmitter` (defined in `cli.py`) that renders events to the terminal with Rich formatting.
+The CLI uses a `ConsoleEmitter` (defined in `_console_emitter.py`) that renders events to the terminal with Rich formatting.
 
 ### Multi-run management (UI layer)
 
@@ -111,7 +112,7 @@ The CLI uses a `ConsoleEmitter` (defined in `cli.py`) that renders events to the
 ## Key files to understand first
 
 1. **`engine.py`** — The core run loop. Understands `RunConfig`, `RunState`, and `EventEmitter`. This is where iteration logic lives.
-2. **`cli.py`** — All CLI commands, the `ConsoleEmitter`, and prompt resolution. Delegates to `engine.run_loop()` for the actual loop. Scaffold templates live in `_templates.py`.
+2. **`cli.py`** — All CLI commands and prompt resolution. Delegates to `engine.run_loop()` for the actual loop. Scaffold templates live in `_templates.py`. Terminal event rendering lives in `_console_emitter.py`.
 3. **`_frontmatter.py`** — The primitive discovery system. Understanding `discover_primitives()` and `parse_frontmatter()` is essential for working on checks/contexts/instructions/prompts.
 4. **`resolver.py`** — Template placeholder logic shared by contexts and instructions. Small file but critical — changes here affect both.
 
@@ -135,7 +136,7 @@ You need to:
 5. Update `docs/primitives.md`
 
 ### If you change the event system...
-Events are defined in `_events.py:EventType`. The `ConsoleEmitter` in `cli.py` renders them to the terminal. The UI layer consumes them via `QueueEmitter`. Adding a new event type requires handling it in both places.
+Events are defined in `_events.py:EventType`. The `ConsoleEmitter` in `_console_emitter.py` renders them to the terminal. The UI layer consumes them via `QueueEmitter`. Adding a new event type requires handling it in both places.
 
 ### Output truncation
 `_output.py:truncate_output()` caps output at 5000 chars. This affects check failure output injected into prompts. If agents complain about missing error details, this is why.

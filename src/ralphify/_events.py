@@ -1,8 +1,8 @@
 """Event types and emitter protocol for the run loop.
 
 The run engine emits structured events during execution.  CLI mode renders
-them to the terminal via ``ConsoleEmitter``.  UI mode pushes them through
-a ``QueueEmitter`` into the web layer.
+them to the terminal via :class:`~ralphify._console_emitter.ConsoleEmitter`.
+UI mode pushes them through a ``QueueEmitter`` into the web layer.
 """
 
 from __future__ import annotations

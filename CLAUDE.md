@@ -22,7 +22,7 @@ uv run mkdocs serve        # Preview docs at http://127.0.0.1:8000
 All source code is in `src/ralphify/`. The main file is `cli.py` — it contains the CLI commands and delegates to the engine for the core loop.
 
 Key modules:
-- `cli.py` — CLI commands and the `ConsoleEmitter`
+- `cli.py` — CLI commands; delegates to `_console_emitter.py` for terminal event rendering
 - `_templates.py` — Scaffold templates for `ralph init` and `ralph new`
 - `_frontmatter.py` — Primitive discovery and YAML frontmatter parsing
 - `resolver.py` — Template placeholder resolution (`{{ contexts.name }}`, `{{ instructions }}`)
