@@ -92,14 +92,21 @@ def run_agent_streaming(
         text=True,
     )
     try:
-        # Send prompt and close stdin so the agent can start.
-        proc.stdin.write(prompt)  # type: ignore[union-attr]
-        proc.stdin.close()  # type: ignore[union-attr]
+        # Guaranteed non-None because we passed PIPE for all three streams.
+        assert proc.stdin is not None
+        assert proc.stdout is not None
+        assert proc.stderr is not None
 
-        for line in proc.stdout:  # type: ignore[union-attr]
+        # Send prompt and close stdin so the agent can start.
+        proc.stdin.write(prompt)
+        proc.stdin.close()
+
+        timed_out = False
+        for line in proc.stdout:
             if deadline and time.monotonic() > deadline:
                 proc.kill()
                 proc.wait()
+                timed_out = True
                 break
             stdout_lines.append(line)
             stripped = line.strip()
@@ -110,12 +117,13 @@ def run_agent_streaming(
                 except json.JSONDecodeError:
                     pass
             sys.stdout.write(line)
-        else:
-            # stdout exhausted — process should be done
+
+        if not timed_out:
+            # stdout exhausted — process finished normally.
             proc.wait()
             returncode = proc.returncode
 
-        stderr_data = proc.stderr.read()  # type: ignore[union-attr]
+        stderr_data = proc.stderr.read()
         if stderr_data:
             sys.stderr.write(stderr_data)
     finally:
