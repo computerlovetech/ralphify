@@ -18,7 +18,7 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NamedTuple
-from ralphify._agent import _is_claude_command, run_agent, run_agent_streaming
+from ralphify._agent import execute_agent
 from ralphify._discovery import merge_by_name
 from ralphify._events import Event, EventEmitter, EventType, NullEmitter
 from ralphify._output import format_duration
@@ -204,22 +204,16 @@ def _execute_agent(
     Updates ``state`` counters (completed / failed / timed_out) and returns
     the process return code, or ``None`` if the process timed out.
 
-    When the agent command is ``claude``, uses streaming mode to emit
-    ``AGENT_ACTIVITY`` events for each JSON line of output.  Other agents
-    fall back to the non-streaming ``subprocess.run()`` path.
+    Delegates to :func:`~ralphify._agent.execute_agent`, which auto-selects
+    streaming or blocking mode based on the agent command.
     """
     cmd = [config.command] + config.args
 
     try:
-        if _is_claude_command(cmd):
-            agent = run_agent_streaming(
-                cmd, prompt, config.timeout, log_path_dir, state.iteration,
-                on_activity=lambda data: emit(EventType.AGENT_ACTIVITY, {"raw": data, "iteration": state.iteration}),
-            )
-        else:
-            agent = run_agent(
-                cmd, prompt, config.timeout, log_path_dir, state.iteration,
-            )
+        agent = execute_agent(
+            cmd, prompt, config.timeout, log_path_dir, state.iteration,
+            on_activity=lambda data: emit(EventType.AGENT_ACTIVITY, {"raw": data, "iteration": state.iteration}),
+        )
     except FileNotFoundError:
         raise FileNotFoundError(
             f"Agent command not found: {config.command!r}. "

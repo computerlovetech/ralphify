@@ -190,3 +190,28 @@ def run_agent(
         elapsed=time.monotonic() - start,
         log_file=log_file,
     )
+
+
+def execute_agent(
+    cmd: list[str],
+    prompt: str,
+    timeout: float | None,
+    log_path_dir: Path | None,
+    iteration: int,
+    on_activity: Callable[[dict], None] | None = None,
+) -> AgentResult:
+    """Run the agent subprocess, auto-selecting streaming or blocking mode.
+
+    Uses streaming mode for agents that support ``--output-format stream-json``
+    (e.g. Claude Code); all other agents use the blocking ``subprocess.run``
+    path.  The *on_activity* callback is only invoked in streaming mode.
+
+    This is the single entry point the engine should use — callers don't need
+    to know which execution mode is selected.
+    """
+    if _is_claude_command(cmd):
+        return run_agent_streaming(
+            cmd, prompt, timeout, log_path_dir, iteration,
+            on_activity=on_activity,
+        )
+    return run_agent(cmd, prompt, timeout, log_path_dir, iteration)

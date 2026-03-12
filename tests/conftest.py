@@ -12,4 +12,4 @@ def _disable_streaming(monkeypatch):
     bypass those mocks.  Forcing ``_is_claude_command`` to return ``False``
     ensures all tests go through the ``subprocess.run`` path.
     """
-    monkeypatch.setattr("ralphify.engine._is_claude_command", lambda cmd: False)
+    monkeypatch.setattr("ralphify._agent._is_claude_command", lambda cmd: False)
