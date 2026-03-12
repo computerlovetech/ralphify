@@ -1059,3 +1059,265 @@ Adding iteration 3 opportunities to the existing phased plan:
 23. **Should the git diff summary (O37) detect "going in circles"?** If the same file is modified in 3 consecutive iterations, the summary could add a warning: `⚠ src/main.py modified in last 3 iterations — agent may be going in circles`. This directly addresses the best-practices doc's red flag: "Commits that undo previous commits."
 
 24. **How should presets (O41) handle existing files?** If `ralph init --preset python` is run in a project that already has a `ralph.toml`, should it fail, merge, or overwrite? Current `ralph init --force` overwrites everything — but presets create many more files (checks, contexts) that are harder to recreate.
+
+---
+
+## Deep Dive: The Multi-Ralph Workflow (NEW — Iteration 4)
+
+Users who outgrow a single RALPH.md prompt and create named ralphs (e.g., `docs`, `refactor`, `add-tests`) enter a workflow with its own distinct friction chain. This section walks through that journey.
+
+### The Progression
+
+1. **Day 1**: User has root `RALPH.md` — one prompt for everything. Works fine.
+2. **Week 2**: User wants different prompts for different tasks. Discovers `ralph new docs` to create a named ralph.
+3. **Week 3**: User has 3-5 named ralphs. Wants ralph-scoped checks (e.g., `docs` ralph doesn't need `pytest`). Discovers `--ralph` flag on `ralph new`.
+4. **Month 2**: User has a complex setup with global and scoped primitives. Debugging which primitives apply to which ralph becomes non-trivial.
+
+### Friction Points
+
+- **F68: No `ralph list` command to show available ralphs** (NEW, VALIDATED). To see available named ralphs, the user must run `ralph status` and scroll to the "Ralphs" section at the bottom. There's no quick `ralph list` or `ralph ralphs` command that shows just the ralphs with their descriptions and enabled/disabled status. For a user with 5+ ralphs, `ralph status` buries the ralph list below checks, contexts, and instructions. The most common question when switching tasks — "what ralphs do I have?" — requires the most verbose command.
+
+- **F69: Ralph-scoped primitives create 5+ levels of directory nesting** (NEW, VALIDATED). A ralph-scoped check lives at `.ralphify/ralphs/docs/checks/lint/CHECK.md` — that's 6 directory levels. Creating, finding, and editing these files is friction-heavy. Tab completion helps but `cd .ralphify/ralphs/docs/checks/lint/` is tedious. Compare: global checks at `.ralphify/checks/lint/CHECK.md` are 4 levels — already deep, but manageable. Scoped primitives add 2 more levels for the `ralphs/<name>/` prefix.
+
+- **F70: `enabled` field on ralphs is confusing — disabled ralphs can still be run** (NEW, VALIDATED). A ralph with `enabled: false` is excluded from `ralph status`'s ralph list (filtered by `_print_primitives_section` at `cli.py:85`). But `resolve_ralph_name()` at `ralphs.py:57-76` iterates ALL discovered ralphs (from `discover_ralphs` which returns both enabled and disabled). So `ralph run disabled-ralph` works! The `enabled` field on ralphs has an inconsistent meaning: it hides the ralph from `status` but doesn't prevent it from being used. For checks/contexts/instructions, `enabled: false` means "don't run this" — clear semantics. For ralphs, it means "don't show this in status" — confusing semantics. A user who disables a ralph expects it to be unavailable.
+
+- **F71: No way to promote root RALPH.md to a named ralph** (NEW, VALIDATED). A common progression: user starts with root `RALPH.md`, customizes it heavily, then wants to add a second prompt. They must: (1) `ralph new docs` to create a named ralph, (2) copy content from `RALPH.md` to `.ralphify/ralphs/docs/RALPH.md`, (3) decide what to do with root `RALPH.md` (keep as default? delete?), (4) update `ralph.toml` if needed. This is 4 manual steps for a natural workflow progression. A `ralph promote RALPH.md --name general` command could do this in one step.
+
+- **F72: No way to switch the default ralph without editing `ralph.toml`** (NEW, VALIDATED). If a user has ralphs named `docs`, `tests`, and `refactor`, switching the default requires opening `ralph.toml` and changing `ralph = "docs"` to `ralph = "tests"`. This is friction for a frequent operation. `ralph run tests` works for one-off runs, but the user who wants to run 50 iterations on `tests` must either type `ralph run tests -n 50` every time or edit the toml. A `ralph use tests` command that updates the toml's `ralph` field would be simpler.
+
+- **F73: No visibility into which primitives apply to a named ralph** (NEW, VALIDATED). When running `ralph run docs`, the user sees "Checks: 3 enabled" but doesn't know if those are global checks, docs-scoped checks, or a mix. The `merge_by_name()` function at `_discovery.py:103-113` merges global and local primitives (local wins on name collision), but the result is opaque. If a user has global `lint` check and docs-scoped `lint` check (overriding with a docs-specific config), they can't see this from `ralph status` or the run output. The `RUN_STARTED` event data includes counts but not origins.
+
+- **F74: Ralph-scoped primitives that disable a global primitive are invisible** (NEW, VALIDATED). A powerful but non-obvious pattern: create a ralph-scoped check with `enabled: false` and the same name as a global check to suppress it for that ralph. The `merge_by_name` function replaces the global with the local, and then the `enabled` filter at `engine.py:94` removes it. This works correctly but is completely invisible — there's no `ralph status --ralph docs` to show the merged result. A user trying to debug "why isn't my lint check running for the docs ralph?" has no tool to answer this.
+
+### The Mental Model Gap
+
+The multi-ralph workflow requires users to understand a layering system:
+1. Global primitives (`.ralphify/checks/`, etc.)
+2. Ralph-scoped primitives (`.ralphify/ralphs/<name>/checks/`, etc.)
+3. Merge behavior (local wins on name collision)
+4. Enabled filtering (happens after merge)
+
+This is a 4-layer mental model just for understanding which primitives run. It's powerful for platform engineers but overwhelming for the target persona (solo founders who want to "ship features while not coding"). Most users would be better served by a simpler model where each ralph is self-contained.
+
+---
+
+## Deep Dive: Frontmatter Authoring Pitfalls (NEW — Iteration 4)
+
+Frontmatter is the primary configuration mechanism for primitives. Every check, context, instruction, and ralph has frontmatter. The current parser (`_frontmatter.py`) is intentionally minimal — flat `key: value` pairs, no YAML library. This simplicity has benefits (no dependency, no YAML surprises) but creates its own failure modes.
+
+### Validated Failure Modes
+
+- **F75: Missing colon in frontmatter silently drops the line** (NEW, VALIDATED). `_parse_kv_lines()` at `_frontmatter.py:44-45` skips lines without `:`. Writing `command ruff check .` (missing colon) silently drops the command field. The check then has no command and no script → silently excluded from the loop (via `_check_from_entry` returning `None` at `checks.py:60-61`). The user sees the check in `ralph status` with `?` detail but no explanation. This is a 3-step silent failure chain: (1) frontmatter parser drops the line, (2) check constructor returns None, (3) check is excluded from the loop.
+
+- **F76: Typos in frontmatter field names are silently accepted** (NEW, VALIDATED). Writing `tiemout: 60` (typo) is accepted as a string-valued field called "tiemout". It's never used — `_check_from_entry` at `checks.py:69` does `prim.frontmatter.get("timeout", _DEFAULT_TIMEOUT)` which falls through to the default because "tiemout" ≠ "timeout". The check runs with the default 60s timeout. The user thinks they set a custom timeout but the default applies. No warning. The same applies to `comamnd` (typo for `command`), `eanbled` (typo for `enabled`), etc.
+
+- **F77: Invalid type coercion produces an unhandled Python exception** (NEW, VALIDATED). Writing `timeout: abc` triggers `int("abc")` in `_FIELD_COERCIONS` at `_frontmatter.py:32`, raising `ValueError: invalid literal for int() with base 10: 'abc'`. This propagates as an unhandled exception during primitive discovery, crashing the entire `ralph run` or `ralph status` command with a traceback. The error message doesn't indicate which file caused the problem — the user sees a raw Python traceback pointing to `_frontmatter.py:50`.
+
+- **F78: Inline comments after values become part of the value** (NEW, VALIDATED). Writing `command: ruff check . # lint only` in frontmatter results in `command = "ruff check . # lint only"`. The `_parse_kv_lines` function at `_frontmatter.py:46-48` uses `line.partition(":")` and takes everything after the first colon as the value, stripping only leading/trailing whitespace. The `#` is not treated as a comment in the value position — only as a line-start comment (line 42). When this command runs via `shlex.split("ruff check . # lint only")`, it produces `['ruff', 'check', '.', '#', 'lint', 'only']`, passing `#`, `lint`, and `only` as literal arguments to ruff. Ruff interprets these as file paths and probably fails with "file not found" — a confusing error for a comment the user thought was harmless.
+
+- **F79: No frontmatter at all is indistinguishable from intentional no-config** (NEW, VALIDATED). A CHECK.md that's just a markdown body with no `---` delimiters works — `parse_frontmatter` returns `({}, text)`. The check gets all defaults: `timeout=60`, `enabled=True`, `command=None`, `script=None`. But with no command and no script, it's excluded. A user who writes a CHECK.md with just failure instructions (body text) and no frontmatter — intending to add the command field later — gets no error, no warning, just a silently excluded check. The same file structure would be valid for an instruction (which has no command), so the file format gives no signal about what's missing.
+
+- **F80: Frontmatter `enabled: true` is the only reliable truthy value — others silently work but are undocumented** (NEW, VALIDATED). The coercion `lambda v: v.lower() in ("true", "yes", "1")` at `_frontmatter.py:33` means `enabled: True` (capital T) → `"True".lower()` → `"true"` → True. But `enabled: TRUE` → True, `enabled: Yes` → True, `enabled: 1` → True. For falsy values: `enabled: false` → False, `enabled: no` → False, `enabled: 0` → False. But also: `enabled: anything-else` → False. So `enabled: flase` (typo) → False, silently disabling the primitive. There's no way to distinguish between intentional `false` and a typo.
+
+### The Bigger Picture
+
+Frontmatter is configuration-as-markdown, which trades machine-parsability for human-readability. The parser's simplicity is a feature for the common case but creates a "pit of failure" for edge cases. Every field that's silently dropped or mistyped creates a debugging session where the user must trace through the parse → discover → filter → run pipeline to find the problem.
+
+The root cause: **frontmatter errors are silent at parse time and only surface as behavioral anomalies at run time** — often many minutes later, after the user has started a loop and noticed something isn't working.
+
+---
+
+## Deep Dive: CI/CD & Automation Gaps (NEW — Iteration 4)
+
+Ralphify's primary use case is interactive (developer at a terminal), but automated/CI use cases are a natural extension: "run the agent in CI to fix failing tests," "nightly cleanup agent," "PR review agent." This section analyzes how well ralphify serves non-interactive execution.
+
+### The Exit Code Problem
+
+- **F81: `ralph run` always exits 0 regardless of outcome** (NEW, VALIDATED — CRITICAL). Traced through the code: `cli.py:run()` at line 340 calls `run_loop(config, state, emitter)` which returns `None`. The `run()` function then returns normally — no exit code is set. The `state` object has `state.status` (COMPLETED/FAILED/STOPPED) and `state.completed`/`state.failed` counters, but none of these influence the process exit code. This means:
+  - `ralph run -n 1` where the agent crashes → exit 0
+  - `ralph run -n 1` where all checks fail → exit 0
+  - `ralph run -n 1` where the agent times out → exit 0
+  - Only an unhandled Python exception produces non-zero exit
+
+  For CI/CD, this is a showstopper. A CI step of `ralph run -n 3 && echo "All good"` always prints "All good." There's no way for a calling script to know if the agent succeeded. This undermines J2 (trust the output) in automated contexts.
+
+- **F82: No machine-readable output format** (NEW, VALIDATED). All CLI output goes through Rich console formatting (colors, Unicode, spinners). There's no `--json` flag to produce structured output. A CI pipeline that wants to parse iteration results (how many passed, which checks failed, total duration) must parse Rich-formatted terminal output — fragile and version-dependent. The event system (`_events.py`) already produces structured data with `Event.to_dict()`, but this serialization is only used by the WebSocket/UI layer, not the CLI.
+
+- **F83: Banner and spinner output in non-interactive contexts** (NEW, VALIDATED). When running in CI (no TTY), Rich's `Live` display (spinner) degrades, but the ASCII art banner still prints. There's no detection of `sys.stdout.isatty()` to suppress interactive-only output. The banner adds 8 lines of noise to CI logs. The spinner's transient rendering may produce garbled output in log files.
+
+- **F84: No `--quiet` / `--verbose` flags for controlling output verbosity** (NEW, VALIDATED). The CLI has no global verbosity control. Every `ralph run` produces the same output: banner, config summary, iteration headers, check results, run summary. In CI, users want minimal output (just pass/fail). In debugging, users want maximal output (prompt content, context resolution, per-check output). Currently, the only axis of control is `--log-dir` for capturing agent output — but this doesn't affect the CLI's own output.
+
+- **F85: `ralph.toml` `command` field is user-specific but committed to git** (NEW, VALIDATED). The `command` and `args` fields in `ralph.toml` specify the agent binary and its flags. This is project-level config committed to the repo. But different team members may use different agents (Claude Code vs Aider vs custom wrapper). A team repo with `command = "claude"` breaks for a member using Aider. There's no concept of personal overrides (e.g., `.ralph.local.toml`, environment variables like `RALPH_COMMAND`, or per-user config in `~/.config/ralphify/`). Every agent switch requires editing the shared config file.
+
+- **F86: No environment variable overrides for config** (NEW, VALIDATED). CI systems commonly configure tools via environment variables (`RALPH_COMMAND=claude`, `RALPH_MAX_ITERATIONS=5`, `RALPH_LOG_DIR=logs`). Ralphify has no environment variable support — all configuration comes from `ralph.toml` (project-level) or CLI flags (per-invocation). This means CI pipelines must either: (a) modify `ralph.toml` before running (fragile, leaves dirty git state), (b) pass all settings via CLI flags (verbose, easy to miss), or (c) use a wrapper script.
+
+### CI/CD Usage Pattern Analysis
+
+A typical CI integration would look like:
+```yaml
+- name: Run agent
+  run: ralph run -n 3 --timeout 600 --log-dir logs --stop-on-error
+- name: Check result
+  run: ??? # No way to check if ralph succeeded
+```
+
+The minimum viable CI story requires:
+1. Non-zero exit code on failure (F81) — BLOCKING
+2. Quiet mode for clean logs (F84) — HIGH VALUE
+3. Environment variable overrides (F86) — MEDIUM VALUE
+4. JSON output for parsing (F82) — NICE TO HAVE
+
+---
+
+## Deep Dive: The Prompt Lifecycle Edge Cases (NEW — Iteration 4)
+
+What happens when the prompt is empty, too large, or contains unexpected content?
+
+### Validated Edge Cases
+
+- **F87: Empty RALPH.md produces empty prompt with no warning** (NEW, VALIDATED). If `RALPH.md` contains only whitespace or only frontmatter with no body, `parse_frontmatter` returns an empty body string. `_assemble_prompt` at `engine.py:184-185` reads the file and strips frontmatter, getting `""`. If there are no contexts, no instructions, and no check failures, the agent receives an empty string as stdin. No warning is emitted. The agent may do nothing (best case) or do something random (worst case). An empty prompt should at minimum produce a warning.
+
+- **F88: No prompt size tracking or warning** (NEW, VALIDATED). The `PROMPT_ASSEMBLED` event at `engine.py:327` includes `prompt_length` (character count), but nobody acts on it. A prompt with 5 contexts, 10 instructions, and verbose check failures could easily reach 50,000+ characters — potentially exceeding the agent's context window. The tool produces no warning. The agent silently truncates or errors. For Claude Code, the context window is ~200K tokens — usually fine. For smaller models or cost-sensitive users, prompt size matters. A configurable warning threshold (e.g., `warn_prompt_size: 10000` in ralph.toml) would catch accidental bloat.
+
+- **F89: Instruction content that references context placeholders resolves as literal text** (NEW, VALIDATED). The prompt assembly pipeline at `engine.py:186-189` resolves in fixed order: contexts first, then instructions. If an instruction contains `{{ contexts.git-log }}`, this text is injected during instruction resolution — but context resolution already happened. The `{{ contexts.git-log }}` appears as literal text in the final prompt. This is correct behavior (avoiding circular resolution) but non-obvious. A user who writes `{{ contexts.git-log }}` in an instruction expecting it to resolve will get the raw placeholder text with no warning.
+
+- **F90: Check failure text accumulates but never resets on success** (NEW, VALIDATED). Looking at `engine.py:397-398`: `check_failures_text` is returned from `_run_iteration` and passed to the next iteration. When all checks pass, `format_check_failures` returns `""` (empty string). So the failure text IS reset on success — this is correct. But there's a subtlety: if iteration N fails checks, iteration N+1 gets the failure text. If the agent in N+1 fixes some but not all failures, iteration N+2 gets ONLY the failures from N+1's check run — not the union of N and N+1's failures. This is correct behavior but could be surprising: a failure that the agent "ignored" (didn't fix, but the check still passes) disappears from the feedback. This is actually fine — the check results reflect current state, not history.
+
+---
+
+## New Simplification Opportunities (Iteration 4)
+
+### Tier 1: High Impact, Low Effort (NEW)
+
+#### O44: Non-zero exit code when run has failures (NEW — CRITICAL for CI)
+**What:** After `run_loop()` completes in `cli.py:run()`, check `state.status` and `state.failed`. If `state.failed > 0` or `state.status == RunStatus.FAILED`, exit with code 1. Only exit 0 when all iterations completed and all checks passed.
+**Why:** Addresses F81. This is the single most important fix for any non-interactive use case. Without meaningful exit codes, ralphify cannot be used in CI/CD, scripts, or any automated pipeline. Every other CI improvement depends on this.
+**Job:** Trust (J2), Run (J1)
+**Effort:** XS — add 4 lines after `run_loop()` in `cli.py:run()`: check `state.failed > 0`, call `raise typer.Exit(1)`.
+**Risk:** Low. Only changes exit behavior — current users running interactively rarely check exit codes. Could be surprising for users who have `ralph run` in a `set -e` script where check failures are expected (the self-healing loop model assumes some failures). Mitigate by: exit 0 when the loop completed its full `-n` iterations regardless of individual check failures, exit 1 only when the run was cut short by `--stop-on-error` or agent crash.
+
+#### O45: Validate known frontmatter field names with typo detection (NEW)
+**What:** In `_parse_kv_lines()`, after parsing, check each key against the set of known fields (`command`, `timeout`, `enabled`, `description`). If an unknown field is found, emit a warning suggesting the closest known field: `⚠ Unknown field 'tiemout' in CHECK.md — did you mean 'timeout'?` Use a simple Levenshtein distance check (stdlib has `difflib.get_close_matches`).
+**Why:** Addresses F76. Frontmatter typos are currently 100% silent. A simple spell-check on field names would catch the most common configuration errors at discovery time, before the user starts a loop and wonders why their timeout isn't working.
+**Job:** Trust, Setup (J2, J5)
+**Effort:** S — add ~10 lines to `_parse_kv_lines()` using `difflib.get_close_matches`. The set of valid fields varies by primitive type, but a superset (`command`, `timeout`, `enabled`, `description`) covers all cases.
+**Risk:** Very low. Warning only. Unknown fields still accepted (they're used as arbitrary metadata in some workflows).
+
+#### O46: Handle frontmatter type coercion errors gracefully (NEW)
+**What:** Wrap the `coerce(value)` call at `_frontmatter.py:50` in a try/except. On `ValueError`, emit a warning: `⚠ Invalid value for 'timeout': 'abc' — expected an integer. Using default.` Return the raw string value so the caller can fall through to its default.
+**Why:** Addresses F77. Currently `timeout: abc` crashes the entire tool with a Python traceback. A graceful fallback with a clear warning is strictly better.
+**Job:** Trust, Setup (J2, J5)
+**Effort:** XS — add 3 lines of try/except in `_parse_kv_lines`.
+**Risk:** None.
+
+#### O47: Warn on empty prompt file (NEW)
+**What:** In `_assemble_prompt()` at `engine.py:184-185`, after reading and parsing the prompt file, check if the body is empty (after frontmatter stripping). If so, emit a warning event: `⚠ Prompt file 'RALPH.md' is empty — the agent will receive no instructions.`
+**Why:** Addresses F87. An empty prompt is almost always an error (user created the file but hasn't written content yet, or frontmatter is malformed). A warning prevents a wasted iteration.
+**Job:** Trust (J2)
+**Effort:** XS — add 2 lines after `parse_frontmatter` call.
+**Risk:** None.
+
+#### O48: `ralph list` command for quick ralph overview (NEW)
+**What:** Add a `ralph list` (or `ralph ls`) command that shows only the available named ralphs in a compact format: name, description, enabled/disabled, and whether it's the current default (from ralph.toml).
+**Why:** Addresses F68. The most common multi-ralph question — "what ralphs do I have?" — currently requires `ralph status` which buries ralphs at the bottom under 3 other primitive sections. A dedicated command serves the frequent use case directly.
+**Job:** Run, Steer (J1, J3)
+**Effort:** XS — add ~15 lines: discover ralphs, print name + description.
+**Risk:** None.
+
+### Tier 2: High Impact, Medium Effort (NEW)
+
+#### O49: Environment variable overrides for ralph.toml settings (NEW)
+**What:** Support `RALPH_COMMAND`, `RALPH_ARGS`, `RALPH_MAX_ITERATIONS`, `RALPH_TIMEOUT`, `RALPH_DELAY`, `RALPH_LOG_DIR` environment variables that override ralph.toml and CLI defaults. Precedence: CLI flags > env vars > ralph.toml > hardcoded defaults.
+**Why:** Addresses F85 and F86. Enables CI/CD integration without modifying ralph.toml or passing verbose CLI flags. Enables per-user agent selection without editing shared config. This is the standard pattern for CLI tools (Docker, Terraform, kubectl all support env var overrides).
+**Job:** Run, Setup (J1, J5)
+**Effort:** M — add env var lookup in `_load_config()` and `run()`, document precedence.
+**Risk:** Low. Purely additive. Env vars are only used when set — existing behavior unchanged.
+
+#### O50: `ralph use <name>` to switch the default ralph (NEW)
+**What:** Add `ralph use <name>` command that updates `ralph.toml`'s `ralph` field to the specified named ralph. Validates the ralph exists before updating. Shows a confirmation: `Default ralph set to 'docs'. Run 'ralph run' to use it.`
+**Why:** Addresses F72. Switching the default ralph is a frequent operation for multi-ralph users (weekly or daily for some). Currently requires opening and editing ralph.toml. A one-command switch is more ergonomic and less error-prone (no risk of toml syntax errors from manual editing).
+**Job:** Steer, Run (J3, J1)
+**Effort:** S-M — read toml, update the `ralph` field, write back. Requires TOML write support (currently only reads).
+**Risk:** Low. Only modifies the `ralph` field. Could use `tomli-w` for writing or simple string replacement.
+
+#### O51: `--quiet` and `--verbose` output modes (NEW)
+**What:** Add global flags `--quiet` / `-q` (suppress banner, spinner, show only errors and final summary) and `--verbose` / `-v` (show prompt assembly details, per-check output, context resolution). Default behavior unchanged.
+**Why:** Addresses F83 and F84. Quiet mode is essential for CI. Verbose mode is essential for debugging. Currently there's no way to control output level. This is the standard CLI pattern for tools that serve both interactive and automated use cases.
+**Job:** Monitor, Run (J6, J1)
+**Effort:** M — add global flags, pass verbosity to `ConsoleEmitter`, conditionally render events based on verbosity level.
+**Risk:** Low. Purely additive. Default behavior unchanged.
+
+#### O52: Detect and warn on inline comments in frontmatter values (NEW)
+**What:** In `_parse_kv_lines()`, after extracting a value, check if it contains ` #` (space-hash). If so, warn: `⚠ Value for 'command' contains ' #' — comments within values are not supported. The entire string after ':' is used as the value. Use a separate line for comments.`
+**Why:** Addresses F78. Inline comments are a natural YAML expectation that silently produces wrong behavior in ralphify's simplified parser. The warning prevents commands that fail in confusing ways.
+**Job:** Trust, Setup (J2, J5)
+**Effort:** XS — add ~5 lines of detection in `_parse_kv_lines`.
+**Risk:** None. Warning only. Users who intentionally have `#` in values (unlikely but possible) still get the correct behavior.
+
+#### O53: `ralph status --ralph <name>` to show merged primitive state (NEW)
+**What:** Add a `--ralph` flag to `ralph status` that shows the fully merged view: which global primitives apply, which are overridden by ralph-scoped primitives, and which are suppressed. Format: `  ✓ lint       ruff check . (global)`, `  ✓ tests      pytest -x (scoped to docs)`, `  ○ typecheck  (disabled by docs-scoped override)`.
+**Why:** Addresses F73 and F74. The merge behavior is powerful but completely invisible. Users debugging "why doesn't my check run for this ralph?" need visibility into the merge result. This is the multi-ralph equivalent of `ralph preview` for prompt assembly.
+**Job:** Trust, Steer (J2, J3)
+**Effort:** M — call `_discover_enabled_primitives(root, prompt_dir)` and annotate each result with its origin (global vs scoped).
+**Risk:** Very low. Read-only, additive to status output.
+
+### Tier 3: Medium Impact, Lower Effort (NEW)
+
+#### O54: Detect missing colon in frontmatter with warning (NEW)
+**What:** In `_parse_kv_lines()`, for lines that don't contain `:` but do contain a space and look like `key value` (where `key` is a known field name), warn: `⚠ Line 'command ruff check .' appears to be missing a colon. Expected: 'command: ruff check .'`
+**Why:** Addresses F75. The most devastating silent failure: a missing colon drops the most important field (command), causing the entire check to be silently excluded. A heuristic warning for lines that look like they should be key-value pairs catches the most common case.
+**Job:** Trust, Setup (J2, J5)
+**Effort:** S — check first word of non-colon lines against known field names.
+**Risk:** Very low. Warning only. False positives possible for body text that starts with a known field name, but this only triggers inside the frontmatter block (between `---` delimiters).
+
+---
+
+## Updated Principles Applied (Iteration 4)
+
+| Principle | New Applications |
+|---|---|
+| **Clear feedback** | O44 (exit codes), O45 (typo detection), O46 (coercion errors), O47 (empty prompt), O52 (inline comment warning), O54 (missing colon warning) |
+| **Convention over configuration** | O49 (env var overrides follow standard CLI patterns) |
+| **Fewer steps** | O48 (quick ralph listing), O50 (one-command ralph switch) |
+| **Progressive disclosure** | O51 (quiet/verbose modes), O53 (ralph-scoped status for advanced users) |
+| **Observability is trust** | O44 (exit code is the most basic observable), O53 (merge visibility) |
+| **Single source of truth** | O53 (status and run should agree on primitives) |
+
+---
+
+## Updated Recommended Implementation Order (Iteration 4)
+
+**CRITICAL — implement before any other CI/CD or automation work:**
+- O44: Non-zero exit code on failures (XS) — everything else in CI depends on this
+
+**Phase 1 — "Just Works" (add to existing):**
+- O45: Validate known frontmatter field names (S)
+- O46: Handle type coercion errors gracefully (XS)
+- O47: Warn on empty prompt file (XS)
+- O48: `ralph list` command (XS)
+- O52: Detect inline comments in frontmatter values (XS)
+- O54: Detect missing colon in frontmatter (S)
+
+**Phase 2 — "Smart Setup" (add to existing):**
+- O50: `ralph use <name>` to switch default ralph (S-M)
+- O49: Environment variable overrides (M) — enables CI/CD without config modification
+
+**Phase 3 — "Observable Loop" (add to existing):**
+- O51: `--quiet` and `--verbose` output modes (M) — essential for CI logs
+- O53: `ralph status --ralph <name>` for merged primitive view (M)
+
+---
+
+## Updated Open Questions (Iteration 4)
+
+25. **What should the exit code semantics be?** O44 proposes non-zero on failure, but the self-healing loop model expects some check failures (that's how the loop learns). Options: (a) exit 1 if ANY check ever failed (too strict — almost every run has early failures), (b) exit 1 if the LAST iteration had check failures (useful — "did it converge?"), (c) exit 1 only on agent crash or `--stop-on-error` trigger (most compatible with current model), (d) exit code = number of failed checks in last iteration (informative but non-standard). Recommendation: (b) with an option to select (c) via flag.
+
+26. **Should `ralph list` show disabled ralphs?** If yes, mark them clearly. If no, users can't discover ralphs that are disabled. Recommendation: show all, with `[disabled]` tag.
+
+27. **Should frontmatter validation be per-primitive-type?** Currently all primitives share the same parser. But `command` is valid for checks and contexts but not instructions. `description` is valid for ralphs but not checks. Type-specific validation would catch more errors (e.g., "instructions don't support the 'command' field") but adds coupling between the parser and each primitive type. Recommendation: start with a universal known-field set, refine per-type later.
+
+28. **Should `ralph use` modify ralph.toml in-place?** TOML modification risks losing comments and formatting. Options: (a) use a TOML library that preserves formatting (e.g., `tomlkit`), (b) use simple regex replacement for the `ralph = "..."` line, (c) store the "current ralph" in a separate file (e.g., `.ralphify/.current`). Recommendation: (b) for simplicity — the ralph field is a single line.
+
+29. **Should environment variables use `RALPH_` or `RALPHIFY_` prefix?** The CLI command is `ralph` but the package is `ralphify`. `RALPH_COMMAND` is shorter but could conflict with other tools. `RALPHIFY_COMMAND` is unambiguous but verbose. Recommendation: `RALPH_` — shorter, matches the CLI command, and conflicts are unlikely.
+
+30. **Is the frontmatter parser intentionally minimal or accidentally limited?** The simplified `key: value` format avoids YAML's complexity, but it can't express: lists (for args), nested config (for structured settings), or multiline values (for long commands). Should it stay minimal (with `run.*` scripts as the escape hatch) or grow toward a subset of YAML? Recommendation: stay minimal — the escape hatches exist and complexity breeds more edge cases.
