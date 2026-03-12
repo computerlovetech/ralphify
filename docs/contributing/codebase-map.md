@@ -17,13 +17,13 @@ The core loop is simple. The complexity lives in **prompt assembly** — resolvi
 ```
 src/ralphify/           # All source code
 ├── __init__.py         # Version detection + app entry point
-├── cli.py              # CLI commands (init, run, status, new, ralphs) — delegates to engine for the loop
+├── cli.py              # CLI commands (init, run, status, new) — delegates to engine for the loop
 ├── engine.py           # Core run loop orchestration with structured event emission
-├── manager.py          # Multi-run orchestration for the UI layer (concurrent runs via threads)
+├── manager.py          # Multi-run orchestration (concurrent runs via threads)
 ├── checks.py           # Discover and run validation checks, format failures
 ├── contexts.py         # Discover and run dynamic data contexts, resolve into prompt
 ├── instructions.py     # Discover and resolve static text instructions
-├── ralphs.py           # Named ralph discovery and resolution
+├── ralphs.py           # Named ralph discovery and resolution (resolve_ralph_source)
 ├── resolver.py         # Template placeholder resolution (shared by contexts + instructions)
 ├── detector.py         # Auto-detect project type from manifest files
 ├── _agent.py           # Run agent subprocesses (streaming + blocking modes, log writing)
@@ -33,15 +33,8 @@ src/ralphify/           # All source code
 ├── _discovery.py       # Scan .ralphify/ directories for primitives (discover_primitives, find_run_script)
 ├── _templates.py       # Scaffold templates for init and new commands
 ├── _console_emitter.py # Rich console renderer for run-loop events (ConsoleEmitter)
-├── _events.py          # Event types and emitter protocol (NullEmitter, QueueEmitter)
-├── _output.py          # Combine/truncate stdout+stderr
-└── ui/                 # Web UI layer (optional — not part of the core CLI)
-    ├── app.py          # FastAPI application setup
-    ├── api/            # REST API endpoints
-    ├── models.py       # Pydantic models for API
-    ├── persistence.py  # SQLite persistence via aiosqlite
-    ├── frontend/       # Frontend assets (HTML, JS, CSS)
-    └── static/         # Static files served by the UI
+├── _events.py          # Event types and emitter protocol (NullEmitter, QueueEmitter, FanoutEmitter)
+└── _output.py          # Combine/truncate stdout+stderr
 
 tests/                  # Pytest tests — one test file per module
 docs/                   # MkDocs site (Material theme) — user-facing documentation
@@ -54,14 +47,14 @@ docs/contributing/      # Contributor documentation (this section)
 
 ## Architecture: how the pieces connect
 
-The CLI entry point is `cli.py:run()`, which parses options, resolves the prompt source via `ralphs.py:resolve_prompt_source()`, and delegates to `engine.py:run_loop()` for the actual iteration cycle. The engine emits structured events via an `EventEmitter`, making the same loop reusable from both CLI and web UI contexts.
+The CLI entry point is `cli.py:run()`, which parses options, resolves the prompt source via `ralphs.py:resolve_ralph_source()`, and delegates to `engine.py:run_loop()` for the actual iteration cycle. The engine emits structured events via an `EventEmitter`, making the same loop reusable from both the CLI and any external orchestration layer (such as `manager.py`).
 
 ```
 ralph run
   │
   ├── cli.py:run() — parse options, print banner
   │   ├── Load config from ralph.toml
-  │   ├── Resolve prompt via ralphs.resolve_prompt_source() (--prompt > name > --prompt-file > toml > root)
+  │   ├── Resolve prompt via ralphs.resolve_ralph_source() (--prompt > name > --prompt-file > toml > root)
   │   └── Build RunConfig and call engine.run_loop()
   │
   └── engine.py:run_loop(config, state, emitter)
@@ -110,20 +103,20 @@ The run loop communicates via structured events (`_events.py`). Each event has a
 
 The CLI uses a `ConsoleEmitter` (defined in `_console_emitter.py`) that renders events to the terminal with Rich formatting.
 
-### Multi-run management (UI layer)
+### Multi-run management
 
-`manager.py:RunManager` orchestrates concurrent runs for the web UI:
+`manager.py:RunManager` orchestrates concurrent runs, providing the building blocks for any external orchestration layer:
 
 - Creates runs with unique IDs and wraps them in `ManagedRun` (config + state + emitter + thread)
 - Starts each run in a daemon thread via `engine.run_loop()`
 - Supports pause/resume/stop per run via `RunState` thread-safe control methods
-- Uses `FanoutEmitter` to broadcast events to multiple listeners (e.g., queue + persistence)
+- Uses `FanoutEmitter` to broadcast events to multiple listeners
 
 ## Key files to understand first
 
 1. **`engine.py`** — The core run loop. Uses `RunConfig` and `RunState` (from `_run_types.py`) and `EventEmitter`. This is where iteration logic lives.
-2. **`_run_types.py`** — `RunConfig`, `RunState`, and `RunStatus`. These are the shared data types used by the engine, CLI, manager, and UI. Separated so modules that only need the types don't pull in execution logic.
-3. **`cli.py`** — All CLI commands. Delegates to `engine.run_loop()` for the actual loop. Prompt source resolution (name vs. file path vs. inline) lives in `ralphs.py:resolve_prompt_source()`. Scaffold templates live in `_templates.py`. Terminal event rendering lives in `_console_emitter.py`.
+2. **`_run_types.py`** — `RunConfig`, `RunState`, and `RunStatus`. These are the shared data types used by the engine, CLI, and manager. Separated so modules that only need the types don't pull in execution logic.
+3. **`cli.py`** — All CLI commands. Delegates to `engine.run_loop()` for the actual loop. Prompt source resolution (name vs. file path vs. inline) lives in `ralphs.py:resolve_ralph_source()`. Scaffold templates live in `_templates.py`. Terminal event rendering lives in `_console_emitter.py`.
 4. **`_frontmatter.py`** + **`_discovery.py`** — Frontmatter parsing and primitive discovery. `_frontmatter.py` handles YAML parsing and defines marker constants. `_discovery.py` scans `.ralphify/` directories and uses `parse_frontmatter()` to yield `PrimitiveEntry` results. Understanding both is essential for working on checks/contexts/instructions/ralphs.
 5. **`resolver.py`** — Template placeholder logic shared by contexts and instructions. Small file but critical — changes here affect both.
 
@@ -131,7 +124,7 @@ The CLI uses a `ConsoleEmitter` (defined in `_console_emitter.py`) that renders 
 
 ### If you change the primitive marker filenames...
 
-The marker file names (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `RALPH.md`) are defined as constants in `_frontmatter.py` (`CHECK_MARKER`, `CONTEXT_MARKER`, `INSTRUCTION_MARKER`, `RALPH_MARKER`). The primitives directory name is `PRIMITIVES_DIR`. All modules — `checks.py`, `contexts.py`, `instructions.py`, `ralphs.py`, `cli.py`, and the UI layer — import from there. Change the constant to rename everywhere.
+The marker file names (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `RALPH.md`) are defined as constants in `_frontmatter.py` (`CHECK_MARKER`, `CONTEXT_MARKER`, `INSTRUCTION_MARKER`, `RALPH_MARKER`). The primitives directory name is `PRIMITIVES_DIR`. All modules — `checks.py`, `contexts.py`, `instructions.py`, `ralphs.py`, and `cli.py` — import from there. Change the constant to rename everywhere.
 
 ### If you change frontmatter fields...
 
@@ -153,7 +146,7 @@ You need to:
 
 ### If you change the event system...
 
-Events are defined in `_events.py:EventType`. The `ConsoleEmitter` in `_console_emitter.py` renders them to the terminal. The UI layer consumes them via `QueueEmitter`. Adding a new event type requires handling it in both places.
+Events are defined in `_events.py:EventType`. The `ConsoleEmitter` in `_console_emitter.py` renders them to the terminal. External consumers can use `QueueEmitter` or implement the `EventEmitter` protocol. Adding a new event type requires handling it in `ConsoleEmitter` and any other active emitters.
 
 ### Output truncation
 
@@ -181,5 +174,3 @@ Minimal by design:
 - No other runtime dependencies
 
 Dev dependencies: pytest, mkdocs, mkdocs-material.
-
-Optional UI dependencies: fastapi, uvicorn, aiosqlite, websockets.

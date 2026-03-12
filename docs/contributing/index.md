@@ -44,19 +44,17 @@ Tests use temporary directories and have no external dependencies — no API key
 tests/
 ├── conftest.py            # Shared fixtures (disables streaming path for all tests)
 ├── test_checks.py         # Check discovery and execution
-├── test_cli.py            # CLI commands (init, run, status, new, ralphs)
+├── test_cli.py            # CLI commands (init, run, status, new)
 ├── test_contexts.py       # Context discovery and injection
 ├── test_detector.py       # Project type detection
-├── test_discovery.py      # Primitive directory scanning (discover_local_primitives)
+├── test_discovery.py      # Primitive directory scanning
 ├── test_engine.py         # Core run loop and RunState/RunConfig
 ├── test_instructions.py   # Instruction discovery and resolution
 ├── test_manager.py        # Multi-run orchestration
 ├── test_output.py         # Output combining and truncation
-├── test_persistence.py    # UI persistence layer (SQLite)
 ├── test_ralphs.py         # Named ralph discovery and resolution
 ├── test_resolver.py       # Template placeholder resolution (named, bulk, implicit)
 ├── test_runner.py         # Command execution with timeout
-└── ...
 ```
 
 When adding a new feature, add tests in the corresponding file. If you're adding a new module, create a matching `test_<module>.py` file.
