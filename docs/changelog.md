@@ -6,7 +6,9 @@ description: Ralphify release history — new features, bug fixes, and breaking 
 
 All notable changes to ralphify are documented here.
 
-## Unreleased
+## 0.1.6 — 2026-03-12
+
+Named prompts, prompt-scoped primitives, live agent activity streaming, and a redesigned dashboard with persistent history.
 
 ### Added
 
