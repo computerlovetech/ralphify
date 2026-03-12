@@ -146,91 +146,19 @@ args = []
 ralph = "RALPH.md"
 ```
 
-### Python wrapper example
+## Testing your setup
 
-**`ralph-agent.py`**
-
-```python
-#!/usr/bin/env python3
-"""Custom agent wrapper that reads a prompt from stdin."""
-
-import subprocess
-import sys
-
-prompt = sys.stdin.read()
-
-# Transform the prompt, call APIs, run tools — whatever you need
-result = subprocess.run(
-    ["my-tool", "--prompt", prompt],
-    check=True,
-)
-
-sys.exit(result.returncode)
-```
+Verify the agent works outside of ralphify first:
 
 ```bash
-chmod +x ralph-agent.py
+echo "Say hello" | <your-command> <your-args>
 ```
 
-```toml
-[agent]
-command = "./ralph-agent.py"
-args = []
-ralph = "RALPH.md"
-```
-
-## Testing your agent setup
-
-Before running the full loop, verify your agent works with a simple prompt:
-
-```bash
-echo "Say hello and create a file called test.txt with the word 'hello' in it." | <your-command> <your-args>
-```
-
-Then check:
-
-```bash
-cat test.txt   # Should contain "hello"
-rm test.txt    # Clean up
-```
-
-If this works, your agent is compatible with ralphify. Run `ralph status` to verify the full setup:
-
-```bash
-ralph status
-```
-
-You should see a green checkmark next to your command:
-
-```
-✓ Command '<your-command>' found on PATH
-```
-
-## Agent compatibility checklist
-
-| Requirement | Why |
-|---|---|
-| Reads prompt from stdin (or via wrapper) | Ralphify pipes the assembled prompt to the agent's stdin |
-| Works non-interactively | No human is present to approve actions during the loop |
-| Exits when done | Ralphify waits for the process to finish before running checks |
-| Returns meaningful exit codes | Exit 0 = success, non-zero = failure (used by `--stop-on-error`) |
-| Operates on files in the current directory | Checks validate the project state after the agent runs |
-
-## Tips for non-Claude-Code agents
-
-**Disable auto-commits if your prompt handles commits.** Most agents have an auto-commit feature. If your `RALPH.md` includes commit instructions, disable the agent's built-in commits to avoid double-committing or conflicts.
-
-**Test with `-n 1` first.** Run a single iteration to verify the agent receives the prompt correctly and produces useful output:
+Then test through ralphify with a single iteration:
 
 ```bash
 ralph run -n 1 --log-dir ralph_logs
-cat ralph_logs/001_*.log
 ```
 
-**Use `--timeout` as a safety net.** If the agent hangs or enters an interactive mode you didn't expect, the timeout kills it so the loop doesn't stall forever:
-
-```bash
-ralph run --timeout 300
-```
-
-**Check that the agent's PATH is correct.** Some agents need specific tools (compilers, linters, package managers) available. Make sure everything the agent might call is on your PATH before starting the loop.
+!!! tip "Non-Claude-Code agents"
+    Disable auto-commits if your prompt handles commits — most agents have this feature, and it conflicts with prompt-driven commit instructions. Use `--timeout` as a safety net in case the agent enters an unexpected interactive mode.
