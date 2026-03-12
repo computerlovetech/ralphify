@@ -7,10 +7,10 @@ updates, event emission, and loop control.
 
 Two execution modes are supported:
 
-- **Streaming** (``run_agent_streaming``) — line-by-line stdout reading
+- **Streaming** (``_run_agent_streaming``) — line-by-line stdout reading
   via ``Popen``, used for agents that emit JSON streams (e.g. Claude Code).
-- **Blocking** (``run_agent``) — ``subprocess.run`` with optional output
-  capture, used for all other agents.
+- **Blocking** (``_run_agent_blocking``) — ``subprocess.run`` with optional
+  output capture, used for all other agents.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ def _is_claude_command(cmd: list[str]) -> bool:
     return binary == "claude"
 
 
-def run_agent_streaming(
+def _run_agent_streaming(
     cmd: list[str],
     prompt: str,
     timeout: float | None,
@@ -146,7 +146,7 @@ def run_agent_streaming(
     )
 
 
-def run_agent(
+def _run_agent_blocking(
     cmd: list[str],
     prompt: str,
     timeout: float | None,
@@ -210,8 +210,8 @@ def execute_agent(
     to know which execution mode is selected.
     """
     if _is_claude_command(cmd):
-        return run_agent_streaming(
+        return _run_agent_streaming(
             cmd, prompt, timeout, log_path_dir, iteration,
             on_activity=on_activity,
         )
-    return run_agent(cmd, prompt, timeout, log_path_dir, iteration)
+    return _run_agent_blocking(cmd, prompt, timeout, log_path_dir, iteration)
