@@ -200,12 +200,6 @@ You define what "valid" means. Ralphify feeds failures back into the prompt auto
 
     Complete, copy-pasteable setups for Python, TypeScript, bug fixing, and docs.
 
--   **[How It Works](how-it-works.md)**
-
-    ---
-
-    The iteration lifecycle, prompt assembly, and feedback loop explained.
-
 -   **[Python API](api.md)**
 
     ---

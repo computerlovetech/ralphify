@@ -108,7 +108,7 @@ Primitives are discovered once when `ralph run` starts. If you add, remove, or m
 3. Run `ralph status` to verify the changes are detected
 4. Run `ralph run` again
 
-This is different from `RALPH.md`, which **is** re-read every iteration. See [What's fresh and what's fixed](how-it-works.md#whats-fresh-and-whats-fixed) for details.
+This is different from `RALPH.md`, which **is** re-read every iteration. See [What's re-read vs. fixed at startup](primitives.md#whats-re-read-vs-fixed-at-startup) for details.
 
 ## Check issues
 
@@ -223,7 +223,7 @@ Do the work.
 {{ contexts }}
 ```
 
-See [placeholder resolution rules](how-it-works.md#placeholder-resolution-rules) for full details.
+See [Placement in the prompt](primitives.md#placement-in-the-prompt) for full details.
 
 ## Output issues
 

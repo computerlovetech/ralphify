@@ -69,7 +69,7 @@ No. Primitives (checks, contexts, instructions) are discovered and loaded once w
 
 The exception is **context commands** — their output is always fresh because the command re-runs each iteration. But the command itself, timeout, and static content are fixed at startup.
 
-See [What's fresh and what's fixed](how-it-works.md#whats-fresh-and-whats-fixed) for the full breakdown.
+See [What's re-read vs. fixed at startup](primitives.md#whats-re-read-vs-fixed-at-startup) for the full breakdown.
 
 ### What happens if the agent doesn't commit?
 

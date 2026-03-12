@@ -85,7 +85,6 @@ The `--strict` flag treats warnings as errors. The CI pipeline uses this flag, s
 docs/
 ├── index.md              # Landing page
 ├── getting-started.md    # Step-by-step tutorial
-├── how-it-works.md       # Iteration lifecycle and prompt assembly
 ├── agents.md             # Setup guides for different agents
 ├── cookbook.md            # Complete copy-pasteable setups
 ├── primitives.md         # Checks, contexts, instructions reference

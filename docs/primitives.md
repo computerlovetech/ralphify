@@ -494,6 +494,18 @@ Context output is injected into the prompt **regardless of the command's exit co
 
 If a context command produces no output at all, only its static content (the body below the frontmatter) is injected. If it has neither output nor static content, it contributes nothing to the prompt.
 
+### What's re-read vs. fixed at startup
+
+| What | When it's loaded | Editable while running? |
+|---|---|---|
+| `RALPH.md` | Every iteration | Yes — edits take effect next iteration |
+| Context command output | Every iteration | Yes — commands re-run each time |
+| Context/instruction config | Startup only | No — restart the loop |
+| Check config | Startup only | No — restart the loop |
+| New/removed primitives | Startup only | No — restart the loop |
+
+`RALPH.md` is the primary way to steer the agent in real time. To add or modify primitives, stop the loop (`Ctrl+C`) and restart.
+
 ### Disabled primitives
 
 Setting `enabled: false` in frontmatter skips the primitive during execution but does **not** hide it. Disabled primitives still appear in `ralph status` (marked with a different indicator) and are still discovered — they're just filtered out before running. This makes it easy to toggle primitives on and off without deleting directories.
