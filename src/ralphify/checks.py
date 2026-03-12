@@ -71,18 +71,18 @@ def _check_from_entry(prim) -> Check | None:
     )
 
 
+def _checks_from_entries(entries) -> list[Check]:
+    """Convert primitive entries to Checks, skipping entries without a command or script."""
+    return [c for c in map(_check_from_entry, entries) if c is not None]
+
+
 def discover_checks(root: Path = Path(".")) -> list[Check]:
     """Scan ``.ralphify/checks/`` for subdirectories containing a ``CHECK.md``.
 
     Checks without both a ``run.*`` script and a ``command`` in frontmatter
     are skipped with a warning.  Defaults: ``timeout=_DEFAULT_TIMEOUT``, ``enabled=True``.
     """
-    checks = []
-    for prim in discover_primitives(root, "checks", CHECK_MARKER):
-        check = _check_from_entry(prim)
-        if check is not None:
-            checks.append(check)
-    return checks
+    return _checks_from_entries(discover_primitives(root, "checks", CHECK_MARKER))
 
 
 def discover_checks_local(prompt_dir: Path) -> list[Check]:
@@ -91,12 +91,7 @@ def discover_checks_local(prompt_dir: Path) -> list[Check]:
     Same construction logic as :func:`discover_checks` but reads from
     a prompt directory instead of the global ``.ralphify/checks/``.
     """
-    checks = []
-    for prim in discover_local_primitives(prompt_dir, "checks", CHECK_MARKER):
-        check = _check_from_entry(prim)
-        if check is not None:
-            checks.append(check)
-    return checks
+    return _checks_from_entries(discover_local_primitives(prompt_dir, "checks", CHECK_MARKER))
 
 
 def run_check(check: Check, project_root: Path) -> CheckResult:

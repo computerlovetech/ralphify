@@ -82,3 +82,16 @@ def discover_local_primitives(
     global ``.ralphify/{kind}/`` path.  Results are in alphabetical order.
     """
     return _scan_dir(base_dir / kind, marker)
+
+
+def merge_by_name(global_list, local_list):
+    """Merge global and prompt-local primitives; local wins on name conflict.
+
+    Used by the engine to overlay prompt-scoped primitives on top of
+    global ones.  Both lists must contain objects with a ``.name`` attribute.
+    Results are sorted alphabetically by name.
+    """
+    by_name = {p.name: p for p in global_list}
+    for p in local_list:
+        by_name[p.name] = p  # local wins
+    return sorted(by_name.values(), key=lambda p: p.name)

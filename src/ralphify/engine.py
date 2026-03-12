@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NamedTuple
 from ralphify._agent import _is_claude_command, run_agent, run_agent_streaming
+from ralphify._discovery import merge_by_name
 from ralphify._events import Event, EventEmitter, EventType, NullEmitter
 from ralphify._output import format_duration
 from ralphify._run_types import RunConfig, RunState, RunStatus
@@ -65,14 +66,6 @@ def _resolve_prompt_dir(config: RunConfig) -> Path | None:
     return None
 
 
-def _merge_primitives(global_list, local_list):
-    """Merge global and prompt-local primitives; local wins on name conflict."""
-    by_name = {p.name: p for p in global_list}
-    for p in local_list:
-        by_name[p.name] = p  # local wins
-    return sorted(by_name.values(), key=lambda p: p.name)
-
-
 def _discover_enabled_primitives(
     root: Path, prompt_dir: Path | None = None,
 ) -> EnabledPrimitives:
@@ -93,9 +86,9 @@ def _discover_enabled_primitives(
     instructions = discover_instructions(root)
 
     if prompt_dir is not None:
-        checks = _merge_primitives(checks, discover_checks_local(prompt_dir))
-        contexts = _merge_primitives(contexts, discover_contexts_local(prompt_dir))
-        instructions = _merge_primitives(instructions, discover_instructions_local(prompt_dir))
+        checks = merge_by_name(checks, discover_checks_local(prompt_dir))
+        contexts = merge_by_name(contexts, discover_contexts_local(prompt_dir))
+        instructions = merge_by_name(instructions, discover_instructions_local(prompt_dir))
 
     return EnabledPrimitives(
         checks=[c for c in checks if c.enabled],

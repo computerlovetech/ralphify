@@ -8,7 +8,8 @@ from unittest.mock import patch
 
 from ralphify._events import EventType, NullEmitter, QueueEmitter
 from ralphify._run_types import RunConfig, RunState, RunStatus
-from ralphify.engine import _merge_primitives, _resolve_prompt_dir, run_loop
+from ralphify._discovery import merge_by_name
+from ralphify.engine import _resolve_prompt_dir, run_loop
 
 _MOCK_SUBPROCESS = "ralphify._agent.subprocess.run"
 
@@ -444,8 +445,8 @@ class TestPromptLocalPrimitives:
         assert "New focus." in second_call_input
 
 
-class TestMergePrimitives:
-    """Unit tests for _merge_primitives helper."""
+class TestMergeByName:
+    """Unit tests for merge_by_name helper."""
 
     def test_local_wins_on_name_conflict(self):
         from ralphify.instructions import Instruction
@@ -458,7 +459,7 @@ class TestMergePrimitives:
         local_list = [
             Instruction(name="style", path=Path("/l/style"), content="Local."),
         ]
-        merged = _merge_primitives(global_list, local_list)
+        merged = merge_by_name(global_list, local_list)
         assert len(merged) == 2
         by_name = {p.name: p for p in merged}
         assert by_name["style"].content == "Local."
@@ -474,11 +475,11 @@ class TestMergePrimitives:
         local_list = [
             Instruction(name="alpha", path=Path("/l/a"), content="A."),
         ]
-        merged = _merge_primitives(global_list, local_list)
+        merged = merge_by_name(global_list, local_list)
         assert [p.name for p in merged] == ["alpha", "zebra"]
 
     def test_empty_lists(self):
-        assert _merge_primitives([], []) == []
+        assert merge_by_name([], []) == []
 
 
 class TestResolvePromptDir:
