@@ -56,7 +56,7 @@ When ralphify detects that the agent command is `claude`, it automatically adds 
 This enables ralphify to:
 
 - Parse Claude Code's structured JSON output line by line
-- Track agent activity in real time (used by the upcoming web dashboard)
+- Track agent activity in real time
 - Extract the final result text from the agent's response
 
 The flags are appended to whatever `args` you configure in `ralph.toml`, so the actual command executed each iteration is:

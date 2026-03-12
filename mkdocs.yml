@@ -95,7 +95,6 @@ nav:
     - Best Practices: best-practices.md
     - Using with Different Agents: agents.md
     - Cookbook: cookbook.md
-    - Web Dashboard (Coming Soon): dashboard.md
   - Reference:
     - Quick Reference: quick-reference.md
     - Primitives: primitives.md
