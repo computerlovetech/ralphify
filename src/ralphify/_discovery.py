@@ -11,9 +11,25 @@ Parsing of the marker files themselves is delegated to
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Protocol, TypeVar
 
 from ralphify._frontmatter import PRIMITIVES_DIR, parse_frontmatter
+
+
+class Named(Protocol):
+    """Protocol for objects with a ``name`` attribute.
+
+    All primitive dataclasses (:class:`~ralphify.checks.Check`,
+    :class:`~ralphify.contexts.Context`, :class:`~ralphify.instructions.Instruction`,
+    :class:`~ralphify.ralphs.Ralph`) satisfy this protocol, enabling type-safe
+    merging in :func:`merge_by_name`.
+    """
+
+    @property
+    def name(self) -> str: ...
+
+
+_N = TypeVar("_N", bound=Named)
 
 
 class PrimitiveEntry(NamedTuple):
@@ -84,12 +100,12 @@ def discover_local_primitives(
     return _scan_dir(base_dir / kind, marker)
 
 
-def merge_by_name(global_list, local_list):
+def merge_by_name(global_list: list[_N], local_list: list[_N]) -> list[_N]:
     """Merge global and prompt-local primitives; local wins on name conflict.
 
     Used by the engine to overlay prompt-scoped primitives on top of
-    global ones.  Both lists must contain objects with a ``.name`` attribute.
-    Results are sorted alphabetically by name.
+    global ones.  Both lists must contain objects with a ``.name`` attribute
+    (see :class:`Named`).  Results are sorted alphabetically by name.
     """
     by_name = {p.name: p for p in global_list}
     for p in local_list:
