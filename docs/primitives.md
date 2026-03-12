@@ -468,7 +468,6 @@ A primitive's name is its **directory name**, not a field in frontmatter. The na
 - `ralph status` output
 - Check failure headings in the prompt
 - Placeholder references like `{{ contexts.git-log }}`
-- `ralph status` output
 
 ### Frontmatter format
 

@@ -39,6 +39,7 @@ from ralphify.ralphs import discover_ralphs, resolve_ralph_name
 
 
 def main():
+    """Entry point for the ``ralph`` CLI (called by the console script)."""
     app()
 
 __all__ = [
