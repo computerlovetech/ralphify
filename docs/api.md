@@ -224,18 +224,18 @@ All event types the loop can emit. Every event has `type`, `run_id`, `timestamp`
 | Event type | When | Data fields |
 |---|---|---|
 | `ITERATION_STARTED` | Iteration begins | `iteration` |
-| `ITERATION_COMPLETED` | Agent exits with code 0 | `iteration`, `returncode`, `duration` (seconds), `duration_formatted`, `detail`, `log_file` |
-| `ITERATION_FAILED` | Agent exits non-zero | `iteration`, `returncode`, `duration`, `duration_formatted`, `detail`, `log_file` |
-| `ITERATION_TIMED_OUT` | Agent exceeds timeout | `iteration`, `returncode` (null), `duration`, `duration_formatted`, `detail`, `log_file` |
+| `ITERATION_COMPLETED` | Agent exits with code 0 | `iteration`, `returncode`, `duration` (seconds), `duration_formatted`, `detail`, `log_file`, `result_text` |
+| `ITERATION_FAILED` | Agent exits non-zero | `iteration`, `returncode`, `duration`, `duration_formatted`, `detail`, `log_file`, `result_text` |
+| `ITERATION_TIMED_OUT` | Agent exceeds timeout | `iteration`, `returncode` (null), `duration`, `duration_formatted`, `detail`, `log_file`, `result_text` |
 
 #### Checks
 
 | Event type | When | Data fields |
 |---|---|---|
 | `CHECKS_STARTED` | Check phase begins | `iteration`, `count` |
-| `CHECK_PASSED` | A single check passes | `iteration`, `name`, `passed`, `exit_code`, `timed_out` |
-| `CHECK_FAILED` | A single check fails | `iteration`, `name`, `passed`, `exit_code`, `timed_out` |
-| `CHECKS_COMPLETED` | All checks finish | `iteration`, `passed`, `failed`, `results` (array of `{name, passed, exit_code, timed_out}`) |
+| `CHECK_PASSED` | A single check passes | `iteration`, `name`, `passed`, `exit_code`, `timed_out`, `output` |
+| `CHECK_FAILED` | A single check fails | `iteration`, `name`, `passed`, `exit_code`, `timed_out`, `output` |
+| `CHECKS_COMPLETED` | All checks finish | `iteration`, `passed`, `failed`, `results` (array of `{name, passed, exit_code, timed_out, output}`) |
 
 #### Prompt assembly
 

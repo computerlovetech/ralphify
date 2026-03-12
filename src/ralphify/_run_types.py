@@ -40,7 +40,6 @@ class RunConfig:
     Mutable by design: the engine reads fields at each iteration boundary,
     so you can change ``max_iterations``, ``delay``, or ``timeout`` while
     the loop is running and the new values take effect on the next cycle.
-    This is how the planned dashboard will let users tune a live run.
 
     For CLI usage the config is built once from ``ralph.toml`` + flags.
     For programmatic usage, construct directly and pass to :func:`run_loop`.
