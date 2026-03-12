@@ -1321,3 +1321,551 @@ What happens when the prompt is empty, too large, or contains unexpected content
 29. **Should environment variables use `RALPH_` or `RALPHIFY_` prefix?** The CLI command is `ralph` but the package is `ralphify`. `RALPH_COMMAND` is shorter but could conflict with other tools. `RALPHIFY_COMMAND` is unambiguous but verbose. Recommendation: `RALPH_` — shorter, matches the CLI command, and conflicts are unlikely.
 
 30. **Is the frontmatter parser intentionally minimal or accidentally limited?** The simplified `key: value` format avoids YAML's complexity, but it can't express: lists (for args), nested config (for structured settings), or multiline values (for long commands). Should it stay minimal (with `run.*` scripts as the escape hatch) or grow toward a subset of YAML? Recommendation: stay minimal — the escape hatches exist and complexity breeds more edge cases.
+
+---
+
+## Correction: Surface Area Inventory (from Iteration 1)
+
+The UX Audit lists `ralph ui` as a CLI command that launches a web dashboard. **This command does not exist.** The `dashboard.md` documentation is a design preview for a future feature, not documentation of an implemented feature. The actual CLI has 4 commands, not 5: `ralph init`, `ralph run`, `ralph status`, `ralph new`. The UI event infrastructure exists in the codebase (`QueueEmitter`, `FanoutEmitter`, `RunManager`) to support a future dashboard, but no CLI entry point exposes it. This correction affects the concept count: the effective surface area is smaller than reported, which is good — but the dashboard.md doc creates expectations the tool can't meet.
+
+---
+
+## Deep Dive: Interrupt, Lifecycle & Resilience (NEW — Iteration 5)
+
+This section traces what happens when the user's run doesn't end cleanly. Every run ends one of four ways: natural completion, Ctrl+C interrupt, agent/system crash, or dashboard-initiated stop. Each path has distinct UX characteristics.
+
+### Path 1: Natural Completion (happy path)
+
+When `-n` iterations complete or the loop finishes normally:
+- `state.status` remains `RUNNING` → set to `COMPLETED` at `engine.py:420-421`
+- `RUN_STOPPED` event emitted with `reason="completed"` (line 428)
+- `ConsoleEmitter._on_run_stopped` renders summary: "Done: N iteration(s) — X succeeded, Y failed" (line 145-151)
+- **UX: Good.** User sees a clean summary.
+
+### Path 2: Ctrl+C Interrupt
+
+When the user presses Ctrl+C during a run:
+
+**During agent execution:**
+- `KeyboardInterrupt` propagates through `_run_iteration` → `execute_agent`
+- In streaming mode (`_run_agent_streaming`), the `finally` block at `_agent.py:132-135` kills and waits for the subprocess — good cleanup
+- In blocking mode (`_run_agent_blocking`), `subprocess.run()` receives the signal and the child process may or may not be killed depending on OS behavior
+- The exception propagates to the main loop's `except KeyboardInterrupt: pass` at `engine.py:409-410`
+
+**During delay between iterations:**
+- `time.sleep(config.delay)` at `engine.py:407` is interrupted by `KeyboardInterrupt`
+- Falls to the same `except` handler
+
+**During check execution:**
+- `subprocess.run()` in `_runner.py` receives the signal
+- Check may produce partial output
+
+**After interrupt is caught:**
+- Line 409-410: `pass` — no state update, no "interrupted" flag
+- Line 420-421: `if state.status == RunStatus.RUNNING: state.status = RunStatus.COMPLETED`
+- **The status is set to COMPLETED, not STOPPED or INTERRUPTED**
+- Line 423-427: `reason` resolves to `"completed"`
+- Line 140: Summary renders as "Done: N iteration(s)..."
+
+- **F91: Ctrl+C reports as "completed" instead of "interrupted"** (NEW, VALIDATED). `engine.py:409-410`: `KeyboardInterrupt` is caught with `pass`, then `state.status` falls through to `COMPLETED` (line 420-421). The `RUN_STOPPED` event has `reason="completed"`. The console summary says "Done" — indistinguishable from a natural `-n` completion. For CI pipelines and log analysis, there's no way to tell if a run was deliberately interrupted. The `RunStatus` enum (in `_run_types.py`) has a `STOPPED` variant that would be more accurate, but nothing sets it during Ctrl+C handling. Fix: add `state.status = RunStatus.STOPPED` inside the `except KeyboardInterrupt` block.
+
+- **F92: Partial iteration state after Ctrl+C is ambiguous** (NEW, VALIDATED). If Ctrl+C fires during the agent phase of iteration 5, the iteration counter `state.iteration` is already 5 (set at `engine.py:392`), but the iteration hasn't completed checks. The summary reports `total = state.completed + state.failed` which might be 4, but `state.iteration` is 5. The user sees "Done: 4 iteration(s)" but the agent may have made changes during the interrupted 5th iteration that weren't validated by checks. There's no indication that an iteration was in-progress when interrupted, and no guidance to the user that they should review uncommitted changes.
+
+### Path 3: Crash / Exception
+
+When an unhandled exception occurs:
+- `engine.py:411-418`: caught by `except Exception`, status set to `FAILED`
+- `LOG_MESSAGE` event emitted with traceback
+- Falls through to `RUN_STOPPED` with `reason="error"`
+- `ConsoleEmitter._on_run_stopped`: line 140 checks `reason == "completed"` — this is **NOT "completed"**, so the `if` block is skipped
+- **Result: NO summary is printed for crashed runs**
+
+- **F93: No run summary printed for crashed or stopped runs** (NEW, VALIDATED). `_console_emitter.py:138-151`: the `_on_run_stopped` handler only renders the summary when `reason == "completed"`. For `reason == "error"` or `reason == "user_requested"`, the handler only calls `_stop_live()` and returns — no output. For crashes, the traceback is printed via the `LOG_MESSAGE` handler (line 127-136), but the iteration statistics (completed/failed/timed_out) are lost. A 50-iteration run that crashes on iteration 47 shows the crash error but never tells the user "46 iterations completed, 1 crashed." The data is in the `RUN_STOPPED` event (lines 428-434) but `ConsoleEmitter` discards it for non-completed runs.
+
+### Path 4: Dashboard-initiated stop
+
+When the dashboard UI calls `RunManager.stop_run()`:
+- `state.request_stop()` is called (`_run_types.py:108-110`)
+- On next iteration boundary, `_handle_loop_transitions` at `engine.py:139-146` detects the stop request
+- `state.status` set to `STOPPED`
+- Loop breaks, `RUN_STOPPED` emitted with `reason="user_requested"`
+- Same F93 applies — no summary printed in CLI
+
+### The Pause Lifecycle
+
+The pause mechanism exists (`RunState.request_pause()` / `request_resume()` at `_run_types.py:95-103`) but has timing issues:
+
+- **F94: Pause requests are only processed at iteration boundaries** (NEW, VALIDATED). `_handle_loop_transitions()` at `engine.py:139-152` checks `state.consume_pause_request()` once per iteration, at the TOP of the next iteration — not during agent execution or checks. If a user triggers pause (via dashboard) while the agent is running a 5-minute task, the pause doesn't take effect until that iteration completes. Combined with the fact that there's no CLI mechanism to trigger pause (only dashboard API), this feature is inaccessible to most users. The `_pause_event.wait()` at `engine.py:146-152` then blocks the engine thread until resume, emitting `RUN_PAUSED` and `RUN_RESUMED` events — but `ConsoleEmitter` has no handlers for these events, so CLI users see nothing.
+
+- **F95: Pause/resume during delay sleep is completely ignored** (NEW, VALIDATED). `time.sleep(config.delay)` at `engine.py:407` is a blocking call that doesn't check for pause/resume/stop requests. If delay is 60 seconds and the user requests pause at second 5, the request is queued but not processed until after the full 60-second sleep completes AND the next iteration starts. The sleep cannot be interrupted by the dashboard API.
+
+### The Resilience Model
+
+Ralphify's resilience model is surprisingly thin:
+
+| Failure type | Recovery | User signal |
+|---|---|---|
+| Agent crash (non-zero exit) | Counter incremented, loop continues | `✗ Iteration N failed (exit 1)` |
+| Agent timeout | Counter incremented, loop continues | `⏱ Iteration N timed out` |
+| Check crash | Check treated as failed | `✗ checkname (exit N)` |
+| Context crash | Output used regardless (F30) | None — silent |
+| Context timeout | Partial output used (F48) | None — silent |
+| RALPH.md deleted during run | `FileNotFoundError` → run crashes | Traceback |
+| `ralph.toml` deleted during run | Not re-read, no impact | None |
+| `.ralphify/` deleted during run | Primitives frozen at startup (F13), no impact | None |
+| Disk full during logging | `OSError` → run crashes | Traceback |
+| Agent binary disappears during run | `FileNotFoundError` → run crashes | Traceback |
+
+**Key insight:** Ralphify handles the **expected** failure modes well (agent crash, check failure — these are the self-healing loop's core strength) but handles **unexpected** failure modes poorly (filesystem errors, deleted files, resource exhaustion). Every unexpected failure produces a raw Python traceback rather than a user-friendly error.
+
+- **F96: No graceful handling of filesystem errors during run** (NEW, VALIDATED). If `RALPH.md` is deleted while the loop is running, `Path(config.prompt_file).read_text()` at `engine.py:184` raises `FileNotFoundError`. This propagates to the generic exception handler at line 411, which prints a traceback. The user sees a crash with no context about what happened. A more robust approach: catch `FileNotFoundError` in `_assemble_prompt`, emit a clear error ("RALPH.md was deleted — cannot assemble prompt"), and let the user decide whether to stop or retry.
+
+---
+
+## Deep Dive: The Cost & Resource Awareness Gap (NEW — Iteration 5)
+
+J9 (prevent runaway costs) is validated as VERY HIGH intensity. The JTBD research documents that a single agent caught in a "semantic infinite loop" can rack up thousands of dollars, and power users hit $200-500/month in API costs. Yet ralphify has **zero** cost-related features. This section analyzes the gap.
+
+### What Users Want
+
+From the JTBD research, cost concerns manifest as:
+1. **Spend limits** — "stop the loop if I've spent more than $X"
+2. **Cost estimation** — "roughly how much will 10 iterations cost?"
+3. **Cost visibility** — "how much did that run cost?"
+4. **Cost optimization** — "is my prompt wastefully long? Am I repeating context?"
+
+### What Ralphify Provides
+
+**Exactly zero cost features.** The tool has:
+- `-n` (iteration limit) — indirect cost control via iteration cap
+- `--timeout` (per-iteration timeout) — indirect cost control via time cap
+- `--delay` (inter-iteration delay) — indirect rate limiting
+
+These are **time-based** proxies for cost, not cost-aware features. The relationship between iterations/time and actual cost depends entirely on the agent, prompt length, and task complexity — none of which ralphify tracks.
+
+### The Fundamental Constraint
+
+Ralphify can't know the cost because:
+1. It pipes stdin to the agent — the agent decides how many tokens to use
+2. Different agents have different pricing models
+3. The same prompt length can produce wildly different agent effort (and cost)
+
+However, ralphify DOES know things that correlate with cost:
+- **Prompt length** — larger prompts = more input tokens
+- **Iteration count** — more iterations = more API calls
+- **Agent execution time** — longer runs generally = more output tokens
+- **Accumulated context** — growing prompts over iterations = cost escalation
+
+### Friction Points
+
+- **F97: No prompt size trend tracking** (NEW, VALIDATED). The `PROMPT_ASSEMBLED` event at `engine.py:327` includes `prompt_length` (character count), but nobody aggregates it across iterations. A prompt that grows from 3,000 chars (iteration 1) to 15,000 chars (iteration 10) — because check failures accumulate long output — is a cost escalation signal. The tool emits the data per-iteration but never computes the trend. For J9 (prevent runaway costs), a simple "prompt size doubled since iteration 1" warning would catch the most common cost escalation pattern.
+
+- **F98: No cost estimation or token count** (NEW, VALIDATED). Ralphify knows the exact prompt text sent to the agent. For Claude Code, the token count could be estimated cheaply (rough estimate: chars / 4). A one-line display like `  Prompt: ~3,200 tokens (est. $0.02 input)` per iteration would give users the cost visibility J9 demands. This doesn't require integration with billing APIs — just a rough estimate based on the prompt size and publicly available pricing. Even a rough estimate is infinitely more useful than the current nothing.
+
+- **F99: No cumulative resource tracking in run summary** (NEW, VALIDATED). The run summary (`_on_run_stopped` at `_console_emitter.py:145-151`) shows iteration counts but no aggregate resource metrics: total prompt characters sent, total agent execution time, total check execution time. These are easy to compute from existing event data and would give users a rough sense of run cost/efficiency. Example: "Total: 10 iterations in 23m 15s | ~85K prompt chars | Agent: 18m 40s | Checks: 4m 35s"
+
+- **F100: `-n` default of unlimited makes J9 (cost control) the user's problem** (NEW, VALIDATED — reinforces F9). The default behavior of `ralph run` is infinite iterations. Combined with no cost tracking, no spend limits, and no prompt size warnings, a first-time user can trivially start an unbounded cost loop. Ralphify's own JTBD research calls out the "$50,000 contract completed for $297" story — but the flip side is a developer who runs `ralph run` without `-n`, goes to lunch, and comes back to a $500 API bill. The tool's #2 validated job (J2: keep the agent from going off the rails) should apply to cost rails too.
+
+### The Claude Code Cost Opportunity
+
+For Claude Code specifically, ralphify has a unique advantage: the streaming JSON output includes structured event data. While exact cost data may not be in the stream, token counts or model info might be. If Claude Code emits token usage in its JSON events, ralphify could extract and display real cost data — not just estimates. This would make ralphify the only loop harness with actual cost tracking, directly addressing J9.
+
+- **F101: Claude Code JSON stream may contain cost/token data that's being discarded** (NEW, HYPOTHESIZED). `_agent.py:114-124`: the streaming reader parses every JSON line but only extracts `type == "result"` events (line 121). All other JSON event types are forwarded as raw dicts to the `on_activity` callback. If Claude Code emits token usage or cost information in non-result events, ralphify has access to it but doesn't use it. Needs verification: what fields does Claude Code's `--output-format stream-json` actually include?
+
+---
+
+## Deep Dive: Team Adoption & Configuration Sharing (NEW — Iteration 5)
+
+J4 (multiply team output) and J8 (standardize AI workflows) are validated JTBD targeting engineering leads and platform engineers. But ralphify's configuration model is designed for solo use. This section analyzes the friction when a team tries to share a ralphify setup.
+
+### The Sharing Model
+
+Ralphify's config is git-native: `ralph.toml` and `.ralphify/` are committed to the repo. This is great for sharing — anyone who clones the repo gets the full harness setup. But several friction points emerge at team scale.
+
+### Configuration That Should Be Shared vs. Personal
+
+| Config | Should be shared? | Currently shared? | Conflict? |
+|---|---|---|---|
+| `.ralphify/checks/` | Yes | Yes (committed) | No |
+| `.ralphify/contexts/` | Yes | Yes (committed) | No |
+| `.ralphify/instructions/` | Yes | Yes (committed) | No |
+| `.ralphify/ralphs/` | Yes | Yes (committed) | No |
+| `RALPH.md` | Depends on team | Yes (committed) | Medium |
+| `ralph.toml` `command` | No (personal) | Yes (committed) | **HIGH** |
+| `ralph.toml` `args` | No (personal) | Yes (committed) | **HIGH** |
+| `ralph.toml` `ralph` | Depends | Yes (committed) | Low |
+
+The conflict is at `ralph.toml`: the agent command and args are highly personal. A team member using Aider can't use `command = "claude"`. A member who hasn't set up `--dangerously-skip-permissions` can't use those args. But `ralph.toml` is the project config — it should be committed.
+
+### The Personal Override Gap
+
+- **F102: No mechanism for personal overrides of shared config** (NEW, VALIDATED). Other tools solve this with: (a) local override files (`.ralph.local.toml`, gitignored), (b) environment variables (`RALPH_COMMAND=aider`), (c) user-level config (`~/.config/ralphify/config.toml`). Ralphify has none of these. A team that commits `ralph.toml` with `command = "claude"` forces every member to use Claude Code, or every member must locally modify the file and avoid committing the change. This is fragile — `git stash`/`git checkout` cycles around the config file are error-prone.
+
+- **F103: No `.gitignore` entries created by `ralph init`** (NEW, VALIDATED — reinforces F18). `ralph init` at `cli.py:138-161` creates `ralph.toml` and `RALPH.md` but doesn't create or update `.gitignore`. For teams, this means: (a) `ralph_logs/` might be accidentally committed, (b) there's no convention for ignoring personal override files, (c) `.ralphify/` is implicitly expected to be committed but this isn't documented or enforced. A `ralph init` that adds `ralph_logs/` to `.gitignore` (or at minimum prints guidance) would prevent the most common team-sharing mistake.
+
+### The "Golden Setup" Pattern
+
+Platform engineers (persona 6) want to create a reusable ralphify configuration that other team members can adopt without understanding the internals. The ideal pattern:
+
+1. Platform engineer creates `.ralphify/` with checks, contexts, instructions
+2. Commits to repo
+3. Team members run `ralph init` (or just `ralph run`)
+4. Everything works with their personal agent
+
+Currently this breaks at step 4 because `ralph.toml` has a hardcoded agent command. The fix requires either:
+- O49 (environment variable overrides) — each member sets `RALPH_COMMAND=their-agent`
+- A new local override file mechanism
+- Agent auto-detection based on what's installed
+
+- **F104: No "I just cloned this repo, how do I run ralph?" onboarding** (NEW, VALIDATED). When a new team member clones a repo with `.ralphify/` config, there's no `ralph setup` or similar command that detects the existing configuration and guides them through personal setup (which agent to use, any env vars needed). They must read the README, find the ralph config, and manually set up `ralph.toml` with their agent. For J8 (standardize workflows), the tool should recognize "this repo has ralphify config" and help the user get running.
+
+### Team Workflow Patterns
+
+**Pattern A: Shared RALPH.md, individual runs**
+- Each engineer runs their own loop on their branch
+- `RALPH.md` is shared but may be edited per-task
+- Merge conflicts in `RALPH.md` are common and annoying
+- Better pattern: use named ralphs (`.ralphify/ralphs/`) and keep `RALPH.md` generic
+
+**Pattern B: CI-driven loops**
+- GitHub Actions runs `ralph run -n 3` on PRs or nightly
+- Requires F81 fix (non-zero exit codes) and F86 fix (env var overrides)
+- Currently impossible to implement correctly
+
+**Pattern C: Shared checks, personal prompts**
+- The `.ralphify/` directory is committed, personal prompt files are gitignored
+- Requires `ralph.toml` to point to a gitignored file or named ralph
+- Works today but requires manual setup and documentation
+
+---
+
+## Deep Dive: The Event System's Untapped Potential (NEW — Iteration 5)
+
+The event system (`_events.py`) is the most architecturally sophisticated part of ralphify, but its potential is largely unrealized in the CLI. This creates a paradox: the infrastructure for rich monitoring exists, but users experience a minimal, information-sparse interface.
+
+### Events Emitted vs. Rendered
+
+| Event Type | Emitted by Engine | Rendered in CLI | Gap |
+|---|---|---|---|
+| `RUN_STARTED` | Yes | Yes (config summary) | — |
+| `RUN_STOPPED` | Yes | Partial (only "completed" reason) | F93 |
+| `RUN_PAUSED` | Yes | No | Silent |
+| `RUN_RESUMED` | Yes | No | Silent |
+| `ITERATION_STARTED` | Yes | Yes (header) | — |
+| `ITERATION_COMPLETED` | Yes | Yes (status line) | — |
+| `ITERATION_FAILED` | Yes | Yes (status line) | — |
+| `ITERATION_TIMED_OUT` | Yes | Yes (status line) | — |
+| `CHECKS_STARTED` | Yes | No | F22 |
+| `CHECK_PASSED` | Yes | No (only in CHECKS_COMPLETED) | F22 |
+| `CHECK_FAILED` | Yes | No (only in CHECKS_COMPLETED) | F22, F55 |
+| `CHECKS_COMPLETED` | Yes | Yes (summary) | — |
+| `CONTEXTS_RESOLVED` | Yes | No | Invisible |
+| `PROMPT_ASSEMBLED` | Yes | No | F31, F12 |
+| `AGENT_ACTIVITY` | Yes (Claude only) | No | F60 |
+| `PRIMITIVES_RELOADED` | Yes | No | Invisible |
+| `LOG_MESSAGE` | Yes | Yes | — |
+
+**7 of 16 event types are silently discarded by ConsoleEmitter.** This is the root cause of the "invisible infrastructure problem" identified in the cross-cutting analysis. The data exists — it's just not shown.
+
+- **F105: ConsoleEmitter silently discards 7 of 16 event types** (NEW, VALIDATED). `_console_emitter.py:51-60`: the `_handlers` dict maps only 8 event types to handler methods. The remaining 8 (`RUN_PAUSED`, `RUN_RESUMED`, `CHECKS_STARTED`, `CHECK_PASSED`, `CHECK_FAILED`, `CONTEXTS_RESOLVED`, `PROMPT_ASSEMBLED`, `AGENT_ACTIVITY`) hit the `else: pass` at line 68 and are discarded. Every one of these discarded events carries useful information: which contexts resolved, how long the prompt is, what the agent is doing, which check is running. The infrastructure cost to emit these events has already been paid — the rendering cost is ~5-10 lines per handler. This is the highest-leverage observability improvement: zero engine changes, just CLI rendering.
+
+### The Verbosity Opportunity
+
+The event system naturally supports a tiered verbosity model:
+
+- **Quiet** (`-q`): Only `RUN_STOPPED` (pass/fail) + `LOG_MESSAGE` (errors)
+- **Normal** (default): Current behavior + `PROMPT_ASSEMBLED` (one-line summary) + `CHECK_PASSED`/`CHECK_FAILED` (per-check status)
+- **Verbose** (`-v`): All events rendered, including `AGENT_ACTIVITY`, `CONTEXTS_RESOLVED`, `PRIMITIVES_RELOADED`
+- **Debug** (`-vv`): Full prompt content, full check output, context resolution details
+
+This maps cleanly to the two user journeys: Quick Start users want quiet/normal, Deep Customization users want verbose/debug. The event system already provides the data — verbosity is purely a `ConsoleEmitter` filtering concern.
+
+---
+
+## Deep Dive: The `detect_project()` Extension Opportunity (NEW — Iteration 5)
+
+`detector.py` currently checks for 4 manifest files and returns a string. It's called once during `ralph init` and its result is printed but never used. This is the foundation for O1 (smart init) but the detector itself has limitations worth analyzing.
+
+### Current Detection (detector.py:11-27)
+
+```
+package.json → "node"
+pyproject.toml → "python"
+Cargo.toml → "rust"
+go.mod → "go"
+(none) → "generic"
+```
+
+First match wins. No multi-type support.
+
+### Missing Project Types
+
+| Manifest | Type | Typical checks | Priority |
+|---|---|---|---|
+| `Gemfile` | Ruby | `bundle exec rspec`, `rubocop` | Medium |
+| `pom.xml` / `build.gradle` | Java | `mvn test`, `gradle test` | Medium |
+| `mix.exs` | Elixir | `mix test`, `mix credo` | Low |
+| `composer.json` | PHP | `phpunit`, `phpstan` | Medium |
+| `*.sln` / `*.csproj` | .NET | `dotnet test`, `dotnet build` | Medium |
+| `CMakeLists.txt` | C/C++ | `cmake --build . && ctest` | Low |
+| `deno.json` | Deno | `deno test`, `deno lint` | Low |
+
+### Multi-Ecosystem Projects
+
+Many real-world projects have both `package.json` AND `pyproject.toml` (e.g., a Python API with a React frontend). Current detection returns "node" (first match) and misses Python. For O1 (smart init), this matters: auto-scaffolded checks should cover BOTH ecosystems.
+
+- **F106: Project type detection is first-match-wins, misses multi-ecosystem projects** (NEW, VALIDATED). `detector.py:17-22`: the `for filename, project_type in markers.items()` loop returns on first match. A repo with both `pyproject.toml` and `package.json` is classified as "node" (because `package.json` is checked first in the dict). For O1 (smart init auto-creating checks), this means a full-stack project would only get Node checks, not Python checks. The fix: return a list of detected types instead of a single string.
+
+### Deeper Detection Opportunities
+
+Beyond manifest files, detection could identify:
+- **Test framework**: `pytest.ini` / `setup.cfg [tool:pytest]` → pytest; `jest.config.js` → jest
+- **Linter**: `ruff.toml` / `pyproject.toml [tool.ruff]` → ruff; `.eslintrc` → eslint
+- **Type checker**: `pyrightconfig.json` → pyright; `tsconfig.json` → TypeScript
+- **CI system**: `.github/workflows/` → GitHub Actions; `.gitlab-ci.yml` → GitLab CI
+
+This deeper detection would make O1 (smart init) dramatically more accurate — instead of guessing "Python project → pytest", it could confirm "Python project with pytest and ruff already configured."
+
+---
+
+## New Simplification Opportunities (Iteration 5)
+
+### Tier 1: High Impact, Low Effort (NEW)
+
+#### O55: Show run summary for ALL stop reasons, not just "completed" (NEW)
+**What:** In `_on_run_stopped`, render the summary (iteration counts, pass/fail stats) for ALL reasons: "completed", "error", and "user_requested". Differentiate with color/label: "Done" (green) for completed, "Interrupted" (yellow) for user_requested, "Crashed" (red) for error. The data is already in the event — just render it unconditionally.
+**Why:** Addresses F93. Currently, crashed and stopped runs produce no summary at all. A 50-iteration run that crashes on iteration 47 tells the user nothing about the 46 successful iterations. The most anxious moment (a crash) is also the moment with the least information.
+**Job:** Monitor (J6)
+**Effort:** XS — change the `if data.get("reason") == "completed"` condition at `_console_emitter.py:140` to always render, with a label that varies by reason.
+**Risk:** None.
+
+#### O56: Set `state.status = RunStatus.STOPPED` on Ctrl+C (NEW)
+**What:** In the `except KeyboardInterrupt` block at `engine.py:409`, set `state.status = RunStatus.STOPPED` instead of letting it fall through to `COMPLETED`. This makes the `RUN_STOPPED` event have `reason="user_requested"` for interrupts.
+**Why:** Addresses F91. Ctrl+C should be distinguishable from natural completion. This is one line of code with high impact for log analysis and CI.
+**Job:** Trust, Monitor (J2, J6)
+**Effort:** XS — add one line: `state.status = RunStatus.STOPPED`
+**Risk:** Very low. Changes the reported reason but not behavior. With O55, users would see "Interrupted" instead of "Done".
+
+#### O57: Warn about unvalidated iteration changes on Ctrl+C (NEW)
+**What:** After Ctrl+C, if `state.iteration > state.completed + state.failed` (i.e., an iteration was in progress), print a warning: `⚠ Iteration {N} was interrupted before checks ran. Review uncommitted changes with 'git diff'.`
+**Why:** Addresses F92. An interrupted iteration may have left the codebase in a partially-modified state. The user should know to review before committing or starting another run.
+**Job:** Trust (J2)
+**Effort:** XS — add 3 lines after the `except KeyboardInterrupt` block, before status finalization.
+**Risk:** None. Warning only.
+
+#### O58: Track and display cumulative prompt size trend (NEW)
+**What:** In `ConsoleEmitter`, maintain a list of prompt lengths from `PROMPT_ASSEMBLED` events. If prompt length grows >50% from iteration 1, show a warning: `⚠ Prompt size growing: 3,200 → 8,400 chars (+163%). Consider reviewing check failure verbosity.`
+**Why:** Addresses F97. Prompt size growth is the primary leading indicator of cost escalation. A one-time warning when the trend exceeds a threshold costs nothing and catches the most common cost spiral.
+**Job:** Trust, Monitor (J6, J9)
+**Effort:** S — add a `PROMPT_ASSEMBLED` handler to `ConsoleEmitter`, track min/max prompt length, warn on growth.
+**Risk:** Very low. Warning only.
+
+#### O59: Show estimated token count per iteration (NEW)
+**What:** In the prompt assembly summary (O7), include a rough token estimate: `Prompt: 3,847 chars (~960 tokens)`. Use the simple heuristic of chars/4 for English text. For Claude models, this is a reasonable approximation.
+**Why:** Addresses F98. Users need a mental model of cost per iteration. Even a rough estimate anchors their expectations. "960 tokens" is a number users can multiply by their API pricing to get cost-per-iteration.
+**Job:** Monitor, Trust (J6, J9)
+**Effort:** XS — add `~{prompt_length // 4} tokens` to the prompt summary line.
+**Risk:** Very low. Labeled as estimate. The chars/4 heuristic is well-known and approximate but useful.
+
+#### O60: Add aggregate resource metrics to run summary (NEW)
+**What:** Track total prompt chars sent, total agent execution time, and total check execution time across all iterations. Include in the run summary: `Total: 10 iterations in 23m 15s | ~85K prompt chars (~21K tokens) | Agent: 18m 40s | Checks: 4m 35s`
+**Why:** Addresses F99. After a long run, users need to understand where time and resources went. Was it mostly agent time? Check time? Was the prompt bloating? These are the basic questions for cost optimization and the data already flows through events.
+**Job:** Monitor (J6, J9)
+**Effort:** S — track running totals in `ConsoleEmitter` from existing events, display in `_on_run_stopped`.
+**Risk:** None.
+
+### Tier 2: High Impact, Medium Effort (NEW)
+
+#### O61: Interruptible delay with countdown and early-resume (NEW)
+**What:** Replace `time.sleep(config.delay)` at `engine.py:407` with a loop that sleeps in 1-second increments, checking for pause/stop/resume requests each second. Display a countdown: `Waiting: 45s remaining...` (updated each second via `LOG_MESSAGE` or a new event). Allow Ctrl+C during delay to cleanly stop the run.
+**Why:** Addresses F95 (pause ignored during delay) and F41 (no countdown). Long delays (30-60s for rate limiting) currently make the tool appear frozen. A countdown + interruptible sleep makes delays feel responsive.
+**Job:** Monitor, Steer (J6, J3)
+**Effort:** S-M — replace one `time.sleep()` with a polling loop, add countdown rendering in `ConsoleEmitter`.
+**Risk:** Very low. Only changes delay implementation.
+
+#### O62: Environment variable override for agent command (NEW — CI priority)
+**What:** Support `RALPH_COMMAND` and `RALPH_ARGS` environment variables that override `ralph.toml`'s `command` and `args` fields. Precedence: env var > toml. Print the effective command at run start: `Agent: aider (from $RALPH_COMMAND)`
+**Why:** Addresses F102 (no personal overrides) and F85 (command is user-specific but committed). This is the minimum viable team adoption enabler: commit `ralph.toml` with Claude Code defaults, each team member sets `RALPH_COMMAND=their-agent` in their shell profile. Also enables CI where the agent is configured per-environment. Separated from O49 (full env var support) because just command/args covers 80% of the team friction.
+**Job:** Setup, Run (J1, J4, J8)
+**Effort:** S — add 5 lines of `os.environ.get()` in `_load_config()` or `run()`.
+**Risk:** Very low. Purely additive. Env vars only used when set.
+
+#### O63: Render `PROMPT_ASSEMBLED` and `CONTEXTS_RESOLVED` events in CLI (NEW)
+**What:** Add handlers for `PROMPT_ASSEMBLED` and `CONTEXTS_RESOLVED` to `ConsoleEmitter`. Show one line per event: `  Contexts: 3 resolved | Prompt: 4,832 chars` This replaces the separate O7 proposal with a simpler event-handler approach.
+**Why:** Addresses F105 (ConsoleEmitter discards 7 event types), F12 (minimal iteration output), and F14 (no signal when prompt changes). Uses existing event infrastructure — zero engine changes.
+**Job:** Monitor (J6)
+**Effort:** XS-S — add two handler methods, ~15 lines total.
+**Risk:** None. One extra line of output per iteration.
+
+#### O64: Detect TTY and suppress interactive elements in non-TTY mode (NEW)
+**What:** In `ConsoleEmitter.__init__`, detect `sys.stdout.isatty()`. When not a TTY (piped output, CI): suppress the ASCII banner, disable Rich Live display (spinner), disable color output, use simple text instead of Unicode symbols. Respect `NO_COLOR` environment variable per the convention.
+**Why:** Addresses F83 (banner/spinner in CI). The Rich library already has `Console(no_color=True, force_terminal=False)` options. This is the minimum viable CI output improvement — clean, parseable logs instead of ANSI-garbled output.
+**Job:** Run, Monitor (J1, J6)
+**Effort:** S-M — conditional `Console` construction, conditional `_IterationSpinner` usage.
+**Risk:** Low. TTY detection is standard. `NO_COLOR` is a widely adopted convention.
+
+### Tier 3: Medium Impact, Medium Effort (NEW)
+
+#### O65: Local override file (`.ralph.local.toml`) for personal config (NEW)
+**What:** If `.ralph.local.toml` exists, merge its values over `ralph.toml`. The local file overrides any keys present. Add `.ralph.local.toml` to the suggested `.gitignore` entries from `ralph init`. This lets teams commit `ralph.toml` with shared defaults while each member has personal agent config.
+**Why:** Addresses F102 more completely than O62 (env vars alone). The local file pattern is established (`.env.local`, `docker-compose.override.yml`, `settings.local.py`). It handles all config overrides, not just command/args.
+**Job:** Setup, Run (J4, J8)
+**Effort:** M — add file detection and dict merge in `_load_config()`, update init to mention it.
+**Risk:** Low. Purely additive — only used when the file exists. Potential confusion: "which config file am I actually using?" Mitigate with `ralph status` showing resolved config origin.
+
+#### O66: Claude Code JSON stream token extraction (NEW — EXPLORATORY)
+**What:** In `_run_agent_streaming` at `_agent.py:114-124`, check if Claude Code JSON events contain token usage data (look for `usage`, `tokens`, `input_tokens`, `output_tokens` fields). If found, accumulate per-iteration and include in `ITERATION_COMPLETED` event data. Display in CLI: `  Tokens: 12,450 input / 3,200 output (~$0.18)`
+**Why:** Addresses F101 and F98. If Claude Code reports token usage in its stream, this would make ralphify the only loop harness with actual (not estimated) cost tracking. For J9 (prevent runaway costs), real token data >> estimated token data.
+**Job:** Monitor, Trust (J6, J9)
+**Effort:** M — requires investigating Claude Code's stream-json format, adding extraction logic, and rendering.
+**Risk:** Medium. Depends on Claude Code's output format, which could change. Should be implemented defensively (extract if available, skip if not).
+
+---
+
+## Updated Principles Applied (Iteration 5)
+
+| Principle | New Applications |
+|---|---|
+| **Clear feedback** | O55 (summary for all stop reasons), O56 (Ctrl+C distinction), O57 (interrupted iteration warning), O58 (prompt size trend), O59 (token estimate), O60 (resource metrics), O61 (delay countdown) |
+| **Observability is trust** | O55, O56, O58, O59, O60, O63 (make existing events visible), O64 (clean CI output), O66 (cost tracking) |
+| **Convention over configuration** | O62 (env var override follows standard pattern), O64 (NO_COLOR convention), O65 (local override file follows .local convention) |
+| **Progressive disclosure** | O63 (context/prompt events shown at normal verbosity), O66 (cost data shown when available) |
+| **Fewer steps** | O62 (one env var vs editing toml), O65 (clone → set personal config → run) |
+
+---
+
+## Updated Recommended Implementation Order (Iteration 5)
+
+**CRITICAL — prerequisite for reliable tool behavior:**
+- O44: Non-zero exit code on failures (XS) — CI depends on this
+- O55: Show run summary for ALL stop reasons (XS) — crashed runs need feedback
+- O56: Set STOPPED status on Ctrl+C (XS) — one-line fix, high trust impact
+
+**Phase 1 — "Just Works" (add to existing):**
+- O57: Warn about unvalidated changes on Ctrl+C (XS)
+- O59: Show estimated token count per iteration (XS)
+- O63: Render PROMPT_ASSEMBLED and CONTEXTS_RESOLVED events (XS-S)
+- O58: Track prompt size trend with growth warning (S)
+- O60: Aggregate resource metrics in run summary (S)
+
+**Phase 2 — "Smart Setup" (add to existing):**
+- O62: Environment variable override for agent command (S) — minimum team enabler
+- O64: TTY detection for CI environments (S-M) — minimum CI enabler
+
+**Phase 3 — "Observable Loop" (add to existing):**
+- O61: Interruptible delay with countdown (S-M)
+- O65: Local override file for personal config (M) — full team support
+
+**Phase 4 — "Power User Tools" (add to existing):**
+- O66: Claude Code token extraction (M) — exploratory, high value if feasible
+
+---
+
+## Updated Open Questions (Iteration 5)
+
+31. **Should Ctrl+C during agent execution kill the agent immediately or wait for it to finish?** Current behavior: streaming mode kills, blocking mode depends on OS signal handling. The right answer probably depends on the user's intent — "stop everything now" vs "finish this thought but don't start the next iteration." A double-Ctrl+C pattern (first = pause after iteration, second = kill immediately) would serve both needs.
+
+32. **Should the prompt size warning threshold be configurable?** O58 proposes warning at >50% growth. But some workflows intentionally accumulate context (e.g., a conversation-style prompt that grows by design). A configurable threshold (or disable) in `ralph.toml` would prevent false alerts.
+
+33. **Should token estimation use a more sophisticated model?** O59 proposes chars/4 as a rough estimate. For non-English text, this is less accurate. For code-heavy prompts, tokenization is different. The estimate could be improved by using `tiktoken` (if installed) or a per-model heuristic. But even chars/4 is better than nothing.
+
+34. **Should `.ralph.local.toml` override ALL keys or just specific sections?** Full override is simpler but could lead to drift (local file silently ignores a new required key). Section-level override (only `[agent]` can be overridden locally) is safer but more complex. Recommendation: full override with `ralph status` showing effective config.
+
+35. **Should ralphify auto-detect Claude Code's stream format or require opt-in?** O66 proposes extracting token data from Claude Code's JSON stream. If the format changes, extraction fails silently. Should this be `--track-cost` (opt-in) or automatic (with graceful fallback)? Recommendation: automatic with graceful fallback — if the fields exist, use them; if not, skip silently.
+
+36. **What happens to the in-progress iteration's changes on Ctrl+C?** O57 warns the user, but should ralphify do anything about it? Options: (a) just warn (proposed), (b) auto-run `git stash` to save in-progress changes, (c) auto-run checks on the interrupted iteration before stopping. (a) is safest; (b) and (c) are opinionated and could surprise users.
+
+37. **Should `ralph init` create `.gitignore` entries?** Teams need `ralph_logs/` and `.ralph.local.toml` ignored. Options: (a) create a new `.gitignore` if none exists, (b) append to existing `.gitignore`, (c) print guidance ("Add these to your .gitignore"). (b) risks surprising users who have a carefully curated `.gitignore`. (c) is safest. Recommendation: (c) with a `ralph init --gitignore` flag for (b).
+
+---
+
+## Consolidated Priority Matrix (All Iterations)
+
+This matrix combines all opportunities across 5 iterations, ranked by a composite score:
+**Score = (job_impact × job_frequency) / (effort + risk)**
+
+### CRITICAL (implement immediately)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O44 | Non-zero exit code on failures | XS | F81 (CI showstopper) |
+| O55 | Run summary for all stop reasons | XS | F93 (crashed runs silent) |
+| O56 | Ctrl+C reports as STOPPED | XS | F91 (misleading status) |
+
+### Phase 1: Quick Wins (XS-S effort, high impact)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O4 | Suppress banner on `ralph run` | XS | F8 |
+| O14 | Show iteration progress N/M | XS | F20 |
+| O15 | Default `-n 1` for inline prompts | XS | F21 |
+| O24 | Render per-check events in CLI | XS | F22 |
+| O29 | Inline comments in generated toml | XS | F29 |
+| O35 | Pass/fail suffix in log filenames | XS | F49 |
+| O38 | Warn on shell operators in commands | XS | F66 |
+| O39 | Validate `run.*` script permissions | XS | F59 |
+| O46 | Handle type coercion errors gracefully | XS | F77 |
+| O47 | Warn on empty prompt file | XS | F87 |
+| O48 | `ralph list` command | XS | F68 |
+| O52 | Detect inline comments in frontmatter | XS | F78 |
+| O57 | Warn about unvalidated changes on Ctrl+C | XS | F92 |
+| O59 | Estimated token count per iteration | XS | F98 |
+| O63 | Render PROMPT_ASSEMBLED/CONTEXTS_RESOLVED | XS-S | F105, F12 |
+| O7 | Show prompt assembly summary | S | F12, F14 |
+| O19 | Aggregate check stats in run summary | S | F23 |
+| O25 | Warn on unresolved named placeholders | S | F37 |
+| O31 | Validate `ralph.toml` schema on load | S | F45 |
+| O32 | Show context timeout warnings | S | F32 |
+| O40 | Show check output snippet on failure | S | F55 |
+| O45 | Validate frontmatter field names | S | F76 |
+| O54 | Detect missing colon in frontmatter | S | F75 |
+| O58 | Track prompt size trend | S | F97 |
+| O60 | Aggregate resource metrics in summary | S | F99 |
+
+### Phase 2: Smart Setup (S-M effort)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O1 | Smart `ralph init` with auto checks | S | F2, F3 |
+| O3 | Default iteration limit | S | F9, F100 |
+| O8 | Better init prompt template | S | F1 |
+| O17 | Soften dangerous flag in config | S | F17 |
+| O26 | Validate check commands in status | S | F34 |
+| O62 | Env var override for agent command | S | F102, F85 |
+| O6 | Warn on silent context exclusion | S-M | F16 |
+| O34 | Status mirrors run resolution | S-M | F46, F47 |
+| O50 | `ralph use <name>` | S-M | F72 |
+| O64 | TTY detection for CI | S-M | F83 |
+| O41 | `ralph init --preset` | M | F56, F57 |
+
+### Phase 3: Observable Loop (M effort)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O28 | Fix non-Claude agent output | M | F43, F50 |
+| O2 | Default log directory | S (after O28) | F10 |
+| O16 | Show truncation details | S | F11 |
+| O30 | Save prompt to log directory | S | F31 |
+| O33 | Unified config (`[run]` in toml) | M | F42, F51 |
+| O36 | Agent activity in CLI | S | F60 |
+| O37 | Post-iteration git diff summary | S | F61 |
+| O51 | `--quiet` and `--verbose` modes | M | F83, F84 |
+| O61 | Interruptible delay with countdown | S-M | F41, F95 |
+
+### Phase 4: Power User Tools (M-L effort)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O5 | Remove `--prompt-file` flag | S-M | F6, F7 |
+| O9 | Hot-reload primitives | M | F13, F24 |
+| O21 | Fail-fast checks | S-M | F26 |
+| O23 | Preview command | M | F31, F25 |
+| O27 | Clarify stop-on-error | S-M | F33 |
+| O42 | CLI pause signal | M | F53 |
+| O43 | Diagnostic mode for assembly | M | F54 |
+| O49 | Full env var overrides | M | F85, F86 |
+| O53 | `ralph status --ralph` | M | F73, F74 |
+| O65 | Local override file | M | F102 |
+| O66 | Claude Code token extraction | M | F101 |
+
+### Deferred (L effort, high risk)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O10 | Merge instructions into prompt | L | Concept count |
+| O12 | Interactive init wizard | L | F5 |
+| O22 | Rename "ralphs" to "prompts" | L | F19, F28 |
