@@ -16,20 +16,23 @@ from typing import NamedTuple, Protocol, TypeVar
 from ralphify._frontmatter import PRIMITIVES_DIR, parse_frontmatter
 
 
-class Named(Protocol):
-    """Protocol for objects with a ``name`` attribute.
+class Primitive(Protocol):
+    """Protocol for the shared interface of all primitive types.
 
     All primitive dataclasses (:class:`~ralphify.checks.Check`,
     :class:`~ralphify.contexts.Context`, :class:`~ralphify.instructions.Instruction`,
     :class:`~ralphify.ralphs.Ralph`) satisfy this protocol, enabling type-safe
-    merging in :func:`merge_by_name`.
+    discovery, filtering, merging, and display.
     """
 
     @property
     def name(self) -> str: ...
 
+    @property
+    def enabled(self) -> bool: ...
 
-_N = TypeVar("_N", bound=Named)
+
+_P = TypeVar("_P", bound=Primitive)
 
 
 class PrimitiveEntry(NamedTuple):
@@ -100,12 +103,12 @@ def discover_local_primitives(
     return _scan_dir(base_dir / kind, marker)
 
 
-def merge_by_name(global_list: list[_N], local_list: list[_N]) -> list[_N]:
+def merge_by_name(global_list: list[_P], local_list: list[_P]) -> list[_P]:
     """Merge global and prompt-local primitives; local wins on name conflict.
 
     Used by the engine to overlay prompt-scoped primitives on top of
-    global ones.  Both lists must contain objects with a ``.name`` attribute
-    (see :class:`Named`).  Results are sorted alphabetically by name.
+    global ones.  Both lists must contain objects satisfying the
+    :class:`Primitive` protocol.  Results are sorted alphabetically by name.
     """
     by_name = {p.name: p for p in global_list}
     for p in local_list:

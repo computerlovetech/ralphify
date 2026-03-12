@@ -9,13 +9,16 @@ import shutil
 import sys
 import tomllib
 import uuid
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import typer
 from rich.console import Console
 
 from ralphify import __version__
 from ralphify._console_emitter import ConsoleEmitter
+from ralphify._discovery import Primitive
 from ralphify._frontmatter import CHECK_MARKER, CONFIG_FILENAME, CONTEXT_MARKER, INSTRUCTION_MARKER, PRIMITIVES_DIR, RALPH_MARKER
 from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
@@ -77,7 +80,10 @@ BANNER_COLORS = [
 ]
 
 
-def _print_primitives_section(label: str, items: list, detail_fn) -> None:
+_P = TypeVar("_P", bound=Primitive)
+
+
+def _print_primitives_section(label: str, items: list[_P], detail_fn: Callable[[_P], str]) -> None:
     """Print a status section for discovered primitives."""
     if items:
         rprint(f"\n[bold]{label}:[/bold]  {len(items)} found")

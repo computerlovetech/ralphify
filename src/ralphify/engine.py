@@ -17,9 +17,10 @@ import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, NamedTuple
+from collections.abc import Callable as _Callable
+from typing import Any, NamedTuple, TypeVar
 from ralphify._agent import execute_agent
-from ralphify._discovery import merge_by_name
+from ralphify._discovery import Primitive, merge_by_name
 from ralphify._events import Event, EventEmitter, EventType, NullEmitter
 from ralphify._output import format_duration
 from ralphify._run_types import RunConfig, RunState, RunStatus
@@ -66,7 +67,15 @@ def _resolve_prompt_dir(config: RunConfig) -> Path | None:
     return None
 
 
-def _discover_and_filter_enabled(root, prompt_dir, discover, discover_local):
+_P = TypeVar("_P", bound=Primitive)
+
+
+def _discover_and_filter_enabled(
+    root: Path,
+    prompt_dir: Path | None,
+    discover: _Callable[[Path], list[_P]],
+    discover_local: _Callable[[Path], list[_P]],
+) -> list[_P]:
     """Discover primitives, merge local overrides (if any), and return only enabled ones.
 
     Encapsulates the three-step pattern shared by all primitive types:
