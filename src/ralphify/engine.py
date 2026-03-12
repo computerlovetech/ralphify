@@ -17,10 +17,9 @@ import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from collections.abc import Callable as _Callable
-from typing import Any, NamedTuple, TypeVar
+from typing import Any, NamedTuple
 from ralphify._agent import execute_agent
-from ralphify._discovery import Primitive, merge_by_name
+from ralphify._discovery import discover_enabled
 from ralphify._events import Event, EventEmitter, EventType, NullEmitter
 from ralphify._output import format_duration
 from ralphify._run_types import RunConfig, RunState, RunStatus
@@ -67,26 +66,6 @@ def _resolve_prompt_dir(config: RunConfig) -> Path | None:
     return None
 
 
-_P = TypeVar("_P", bound=Primitive)
-
-
-def _discover_and_filter_enabled(
-    root: Path,
-    prompt_dir: Path | None,
-    discover: _Callable[[Path], list[_P]],
-    discover_local: _Callable[[Path], list[_P]],
-) -> list[_P]:
-    """Discover primitives, merge local overrides (if any), and return only enabled ones.
-
-    Encapsulates the three-step pattern shared by all primitive types:
-    discover globals → merge with prompt-scoped locals → filter to enabled.
-    """
-    items = discover(root)
-    if prompt_dir is not None:
-        items = merge_by_name(items, discover_local(prompt_dir))
-    return [item for item in items if item.enabled]
-
-
 def _discover_enabled_primitives(
     root: Path, prompt_dir: Path | None = None,
 ) -> EnabledPrimitives:
@@ -103,9 +82,9 @@ def _discover_enabled_primitives(
     only enabled primitives and do not re-filter.
     """
     return EnabledPrimitives(
-        checks=_discover_and_filter_enabled(root, prompt_dir, discover_checks, discover_checks_local),
-        contexts=_discover_and_filter_enabled(root, prompt_dir, discover_contexts, discover_contexts_local),
-        instructions=_discover_and_filter_enabled(root, prompt_dir, discover_instructions, discover_instructions_local),
+        checks=discover_enabled(root, prompt_dir, discover_checks, discover_checks_local),
+        contexts=discover_enabled(root, prompt_dir, discover_contexts, discover_contexts_local),
+        instructions=discover_enabled(root, prompt_dir, discover_instructions, discover_instructions_local),
     )
 
 

@@ -9,7 +9,7 @@ Parsing of the marker files themselves is delegated to
 :func:`~ralphify._frontmatter.parse_frontmatter`.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import NamedTuple, Protocol, TypeVar
 
@@ -114,3 +114,23 @@ def merge_by_name(global_list: list[_P], local_list: list[_P]) -> list[_P]:
     for p in local_list:
         by_name[p.name] = p  # local wins
     return sorted(by_name.values(), key=lambda p: p.name)
+
+
+def discover_enabled(
+    root: Path,
+    prompt_dir: Path | None,
+    discover: Callable[[Path], list[_P]],
+    discover_local: Callable[[Path], list[_P]],
+) -> list[_P]:
+    """Discover primitives, merge local overrides (if any), and return only enabled ones.
+
+    Encapsulates the three-step pattern shared by all primitive types:
+    discover globals → merge with prompt-scoped locals → filter to enabled.
+
+    Used by the engine's ``_discover_enabled_primitives`` to build the
+    full set of primitives for a run.
+    """
+    items = discover(root)
+    if prompt_dir is not None:
+        items = merge_by_name(items, discover_local(prompt_dir))
+    return [item for item in items if item.enabled]
