@@ -51,6 +51,20 @@ class CheckResult:
     output: str
     timed_out: bool = False
 
+    def to_event_data(self) -> dict:
+        """Serialize to a dict for event emission.
+
+        This is the single source of truth for how check results appear
+        in engine events.  Both per-check and summary events use this.
+        """
+        return {
+            "name": self.check.name,
+            "passed": self.passed,
+            "exit_code": self.exit_code,
+            "timed_out": self.timed_out,
+            "output": self.output,
+        }
+
 
 def _check_from_entry(prim: PrimitiveEntry) -> Check | None:
     """Convert a :class:`PrimitiveEntry` to a :class:`Check`, or ``None`` if invalid."""

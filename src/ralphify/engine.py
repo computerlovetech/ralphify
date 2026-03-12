@@ -271,13 +271,7 @@ def _run_checks_phase(
     # Build per-result data once; reused for both per-check and summary events.
     results_data: list[dict] = []
     for cr in check_results:
-        result = {
-            "name": cr.check.name,
-            "passed": cr.passed,
-            "exit_code": cr.exit_code,
-            "timed_out": cr.timed_out,
-            "output": cr.output,
-        }
+        result = cr.to_event_data()
         results_data.append(result)
         emit(
             EventType.CHECK_PASSED if cr.passed else EventType.CHECK_FAILED,
