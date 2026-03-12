@@ -17,9 +17,9 @@ ralph = "RALPH.md"
 
 ---
 
-## Python library development
+## Ship features from a plan file
 
-Ship features from a plan file, with test and lint guardrails.
+Python library development with test and lint guardrails.
 
 **`RALPH.md`**
 
@@ -90,7 +90,7 @@ ralph run -n 3 --log-dir ralph_logs
 
 ---
 
-## Test-driven bug fixing
+## Fix bugs from failing tests
 
 Point the agent at a failing test suite and let it fix bugs one at a time.
 
@@ -151,7 +151,7 @@ ralph run --stop-on-error --log-dir ralph_logs
 
 ---
 
-## Documentation writing
+## Improve project docs
 
 Improve project documentation one page at a time.
 
@@ -199,34 +199,9 @@ ralph new context git-log
 
 ---
 
-## Node.js / TypeScript project
+## Ship features (Node.js / TypeScript)
 
-**`RALPH.md`** — same structure as Python, with different commands:
-
-```markdown
-# Prompt
-
-You are an autonomous coding agent running in a loop. Each iteration
-starts with a fresh context. Your progress lives in the code and git.
-
-{{ contexts.git-log }}
-
-Read TODO.md for the current task list. Pick the top uncompleted task,
-implement it fully, then mark it done.
-
-## Rules
-
-- One task per iteration
-- No placeholder code — full, working implementations only
-- Run `npm test` before committing
-- Run `npx tsc --noEmit` to check types before committing
-- Commit with a descriptive message
-- Mark the completed task in TODO.md
-
-{{ instructions }}
-```
-
-**Checks:**
+Same RALPH.md structure as the Python recipe above — just swap the commands. The key difference is the checks:
 
 ```markdown
 # .ralphify/checks/tests/CHECK.md
@@ -265,7 +240,7 @@ Fix all lint errors. Do not disable rules with eslint-disable comments.
 
 ## Increase test coverage
 
-Uses script-based checks and contexts to track and enforce coverage.
+Uses script-based checks and contexts to track and enforce a coverage threshold.
 
 **`RALPH.md`**
 
@@ -344,7 +319,7 @@ Make scripts executable: `chmod +x .ralphify/checks/coverage-threshold/run.sh .r
 
 ---
 
-## Running in GitHub Actions
+## Run the loop in CI
 
 Create `.github/workflows/ralph-loop.yml`:
 
