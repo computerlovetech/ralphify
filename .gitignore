@@ -7,3 +7,5 @@ dist/
 .codex/
 site/
 ralph_logs/
+node_modules/
+.playwright-cli/
