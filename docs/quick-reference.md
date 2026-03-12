@@ -35,6 +35,7 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 | `ralph new context <name>` | Scaffold a new context |
 | `ralph new instruction <name>` | Scaffold a new instruction |
 | `ralph new prompt <name>` | Scaffold a new named prompt |
+| `ralph new check <name> --prompt <prompt>` | Scaffold a [prompt-scoped](primitives.md#prompt-scoped-primitives) check |
 | `ralph ui` | Launch the [web dashboard](dashboard.md) |
 | `ralph ui --port 9000` | Dashboard on a custom port |
 | `ralph ui --host 0.0.0.0` | Expose dashboard on network |

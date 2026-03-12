@@ -232,4 +232,18 @@ ralph new context <name>       # Create .ralph/contexts/<name>/CONTEXT.md
 ralph new prompt <name>        # Create .ralph/prompts/<name>/PROMPT.md
 ```
 
+#### Prompt-scoped primitives
+
+Checks, contexts, and instructions accept a `--prompt` option to create them inside a named prompt's directory. These [prompt-scoped primitives](primitives.md#prompt-scoped-primitives) only apply when running that specific prompt.
+
+```bash
+ralph new check docs-build --prompt docs        # .ralph/prompts/docs/checks/docs-build/CHECK.md
+ralph new context doc-coverage --prompt docs     # .ralph/prompts/docs/contexts/doc-coverage/CONTEXT.md
+ralph new instruction writing-style --prompt docs  # .ralph/prompts/docs/instructions/writing-style/INSTRUCTION.md
+```
+
+| Option | Description |
+|---|---|
+| `--prompt` | Name of a prompt in `.ralph/prompts/` to scope this primitive to |
+
 The created template files include placeholder frontmatter and comments explaining how to configure each primitive. See [Primitives](primitives.md) for full details on each type.

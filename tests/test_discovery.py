@@ -1,7 +1,5 @@
 """Tests for discover_local_primitives in _discovery.py."""
 
-from pathlib import Path
-
 from ralphify._discovery import discover_local_primitives
 
 

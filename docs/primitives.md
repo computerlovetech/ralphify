@@ -356,6 +356,18 @@ When you use [named prompts](#prompts), you can attach checks, contexts, and ins
 
 Different tasks need different validation. A documentation prompt might need a `mkdocs build` check but not a `cargo test` check. A refactoring prompt might need stricter lint rules. Prompt-scoped primitives let you customize the loop per task without cluttering the global `.ralph/` directory.
 
+### Creating prompt-scoped primitives
+
+Use the `--prompt` flag with `ralph new` to scaffold a primitive inside a named prompt's directory:
+
+```bash
+ralph new check docs-build --prompt docs
+ralph new context doc-coverage --prompt docs
+ralph new instruction writing-style --prompt docs
+```
+
+This creates the primitive inside `.ralph/prompts/docs/` instead of the global `.ralph/` directory.
+
 ### Directory structure
 
 Place primitive directories inside the named prompt's directory, using the same `checks/`, `contexts/`, `instructions/` layout:

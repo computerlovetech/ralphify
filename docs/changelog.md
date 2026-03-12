@@ -11,6 +11,7 @@ All notable changes to ralphify are documented here.
 ### Added
 
 - **Named prompts** — save reusable, task-focused prompts in `.ralph/prompts/<name>/PROMPT.md` and switch between them with `ralph run <name>`. Create with `ralph new prompt <name>`, list with `ralph prompts list`. The `prompt` field in `ralph.toml` also accepts a prompt name.
+- **`--prompt` flag on `ralph new`** — scope checks, contexts, and instructions to a named prompt with `ralph new check <name> --prompt <prompt>`. Creates the primitive inside `.ralph/prompts/<prompt>/` so it only applies when running that prompt.
 - **`--prompt-file` / `-f` flag** — point `ralph run` at any prompt file by path, overriding `ralph.toml`.
 - **Prompts in Configure** — browse, create, edit, and delete named prompts alongside other primitives in the Configure tab. Each prompt shows as an interactive card with description, content preview, and edit button.
 - **Redesigned dashboard to three tabs** — the dashboard now uses three tabs (Runs, Configure, History). The History tab shows rich run cards with visual pass rates and status badges. The Configure tab has an overview dashboard with drill-down views and inline editors for creating, editing, and deleting prompts, checks, contexts, and instructions.
