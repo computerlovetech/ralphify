@@ -208,17 +208,49 @@ Use `event.to_dict()` to serialize for JSON transport.
 
 ### `EventType`
 
-All event types the loop can emit. See [the dashboard docs](dashboard.md#event-types) for the full table of data fields per event type.
+All event types the loop can emit. Every event has `type`, `run_id`, `timestamp`, and `data` fields.
 
-**Run lifecycle:** `RUN_STARTED`, `RUN_STOPPED`, `RUN_PAUSED`, `RUN_RESUMED`
+#### Run lifecycle
 
-**Iteration lifecycle:** `ITERATION_STARTED`, `ITERATION_COMPLETED`, `ITERATION_FAILED`, `ITERATION_TIMED_OUT`
+| Event type | When | Data fields |
+|---|---|---|
+| `RUN_STARTED` | Run begins | `checks`, `contexts`, `instructions` (int counts), `max_iterations`, `timeout`, `delay`, `prompt_name` |
+| `RUN_STOPPED` | Run ends for any reason | `reason` (`"completed"`, `"user_requested"`, `"error"`), `total`, `completed`, `failed`, `timed_out` |
+| `RUN_PAUSED` | Run is paused | — |
+| `RUN_RESUMED` | Run is resumed | — |
 
-**Checks:** `CHECKS_STARTED`, `CHECK_PASSED`, `CHECK_FAILED`, `CHECKS_COMPLETED`
+#### Iteration lifecycle
 
-**Prompt assembly:** `CONTEXTS_RESOLVED`, `PROMPT_ASSEMBLED`
+| Event type | When | Data fields |
+|---|---|---|
+| `ITERATION_STARTED` | Iteration begins | `iteration` |
+| `ITERATION_COMPLETED` | Agent exits with code 0 | `iteration`, `returncode`, `duration` (seconds), `duration_formatted`, `detail`, `log_file` |
+| `ITERATION_FAILED` | Agent exits non-zero | `iteration`, `returncode`, `duration`, `duration_formatted`, `detail`, `log_file` |
+| `ITERATION_TIMED_OUT` | Agent exceeds timeout | `iteration`, `returncode` (null), `duration`, `duration_formatted`, `detail`, `log_file` |
 
-**Other:** `AGENT_ACTIVITY`, `PRIMITIVES_RELOADED`, `LOG_MESSAGE`
+#### Checks
+
+| Event type | When | Data fields |
+|---|---|---|
+| `CHECKS_STARTED` | Check phase begins | `iteration`, `count` |
+| `CHECK_PASSED` | A single check passes | `iteration`, `name`, `passed`, `exit_code`, `timed_out` |
+| `CHECK_FAILED` | A single check fails | `iteration`, `name`, `passed`, `exit_code`, `timed_out` |
+| `CHECKS_COMPLETED` | All checks finish | `iteration`, `passed`, `failed`, `results` (array of `{name, passed, exit_code, timed_out}`) |
+
+#### Prompt assembly
+
+| Event type | When | Data fields |
+|---|---|---|
+| `CONTEXTS_RESOLVED` | Contexts injected into prompt | `iteration`, `count` |
+| `PROMPT_ASSEMBLED` | Full prompt built | `iteration`, `prompt_length` |
+
+#### Other
+
+| Event type | When | Data fields |
+|---|---|---|
+| `AGENT_ACTIVITY` | Each line of streamed agent output (Claude Code only) | `raw` (dict — one parsed JSON line from the agent's `stream-json` output), `iteration` |
+| `PRIMITIVES_RELOADED` | Primitives re-discovered mid-run | `checks`, `contexts`, `instructions` (int counts) |
+| `LOG_MESSAGE` | General log from the engine | `message`, `level` (`"info"`, `"error"`), `traceback` (optional) |
 
 ### Built-in emitters
 

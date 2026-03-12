@@ -218,10 +218,10 @@ You define what "valid" means. Ralphify feeds failures back into the prompt auto
 
     Habits and patterns that separate productive loops from noisy ones.
 
--   **[Web Dashboard](dashboard.md)** *(coming soon)*
+-   **[Python API](api.md)**
 
     ---
 
-    Manage runs, edit primitives, and watch agent activity in real time from your browser. Design preview — not yet available.
+    Embed the loop in your own automation, listen to events, and manage multiple runs programmatically.
 
 </div>
