@@ -8,9 +8,13 @@ for interactive CLI sessions.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 
-from rich.console import Console
+from rich.console import Console, ConsoleOptions, RenderResult
+from rich.live import Live
+from rich.spinner import Spinner
+from rich.text import Text
 
 from ralphify._events import Event, EventType
 from ralphify._output import format_duration
@@ -23,12 +27,27 @@ _ICON_ARROW = "\u2192"    # →
 _ICON_DASH = "\u2014"     # —
 
 
+class _IterationSpinner:
+    """Rich renderable that shows a spinner with elapsed time."""
+
+    def __init__(self) -> None:
+        self._spinner = Spinner("dots")
+        self._start = time.monotonic()
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        elapsed = time.monotonic() - self._start
+        text = Text(f" {format_duration(elapsed)}", style="dim")
+        yield self._spinner
+        yield text
+
+
 class ConsoleEmitter:
     """Renders engine events to the Rich console, reproducing original CLI output."""
 
     def __init__(self, console: Console) -> None:
         self._console = console
         self._rprint = console.print
+        self._live: Live | None = None
         self._handlers: dict[EventType, Callable[[dict], None]] = {
             EventType.RUN_STARTED: self._on_run_started,
             EventType.ITERATION_STARTED: self._on_iteration_started,
@@ -61,10 +80,27 @@ class ConsoleEmitter:
         if data.get("instructions"):
             self._rprint(f"[dim]Instructions: {data['instructions']} enabled[/dim]")
 
+    def _start_live(self) -> None:
+        spinner = _IterationSpinner()
+        self._live = Live(
+            spinner,
+            console=self._console,
+            transient=True,
+            refresh_per_second=4,
+        )
+        self._live.start()
+
+    def _stop_live(self) -> None:
+        if self._live is not None:
+            self._live.stop()
+            self._live = None
+
     def _on_iteration_started(self, data: dict) -> None:
         self._rprint(f"\n[bold blue]── Iteration {data['iteration']} ──[/bold blue]")
+        self._start_live()
 
     def _on_iteration_ended(self, data: dict, color: str, icon: str) -> None:
+        self._stop_live()
         status_msg = f"[{color}]{icon} Iteration {data['iteration']} {data['detail']}"
         if data.get("log_file"):
             status_msg += f" {_ICON_ARROW}\n{data['log_file']}"
@@ -100,6 +136,7 @@ class ConsoleEmitter:
             self._rprint(f"[dim]{msg}[/dim]")
 
     def _on_run_stopped(self, data: dict) -> None:
+        self._stop_live()
         if data.get("reason") == "completed":
             total = data.get("total", 0)
             completed = data.get("completed", 0)
