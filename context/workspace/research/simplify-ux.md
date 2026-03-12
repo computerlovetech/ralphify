@@ -2450,3 +2450,622 @@ Self-healing: tests failed 3×, self-healed 2×, currently passing
 | O10 | Merge instructions into prompt | L | Concept count |
 | O12 | Interactive init wizard | L | F5 |
 | O22 | Rename "ralphs" to "prompts" | L | F19, F28 |
+
+---
+
+## Implementation Progress Check (Iteration 7)
+
+Before adding new analysis, noting changes observed in the current codebase vs. previous iteration findings:
+
+**O56 (Ctrl+C reports as STOPPED) — IMPLEMENTED.** `engine.py:406-407` now has `except KeyboardInterrupt: state.status = RunStatus.STOPPED`. This was identified as XS effort CRITICAL in iteration 5. The code no longer falls through to COMPLETED on Ctrl+C. The `RUN_STOPPED` event now correctly reports `reason="user_requested"` for interrupts.
+
+**F91 — RESOLVED** by O56 implementation above.
+
+**F93 (No summary for non-completed runs) — STILL PRESENT.** `_console_emitter.py:140` still checks `if data.get("reason") == "completed"` — stopped and crashed runs still show no summary. O55 remains unimplemented.
+
+---
+
+## Deep Dive: The Prompt Iteration Workflow (NEW — Iteration 7)
+
+The "harness engineering" inner loop is the most frequent workflow for experienced ralphify users: write/edit RALPH.md → run 1-3 iterations → review results → refine prompt → repeat. This is the core craft of using ralphify effectively, yet the tooling provides almost no support for it.
+
+### The Actual Workflow
+
+**Phase 1: Write the initial prompt**
+1. Open `RALPH.md` (or a named ralph's `RALPH.md`) in editor
+2. Write the prompt — role, task, constraints, process
+3. Add placeholder references to contexts (`{{ contexts.git-log }}`)
+4. Save
+
+**Phase 2: Test with one iteration**
+1. `ralph run -n 1 --log-dir logs` (or `ralph run docs -n 1 -l logs`)
+2. Wait 30-120 seconds (spinner, no feedback about what's happening)
+3. See iteration result and check results
+4. Open log file to see full agent output
+5. Run `git diff` or `git log --oneline -1` to see what changed
+
+**Phase 3: Evaluate and refine**
+1. Was the output good? → If yes, scale up to more iterations
+2. Was it bad? → Diagnose: was the prompt unclear? Were checks wrong? Was context missing?
+3. Edit RALPH.md to add constraints/signs
+4. Go to Phase 2
+
+### Friction in Each Phase
+
+**Phase 1 friction — prompt authoring has no feedback:**
+
+- **F132: No syntax highlighting or validation for placeholder syntax** (NEW, VALIDATED). Users write `{{ contexts.git-log }}` in their editor with no feedback about whether this references an existing context. A typo (`{{ contexts.git_log }}` — underscore vs hyphen) silently produces an empty string at run time (F37). IDE extensions or a `ralph validate` command could catch this instantly, but neither exists. The closest thing is `ralph status`, which lists available context names but doesn't cross-reference them against the prompt file.
+
+- **F133: No "prompt preview" without running an iteration** (NEW, VALIDATED — reinforces O23). To see the fully assembled prompt (with contexts resolved, instructions injected), the user must actually run an iteration. There's no `ralph preview` or `ralph run --dry-run`. The O23 opportunity was proposed in iteration 3 but hasn't been implemented. For prompt iteration, this is the single biggest time sink: each test costs 30-120 seconds of agent execution time when the user only wanted to verify "did my context placeholder resolve correctly?"
+
+- **F134: No diff between iterations' prompts** (NEW, VALIDATED). When the user edits RALPH.md between iterations, there's no way to see what changed in the assembled prompt. The `PROMPT_ASSEMBLED` event includes `prompt_length` but not the prompt text, and there's no comparison between consecutive iterations. A user who adds one line to RALPH.md has no confirmation that (a) the change was picked up, and (b) the assembled prompt changed as expected. The closest signal is F14 (no indication prompt was re-read), which remains unaddressed.
+
+**Phase 2 friction — testing is expensive:**
+
+- **F135: Every prompt test costs a full agent execution** (NEW, VALIDATED). There's no lightweight "did the prompt assemble correctly?" check that doesn't involve spinning up the full agent subprocess. The minimum cost of verifying a prompt change is: run contexts (subprocess I/O, 1-30 seconds each) + run agent (30-120+ seconds, API cost) + run checks (5-60 seconds each). For a prompt iteration cycle, this means 1-4 minutes and $0.05-$0.50 per test. If a user is iterating on prompt wording (not checking agent behavior), this is dramatically overpriced. A `ralph assemble` command that resolves contexts and prints the prompt would cost only the context execution time.
+
+- **F136: Log file review requires leaving the terminal** (NEW, VALIDATED). After `ralph run -n 1 -l logs`, the user sees `→ logs/001_20250312-143022.log` in the output. To review what the agent did, they must either: (a) open the file in an editor (`vim logs/001_...`), (b) `cat` the file, or (c) use `less`. None of these are integrated into the ralph workflow. A `ralph log` command that shows the most recent log file (or `ralph log 001` for a specific iteration) would reduce the context-switch cost. Even better: after each iteration, show the last N lines of agent output in the CLI (configurable, e.g., `--tail 20`).
+
+**Phase 3 friction — diagnosis is manual:**
+
+- **F137: No way to correlate agent output with check results** (NEW, VALIDATED). When a check fails, the user wants to know "what did the agent do that caused this check to fail?" The check output and agent output are in separate streams: check results are in the CLI output, agent output is in the log file. There's no cross-referencing. A user must: read the check failure output (in CLI or in next iteration's prompt) → open the log file → mentally correlate the agent's actions with the check's error. For `git diff --stat` post-iteration, the user must run it manually. O37 (post-iteration git diff summary) would help but isn't implemented.
+
+- **F138: No per-ralph iteration history** (NEW, VALIDATED). When iterating on a named ralph (e.g., `ralph run docs -n 1` multiple times), there's no record of which prompt version produced which results. Log files are numbered sequentially within a single `--log-dir` but there's no separation by ralph name. If the user runs `ralph run docs -n 1 -l logs` and then `ralph run tests -n 3 -l logs`, the log directory has files 001-004 with no indication which iterations belong to which ralph. A `logs/docs/001.log`, `logs/tests/001.log` structure (or metadata in the log file) would make post-hoc analysis dramatically easier.
+
+### The Prompt Engineering Tax
+
+The total cost of one prompt iteration cycle:
+
+| Step | Time | Cost |
+|---|---|---|
+| Edit RALPH.md | 30-120s | Free |
+| `ralph run -n 1 -l logs` | 30-180s | $0.05-0.50 API |
+| Review CLI output | 10-30s | Free |
+| Open and read log file | 20-60s | Free |
+| Run `git diff` | 5-10s | Free |
+| Diagnose issues | 30-300s | Free |
+| **Total** | **2-12 minutes** | **$0.05-0.50** |
+
+For 5-10 prompt iterations to get a ralph working well, that's 10-120 minutes and $0.25-$5.00. The time cost is dominated by agent execution (unavoidable for testing agent behavior) and diagnosis (avoidable with better tooling). The diagnosis step could be nearly eliminated with: prompt preview (O23), per-iteration git diff (O37), and prompt assembly summary (O7/O63).
+
+---
+
+## Deep Dive: Loop Convergence & "Going in Circles" (NEW — Iteration 7)
+
+The self-healing feedback loop's success depends on convergence: check failures decrease over iterations as the agent fixes issues. But what happens when the loop doesn't converge? This is the most frustrating user experience in ralphify — watching the agent fail, "fix," and fail again in the same way.
+
+### Convergence Patterns
+
+**Pattern A: Fast convergence (ideal)** — Iteration 1: 3 checks fail. Iteration 2: 1 check fails. Iteration 3: 0 checks fail. The user sees green checkmarks and moves on.
+
+**Pattern B: Slow convergence** — Iteration 1-3: Same check fails each time. Iteration 4: Agent finds a different approach. Iteration 5: All pass. The user needs patience but the loop eventually works.
+
+**Pattern C: Oscillation** — Iteration 1: Test A fails. Iteration 2: Agent fixes A, breaks test B. Iteration 3: Agent fixes B, breaks A again. The user watches a ping-pong pattern without realizing it.
+
+**Pattern D: Stuck loop** — Iteration 1-10: Same check fails with the same error. The agent can't fix the problem (wrong approach, missing context, or fundamentally unable). The user pays for 10 wasted iterations.
+
+**Pattern E: Semantic loop** — All checks pass every iteration, but the agent is doing the same thing over and over. It commits work, then the next iteration re-does the same work differently. No check fails because the work is "valid" — it's just not making progress. This is the most expensive pattern because there's no check-failure signal to alert the user.
+
+### What the User Sees
+
+For Pattern C (oscillation) and Pattern D (stuck), the user's CLI experience is:
+
+```
+── Iteration 3 ──
+✓ Iteration 3 completed (45.2s)
+  Checks: 1 passed, 1 failed
+    ✓ lint
+    ✗ tests (exit 1)
+
+── Iteration 4 ──
+✓ Iteration 4 completed (52.1s)
+  Checks: 1 passed, 1 failed
+    ✓ lint
+    ✗ tests (exit 1)
+
+── Iteration 5 ──
+✓ Iteration 5 completed (48.7s)
+  Checks: 1 passed, 1 failed
+    ✓ lint
+    ✗ tests (exit 1)
+```
+
+Every iteration looks the same. There's no signal that the pattern is repeating. The user must recognize it visually — "I've seen `✗ tests (exit 1)` three times in a row." For long runs (overnight or during meetings), the user isn't watching the output and discovers the stuck loop only when they check in later.
+
+### Friction Points
+
+- **F139: No detection of repeated check failures (stuck loop)** (NEW, VALIDATED). The engine at `engine.py:292-337` runs checks every iteration and formats failures, but never compares failures across iterations. There's no "this check has failed 5 times in a row" warning. The `ConsoleEmitter` receives `CHECKS_COMPLETED` events per iteration but doesn't track cross-iteration patterns. The `RunState` dataclass at `_run_types.py:62-145` has aggregate counters (`completed`, `failed`) but no per-check history. A simple heuristic: if the same check fails 3+ consecutive iterations, emit a warning `⚠ Check 'tests' has failed 3 consecutive iterations — the agent may be stuck. Consider editing your prompt or check failure instruction.`
+
+- **F140: No convergence metrics during the run** (NEW, VALIDATED). There's no real-time display of whether the loop is converging. Users rely on pattern recognition in the terminal output. O75 (self-healing metrics in run summary) was proposed but only shows results at the END of the run. During the run, the user needs earlier signals. A per-check "trend arrow" would help: `✗ tests (exit 1) ↓` (getting worse) vs `✗ tests (exit 1) →` (stuck) vs `✗ tests (exit 1) ↑` (improving, e.g., fewer failures or shorter output). The check output length could serve as a rough convergence proxy (fewer errors = shorter output).
+
+- **F141: No automatic circuit breaker for stuck loops** (NEW, VALIDATED). When a check fails N consecutive times, the loop should optionally stop (or at minimum warn loudly). Currently the only circuit breakers are: `-n` (iteration limit), `--timeout` (per-iteration), and `--stop-on-error` (agent crash only, not check failure — F33). There's no `--max-consecutive-failures 3` flag or equivalent. The self-healing loop philosophy says "keep trying" — but after 5 identical failures, the probability of self-healing on iteration 6 is near zero. The user is paying API costs for zero progress. A smart circuit breaker would save money (J9) and surface stuck states early.
+
+- **F142: No comparison of check output across iterations** (NEW, VALIDATED). `format_check_failures()` at `checks.py:148-176` formats the CURRENT iteration's failures. The engine at `engine.py:289` returns the new `check_failures_text` and discards the previous one. There's no diff or comparison. If the check output is identical across 3 iterations (same test fails with the same error), this is a strong signal the agent is stuck — but the tool never computes this comparison. Even a rough heuristic (check output similarity > 90%) would catch the most common stuck patterns.
+
+- **F143: Semantic loops (Pattern E) are completely invisible** (NEW, VALIDATED). When all checks pass but the agent isn't making meaningful progress, there's zero signal from ralphify. The agent might be: re-implementing the same feature differently each iteration, making tiny cosmetic changes that pass tests, or "implementing" tasks that are already done. The only way to detect this is reviewing git history manually (`git log --stat`). O37 (post-iteration git diff summary) would help by making the changes visible, but even that doesn't detect the pattern of redundant changes. A `git diff --stat HEAD~1..HEAD` that shows the same files modified in consecutive iterations could trigger a warning: `⚠ Same files modified in last 3 iterations: src/main.py, tests/test_main.py`
+
+- **F144: No feedback escalation for persistent failures** (NEW, VALIDATED). When a check fails on iteration 1, the agent gets the check output + failure instruction. When the same check fails on iteration 2, the agent gets the EXACT SAME format: check output + failure instruction. There's no escalation: "I already told you about this failure and you didn't fix it." The failure instruction is static text from CHECK.md — it doesn't adapt to repeated failures. A more sophisticated approach: after N consecutive failures of the same check, inject additional context like "This check has failed the last N iterations. Your previous approaches have not worked. Consider a fundamentally different approach."
+
+### The "Going in Circles" Cost
+
+For a stuck loop running overnight:
+- 10 iterations × 60s per iteration = 10 minutes of agent time
+- 10 iterations × $0.10 per iteration = $1.00 (conservative estimate)
+- 10 iterations × 60s check time = 10 minutes of compute time
+- Total: 20 minutes, $1.00 — for zero productive output
+
+For a 50-iteration overnight run where 40 iterations are stuck:
+- 40 wasted iterations × $0.10 = $4.00 wasted
+- 40 × 120s = 80 minutes of wasted time (extends total run by 80 minutes)
+
+A simple 3-consecutive-failure circuit breaker would save 70-90% of wasted cost in stuck loop scenarios.
+
+---
+
+## Deep Dive: The Git State Contract (NEW — Iteration 7)
+
+Ralphify's documentation says "progress lives in git" and recommends agents commit after each iteration. But ralphify has no git awareness beyond what the user configures manually. This section analyzes what git-related UX is missing.
+
+### What Ralphify Assumes About Git
+
+1. The project is in a git repo (recommended, not required)
+2. The agent makes commits during each iteration
+3. Users review progress via `git log`
+4. Progress survives between iterations because it's committed
+
+### What Ralphify Actually Does With Git
+
+**Nothing.** The tool never interacts with git. It doesn't:
+- Check if the working directory is a git repo
+- Check for uncommitted changes before starting
+- Check for uncommitted changes after each iteration
+- Detect if the agent made commits
+- Show git diff summaries
+- Warn about dirty working tree state
+- Handle merge conflicts
+- Create branches
+
+### Friction Points
+
+- **F145: No pre-run working tree check** (NEW, VALIDATED). A user with uncommitted changes runs `ralph run -n 5`. The agent starts modifying files on top of the user's uncommitted work. If something goes wrong, `git stash` or `git checkout .` would discard BOTH the agent's changes AND the user's pre-existing changes. There's no way to separate them. A pre-run check — `git status --porcelain` → "You have uncommitted changes. Commit or stash before running?" — would prevent this common mistake. Tools like `git rebase` already do this ("Cannot rebase: You have unstaged changes").
+
+- **F146: No post-iteration git awareness** (NEW, VALIDATED). After each iteration, the engine doesn't check whether the agent made any commits. The `ITERATION_COMPLETED` event at `engine.py:233-236` reports duration and exit code but nothing about git state. The user has no way to know from the CLI output whether the agent committed work, left uncommitted changes, or did nothing. O37 (git diff summary) was proposed but isn't implemented. Even a simple `  Commits: 1 new | Files: 3 modified` per iteration would transform the monitoring experience.
+
+- **F147: Interrupted iterations leave orphaned changes** (NEW, VALIDATED — reinforces F92). When Ctrl+C fires during an iteration, the agent may have modified files but not committed them. O57 (warn about unvalidated changes) was proposed but isn't implemented. The user runs `ralph run`, presses Ctrl+C during iteration 5, and sees "Interrupted" (with the O56 fix). But what about the files the agent modified during iteration 5? They're now uncommitted changes in the working tree, mixed with any work from completed iterations. There's no `ralph clean` or rollback mechanism.
+
+- **F148: No branch isolation for agent work** (NEW, VALIDATED). The agent works directly on the current branch. If the user is on `main` and runs `ralph run -n 10`, the agent commits directly to `main`. Best practices would suggest: create a branch like `ralph/docs-2025-03-12` → run the agent on that branch → review → merge to main. But `ralph init` doesn't suggest this, `ralph run` doesn't offer `--branch`, and there's no guidance about branch strategy in the CLI. The FAQ mentions "Run multiple loops in parallel on separate branches" but provides no tooling support.
+
+- **F149: No detection of agent "un-doing" previous commits** (NEW, VALIDATED). A red flag mentioned in best practices (`docs/best-practices.md`): "Commits that undo previous commits." This is a strong signal of oscillation (Pattern C from the convergence analysis). But ralphify never checks for it. A simple `git diff HEAD~2..HEAD~1` compared to `git diff HEAD~1..HEAD` could detect when changes are being reversed. This is the git-level equivalent of the check-failure convergence detection (F139).
+
+- **F150: No git-based progress tracking across iterations** (NEW, VALIDATED). The `RunState` tracks iteration count, completed, and failed — but these are counter-based, not outcome-based. Git history IS the outcome record, but ralphify doesn't read it. A post-run summary that shows `git log --oneline` for the commits made during the run would connect the abstract iteration counts to concrete work. Example: "Done: 5 iterations — 4 succeeded, 1 failed | 4 commits: abc123 'Add login endpoint', def456 'Add tests for login'..."
+
+### The Branch Strategy Gap
+
+The docs mention running "multiple loops in parallel on separate branches" but the tooling doesn't support this:
+
+1. The user must manually `git checkout -b ralph/feature` before running
+2. `ralph.toml` and `.ralphify/` are the same on all branches (unless manually diverged)
+3. `--log-dir` doesn't namespace by branch — logs from different branches mix
+4. No mechanism to start a run on a new branch automatically
+5. No mechanism to PR the agent's work when done
+
+- **F151: No `ralph run --branch <name>` for isolated agent work** (NEW, HYPOTHESIZED). A `--branch` flag that auto-creates and checks out a branch before starting the loop would: (a) isolate agent work from the user's current branch, (b) make cleanup easy (`git branch -D ralph/failed-attempt`), (c) enable parallel loops on different branches, (d) create a natural PR workflow when done. This is a common pattern in CI tools (GitHub Actions checks out branches automatically) but not available in ralphify's CLI.
+
+---
+
+## Deep Dive: The Terminal Output as Product Surface (NEW — Iteration 7)
+
+The terminal output IS the product for CLI users. Every line printed is a design decision. This section does a line-by-line audit of the complete terminal output for a typical 3-iteration run, treating each line as a UI element with information density, visual hierarchy, and user value.
+
+### Complete Output for `ralph run -n 3 -l logs`
+
+```
+████████╗... (6 lines of ASCII banner art)
+
+  Harness toolkit for autonomous AI coding loops       ← tagline
+                                                       ← blank line
+  Run 'ralph --help' for usage information             ← help hint
+  ⭐ Star us on GitHub: https://...                    ← promotional
+
+Timeout: 5m 0s per iteration                           ← config dim
+Checks: 3 enabled                                      ← config dim
+Contexts: 1 enabled                                    ← config dim
+
+── Iteration 1 ──                                      ← header
+⠋ 23.4s                                               ← spinner (transient)
+✓ Iteration 1 completed (45.2s) →                      ← result
+logs/001_20250312-143022.log                           ← log path
+  Checks: 3 passed                                     ← check summary
+    ✓ ruff-lint                                        ← per-check
+    ✓ mkdocs-build                                     ← per-check
+    ✓ tests                                            ← per-check
+
+── Iteration 2 ──
+⠋ 12.1s
+✗ Iteration 2 failed with exit code 1 (32.5s) →
+logs/002_20250312-143108.log
+  Checks: 2 passed, 1 failed
+    ✓ ruff-lint
+    ✗ tests (exit 1)
+    ✓ mkdocs-build
+
+── Iteration 3 ──
+⠋ 8.3s
+✓ Iteration 3 completed (52.1s) →
+logs/003_20250312-143201.log
+  Checks: 3 passed
+    ✓ ruff-lint
+    ✓ tests
+    ✓ mkdocs-build
+
+Done: 3 iteration(s) — 2 succeeded, 1 failed
+```
+
+### Line-by-Line Audit
+
+| Lines | Content | Value | Issue |
+|---|---|---|---|
+| 1-6 | ASCII banner | Brand identity | Wastes 6 lines on every run (F8/O4) |
+| 7 | Tagline | Orients new users | Unnecessary after first use |
+| 8 | Blank line | Spacing | Wastes space |
+| 9 | Help hint | Discoverability | Only useful on first use |
+| 10 | Star us | Promotion | Wastes a line, not user-serving |
+| 11 | Blank line | Spacing | Wastes space |
+| 12-14 | Config summary | Validation | Good — confirms setup at a glance |
+| 15 | Blank line | Spacing | Natural separator |
+| 16 | Iteration header | Structure | Good but missing N/M (F20/O14) |
+| 17 | Spinner | Activity signal | Only signal during 30-120s of execution (F60) |
+| 18-19 | Result + log path | Outcome | Good but log path wraps to next line, breaking alignment |
+| 20-23 | Check summary | Validation | Good but no check output (F55/O40) |
+
+**Information density analysis:**
+- **Banner block (lines 1-11):** 11 lines, ~1 useful line (tagline). Information density: ~9%. This block repeats on every `ralph run`.
+- **Config block (lines 12-14):** 3 lines, all useful. Information density: 100%.
+- **Iteration block (lines 16-23):** 8 lines, all useful. Information density: 100%.
+- **Summary (last line):** 1 line, useful. 100%.
+
+**The overhead:** For a 3-iteration run, the banner is 11 of ~40 total lines = 27.5% of the output is promotional/branding that provides no information. For a 30-iteration run, the banner drops to ~3% — but the first impression matters more.
+
+### What's Missing From the Output
+
+Each missing piece has been identified in previous iterations but seeing them together reveals the compound effect:
+
+| What's missing | Where it would go | Impact | Related |
+|---|---|---|---|
+| Which ralph/prompt is being used | Config block | Medium — "am I running the right prompt?" | — |
+| Iteration progress N/M | Iteration header | High — "how far along am I?" | O14 |
+| Agent activity during iteration | Between header and result | Very High — "what is the agent doing?" | O36 |
+| Prompt assembly summary | Before/after header | Medium — "what went into this iteration?" | O7/O63 |
+| Git changes per iteration | After result | High — "what did the agent change?" | O37 |
+| Check output on failure | After per-check line | Very High — "why did the check fail?" | O40 |
+| Aggregate check stats | Summary | Medium | O19 |
+| Resource metrics | Summary | Medium — "how much did this cost?" | O60 |
+
+**The information gap:** Between the iteration header and the result (30-120 seconds of wall time), the user has ZERO information about what's happening. This is the longest information-void period in any CLI tool the user likely uses. For comparison: `npm install` shows packages being installed, `docker build` shows build steps, `cargo build` shows compilation units. Even `git push` shows transfer progress. Ralphify shows a spinner with elapsed time — that's it.
+
+- **F152: The CLI output has a 30-120 second information void during each iteration** (NEW, VALIDATED). Between `── Iteration N ──` and the result line, the only output is the transient spinner showing elapsed time. The engine emits `AGENT_ACTIVITY` events during this period (for Claude Code) but `ConsoleEmitter` ignores them (F105). The user stares at `⠋ 45.3s` for up to two minutes. This is the primary anxiety-producing moment in the user experience, especially for new users (F60 "First-Run Anxiety"). Every second of silence is a second where the user wonders "is it working?" "is it stuck?" "is it burning money on nothing?"
+
+- **F153: Log file path breaks line alignment in the output** (NEW, VALIDATED). `_console_emitter.py:105-106`: when a log file path is present, the status line is split: `✓ Iteration 1 completed (45.2s) →\nlogs/001_20250312-143022.log`. The `→` and newline break the visual scanning pattern — the user reads left-to-right and hits a line break in the middle of a semantic unit. The log path could be on the same line (if terminal width allows) or indented on the next line with consistent formatting: `  → logs/001_...` instead of bare `logs/001_...`.
+
+- **F154: No indication which ralph/prompt is being used in the output** (NEW, VALIDATED). The config block shows "Checks: 3 enabled, Contexts: 1 enabled" but not which prompt file is being used. `RUN_STARTED` event data at `engine.py:371-379` includes `prompt_name` but `_on_run_started` at `_console_emitter.py:73-81` doesn't render it. When running `ralph run docs`, the user sees nothing confirming that the `docs` ralph was loaded. If `ralph.toml` has `ralph = "docs"` and the user runs `ralph run` (no argument), the output gives no indication which ralph was selected. For a project with 7 ralphs, knowing which one is running is critical context.
+
+### The "Above the Fold" Problem
+
+Terminal windows have limited visible lines (typically 24-80 rows). The banner consumes 11 lines — 14-46% of the visible area. When the first iteration starts, the banner may have already scrolled the config summary out of view. A user opening their terminal after the loop has been running sees only iteration output, with no context about which ralph, which checks, or what settings are active.
+
+- **F155: Config summary scrolls out of view almost immediately** (NEW, VALIDATED). The config block (3 lines of dim text) is printed once at run start, immediately followed by iteration output. After 2-3 iterations, the config summary is likely scrolled off-screen. A user who switches to the terminal after the loop has been running for 10 iterations has no way to see the config without scrolling all the way back. For long runs, this is infeasible. Some CLI tools (like `docker-compose`) use a sticky header or periodic re-emission of key config info.
+
+---
+
+## Deep Dive: The Composability Model (NEW — Iteration 7)
+
+Ralphify has four primitive types (checks, contexts, instructions, ralphs) that compose to produce a prompt. The composability model — how users build, combine, and reason about these pieces — is central to the power user experience. This section analyzes where the model works well and where it creates confusion.
+
+### The Composition Pipeline
+
+```
+RALPH.md (prompt text)
+  + {{ contexts.X }} ← run context commands, inject output
+  + {{ instructions }} ← inject static instruction text
+  + Check Failures   ← from previous iteration
+  = Assembled Prompt → Agent stdin
+```
+
+This pipeline is elegant in concept: the prompt is a template, contexts bring dynamic data, instructions bring reusable rules, and check failures bring feedback. Each piece is independently authored and versioned.
+
+### Where Composability Works
+
+1. **Contexts as data sources**: `git log`, `test status`, `file tree` — these are genuinely useful dynamic data that changes every iteration.
+2. **Checks as quality gates**: `pytest`, `ruff`, `mypy` — these validate independently of the prompt.
+3. **Named ralphs as task switching**: different prompts for different tasks without rewriting.
+
+### Where Composability Breaks Down
+
+- **F156: Instructions are contexts without commands — the distinction is confusing** (NEW, VALIDATED — reinforces O10). An instruction is static text injected into the prompt. A context with no `command` field is... also static text injected into the prompt (via the `static_content` from CONTEXT.md body). The difference: instructions use `{{ instructions.X }}` placeholders, contexts use `{{ contexts.X }}` placeholders. Functionally, they do the same thing with different syntax. This was noted in O10 (merge instructions) but the analysis here is deeper: the overlap is not just conceptual — a user who creates a static context and a user who creates an instruction produce identical runtime behavior. The only structural difference is the primitive type name and placeholder kind.
+
+  A user who asks "should I put my coding standards as an instruction or a context?" gets no clear answer. Both work. The convention "instructions are for rules, contexts are for data" is documented but not enforced — nothing stops a user from putting rules in a context or data in an instruction.
+
+- **F157: The implicit append behavior creates a hidden dependency on placeholder absence** (NEW, VALIDATED). `resolver.py:51-54`: when no placeholders exist in the prompt, all contexts/instructions are appended to the end. This means a prompt that works fine (all contexts appended automatically) can break silently when the user adds their first named placeholder — because adding `{{ contexts.git-log }}` switches from "append all" mode to "named only" mode, silently dropping all other contexts (F16). The user's intent was "place git-log here AND keep everything else" but the behavior is "place git-log here INSTEAD OF everything else."
+
+  This is the most dangerous silent behavior in the entire tool. The transition from "no placeholders" to "one named placeholder" is a breaking change that the user has no reason to expect. The fix in O6 (warn on silent exclusion) would catch this, but the root cause is the tri-modal resolution logic: append-all vs named-only vs named+bulk.
+
+  **Simplification opportunity:** Replace the tri-modal system with: named placeholders for explicit placement, AND always append remaining content at the end. This eliminates the "named-only drops others" trap entirely. Users who don't want remaining content can use `{{ contexts }}` as the last line of their prompt (it would be empty if all contexts were named). The "silent drop" mode would simply not exist.
+
+- **F158: Context resolution order is alphabetical, not dependency-ordered** (NEW, VALIDATED). `resolver.py:44`: `remaining = [content for name, content in sorted(available.items()) if name not in placed]`. When contexts are appended (no placeholders), they appear in alphabetical order. If a user has contexts `01-git-log`, `02-test-status`, `03-architecture`, the alphabetical order matches because of numeric prefixes. But if they have `git-log`, `test-status`, `architecture`, the order is `architecture`, `git-log`, `test-status` — which may not be the intended order. The naming-as-ordering pattern (prefix with numbers) is documented in best practices but is a workaround for lacking explicit ordering support.
+
+- **F159: No visibility into what the assembled prompt actually looks like** (NEW, VALIDATED — consolidates F31, F133, F134). This friction has been identified from multiple angles (F31 in iteration 2, F133 above, O23/O30 proposed). The compound effect: users author 4 separate files (RALPH.md, contexts, instructions, check failure instructions), these are composed by an algorithm they can't observe, and the result is piped to an agent they can't inspect. The prompt is the most important artifact in the system — and it's the only artifact users never see. This is a fundamental trust gap.
+
+### The Composability Complexity Budget
+
+| Concept | Strictly necessary? | Simplification path |
+|---|---|---|
+| Checks | Yes — core value (self-healing feedback) | Keep |
+| Contexts (dynamic) | Yes — fresh data per iteration is key | Keep |
+| Contexts (static) | Redundant with instructions | Merge into instructions OR keep but document overlap |
+| Instructions | Redundant with static contexts | Merge into static contexts OR keep but deprioritize |
+| Named placeholders | Useful for control | Keep but fix silent-drop behavior (F157) |
+| Bulk placeholders | Marginal — only saves explicit naming | Consider removing; always append remaining |
+| Implicit append | Convenient but creates the F157 trap | Remove; require explicit bulk or named placement |
+| Ralph-scoped primitives | Power feature | Keep but improve visibility (O53) |
+| Enabled/disabled | Useful | Keep |
+
+**The minimum viable primitive set:** Checks + dynamic contexts + the prompt file. Instructions could be merged into the prompt (they're just text), static contexts could be merged with instructions (both are static text). This reduces the concept count from 4 primitive types to 2 — dramatically simpler for new users. Power users who want composable static text could use contexts with no command (the existing mechanism).
+
+---
+
+## New Simplification Opportunities (Iteration 7)
+
+### Tier 1: High Impact, Low Effort (NEW)
+
+#### O81: Show which ralph/prompt is active in run output (NEW)
+**What:** In `_on_run_started`, render the prompt source: `Ralph: docs (.ralphify/ralphs/docs/RALPH.md)` or `Prompt: RALPH.md`. The `prompt_name` field is already in the `RUN_STARTED` event data at `engine.py:378`.
+**Why:** Addresses F154. Users with multiple ralphs need confirmation that the right one loaded. Without this, a user who runs `ralph run` (no argument) has no idea which prompt was selected from `ralph.toml`.
+**Job:** Monitor, Trust (J6, J2)
+**Effort:** XS — add 2 lines to `_on_run_started` in `ConsoleEmitter`.
+**Risk:** None.
+
+#### O82: Detect stuck loops — warn after 3 consecutive failures of the same check (NEW)
+**What:** In `ConsoleEmitter`, track per-check consecutive failure count. When a check fails 3+ consecutive iterations, show a warning: `⚠ Check 'tests' has failed 3 consecutive iterations — consider editing your prompt or failure instruction.` Reset the counter when the check passes.
+**Why:** Addresses F139 and F141. The simplest convergence signal. Catches Pattern C (oscillation) and Pattern D (stuck loop) early. Saves the user from watching and paying for iterations that won't self-heal.
+**Job:** Trust, Monitor (J2, J6, J9)
+**Effort:** S — add a dict tracking consecutive failures per check name in `ConsoleEmitter`, update on `CHECKS_COMPLETED`.
+**Risk:** Very low. Warning only. The threshold (3) is conservative — users can ignore it if they know the agent needs more attempts.
+
+#### O83: Indent log file path for consistent alignment (NEW)
+**What:** Change `_console_emitter.py:105-106` from `status_msg += f" {_ICON_ARROW}\n{data['log_file']}"` to `status_msg += f" {_ICON_ARROW} {data['log_file']}"` (same line) when the terminal is wide enough, or `\n    {data['log_file']}` (indented) when it wraps.
+**Why:** Addresses F153. The current bare newline breaks the visual scanning pattern. Every other line in the output is consistently indented; the log path is the only one that breaks alignment.
+**Job:** Monitor (J6)
+**Effort:** XS — change the format string in one line.
+**Risk:** None.
+
+#### O84: Add `ralph assemble [name]` command for prompt preview without agent execution (NEW)
+**What:** Add a command that runs contexts, resolves placeholders, and prints the assembled prompt to stdout — without executing the agent or running checks. Essentially `_assemble_prompt()` exposed as a CLI command. Supports `ralph assemble` (root prompt), `ralph assemble docs` (named ralph), `ralph assemble --with-failures "test output"` (simulate failure injection).
+**Why:** Addresses F133 and F135. The cheapest possible way to verify prompt assembly: only context commands execute (1-30 seconds total), no agent API cost. For prompt iteration cycles, this reduces verification time from 2-4 minutes to 5-30 seconds and cost from $0.05-0.50 to $0.00. This is the single highest-leverage improvement for experienced users.
+**Job:** Steer, Trust (J3, J6)
+**Effort:** S-M — extract `_assemble_prompt()` logic into a CLI command. Most of the code exists in `engine.py:171-195`; need to wire up context discovery+execution and emit to stdout.
+**Risk:** Very low. Read-only command. Context commands still execute (they may have side effects, but that's also true during `ralph run`).
+
+#### O85: Simplify placeholder resolution — always append remaining (NEW)
+**What:** Change `resolver.py:51-54` to always append remaining (not-yet-placed) items to the end of the prompt, regardless of whether named placeholders were used. Remove the "named-only drops others" mode. If the user has `{{ contexts.git-log }}` in their prompt, git-log is placed inline AND all other contexts are still appended at the end.
+**Why:** Addresses F157 (the most dangerous silent behavior). Eliminates the tri-modal resolution system (`append-all` / `named-only` / `named+bulk`). Under the new model, there are only two modes: `named-for-inline-placement` + `remaining-appended-at-end`, and `bulk-for-explicit-placement`. Users never lose content by adding a named placeholder.
+**Job:** Trust (J2)
+**Effort:** S — change ~3 lines in `resolve_placeholders()`. The `elif not has_named:` block becomes unconditional: always append remaining.
+**Risk:** **Medium.** This is a behavior change. Users who intentionally use named-only mode to EXCLUDE certain contexts will now get all contexts appended. The trade-off: preventing silent content loss (very common, very confusing) vs. breaking intentional exclusion (rare, power-user behavior). Mitigate by: adding a `{{ contexts.none }}` or `{{ contexts.stop }}` placeholder that explicitly opts out of appending.
+
+#### O86: Warn if working directory has uncommitted changes before `ralph run` (NEW)
+**What:** At the start of `run_loop()`, run `git status --porcelain 2>/dev/null`. If output is non-empty, emit a warning: `⚠ Working directory has uncommitted changes. Consider committing or stashing before running.` Don't block — just warn.
+**Why:** Addresses F145. Uncommitted changes mixed with agent changes are hard to separate. This warning catches the most common git hygiene issue at the cheapest possible moment (before any agent execution).
+**Job:** Trust (J2, J6)
+**Effort:** S — add `subprocess.run(["git", "status", "--porcelain"], ...)` and a conditional warning in `run_loop()` or `cli.py:run()`.
+**Risk:** Very low. Warning only. Gracefully fails if not in a git repo (stderr captured, empty output treated as clean).
+
+#### O87: Show per-iteration git change summary (NEW — concrete O37 refinement)
+**What:** After each iteration completes, run `git log --oneline -1 --format="%h %s" 2>/dev/null` and `git diff --stat HEAD@{1}..HEAD 2>/dev/null` to show one line: `  Git: abc1234 "Add login endpoint" (3 files changed)`. If no new commit, show `  Git: no new commits`. Emit as a new `GIT_SUMMARY` event.
+**Why:** Refines O37 with concrete implementation. The user instantly knows what the agent did without opening log files. This is the highest-value monitoring improvement for the "feel in control" job (J6).
+**Job:** Monitor (J6)
+**Effort:** S — run one git command after iteration, parse output, emit event, add handler.
+**Risk:** Low. Git commands are read-only. Falls back gracefully.
+
+#### O88: Feedback escalation for consecutive check failures (NEW)
+**What:** Track check failure history in `run_loop()`. When a check fails 3+ consecutive times, prepend an escalation note to the failure section: `⚠ This check has failed the last {N} iterations. Your previous approaches have not resolved it. Consider a fundamentally different approach or ask for help.` This goes into the prompt, not just the CLI.
+**Why:** Addresses F144. Gives the agent stronger signal that its current strategy isn't working. This is low-effort prompt engineering that the tool can do automatically instead of requiring the user to manually add "signs."
+**Job:** Trust (J2)
+**Effort:** S — track per-check failure counts in `_run_iteration` or engine-level state, pass to `format_check_failures`.
+**Risk:** Low. Adds a few words to the agent prompt. Could be made configurable if users find it counterproductive.
+
+### Tier 2: High Impact, Medium Effort (NEW)
+
+#### O89: `ralph log [N]` — view iteration log files from CLI (NEW)
+**What:** Add `ralph log` (shows most recent log file) and `ralph log 3` (shows log for iteration 3) commands. Detects `--log-dir` from ralph.toml or scans common directories (`logs/`, `ralph_logs/`). Outputs log content to stdout (pipeable to `less`, `grep`, etc.).
+**Why:** Addresses F136. After running `ralph run -n 1 -l logs`, the user currently must manually navigate to and open the log file. `ralph log` is one command instead of `cat logs/001_20250312-143022.log` (which requires finding the exact filename).
+**Job:** Monitor (J6)
+**Effort:** S-M — find log directory, sort by name/timestamp, cat most recent or numbered iteration.
+**Risk:** None. Read-only.
+
+#### O90: Separate log files by ralph name (NEW)
+**What:** When using named ralphs, create subdirectories in the log directory: `logs/docs/001_20250312.log`, `logs/tests/001_20250312.log`. When using root RALPH.md, use `logs/default/001_20250312.log`.
+**Why:** Addresses F138. Power users running multiple ralphs share a single log directory where iterations from different ralphs are interleaved. Finding "all the logs from my docs ralph run last night" requires checking timestamps or opening each file. Subdirectories make this trivial.
+**Job:** Monitor (J6)
+**Effort:** S — pass `prompt_name` (or "default") to `_write_log()`, create subdirectory.
+**Risk:** Low. Changes log directory structure. Existing log parsing tools might break if they assume flat structure.
+
+#### O91: Add `--max-consecutive-failures N` circuit breaker (NEW)
+**What:** Add a CLI flag (and `[run]` toml option) that stops the loop when any single check fails N consecutive iterations. Default: off (backward compatible). Recommended: 5. When triggered: `Stopping: check 'tests' has failed 5 consecutive iterations.`
+**Why:** Addresses F141. This is the single most important cost-saving feature for unattended runs. A stuck loop running overnight with no circuit breaker wastes money and time. The user returns to find 50 iterations of the same failure. With `--max-consecutive-failures 5`, the loop stops after iteration 5 and the user's API bill is 90% lower.
+**Job:** Trust, Run (J2, J9)
+**Effort:** S-M — add per-check consecutive failure tracking in engine, add CLI flag, add stop condition.
+**Risk:** Low. Opt-in. Default is off.
+
+---
+
+## Updated Principles Applied (Iteration 7)
+
+| Principle | New Applications |
+|---|---|
+| **Clear feedback** | O81 (show active ralph), O82 (stuck loop warning), O83 (alignment fix), O87 (git summary), O88 (escalated failure feedback) |
+| **Observability is trust** | O81, O82, O84 (prompt preview), O86 (pre-run git check), O87 |
+| **Remove before you add** | O85 (simplify placeholder resolution by removing a mode) |
+| **Convention over configuration** | O86 (git hygiene is a convention), O90 (log directory per ralph) |
+| **Fewer steps** | O84 (verify prompt without running agent), O89 (view logs without navigating filesystem) |
+| **Fewer concepts** | O85 (tri-modal → bi-modal resolution), F156 analysis (instructions ≈ static contexts) |
+| **Progressive disclosure** | O91 (circuit breaker is opt-in but available for power users) |
+
+---
+
+## Updated Recommended Implementation Order (Iteration 7)
+
+**CRITICAL — still the top priority:**
+- O44: Non-zero exit code on failures (XS) — CI depends on this
+- O55: Show run summary for ALL stop reasons (XS) — crashed runs need feedback
+
+(O56 already implemented — Ctrl+C now sets STOPPED.)
+
+**Phase 1 — "Just Works" (add to existing):**
+- O81: Show active ralph/prompt in run output (XS) — orients the user immediately
+- O83: Fix log file path alignment (XS) — visual polish
+- O82: Detect stuck loops — warn after 3 consecutive check failures (S) — catches biggest cost waste
+- O87: Per-iteration git change summary (S) — transforms monitoring experience
+
+**Phase 2 — "Smart Setup" (add to existing):**
+- O86: Warn on uncommitted changes before run (S) — git hygiene
+- O85: Simplify placeholder resolution — always append remaining (S) — eliminates worst silent trap
+- O88: Feedback escalation for consecutive failures (S) — makes self-healing smarter
+
+**Phase 3 — "Observable Loop" (add to existing):**
+- O84: `ralph assemble` command for prompt preview (S-M) — fastest prompt iteration
+- O89: `ralph log [N]` for viewing logs (S-M) — reduces context-switching
+- O90: Separate log files by ralph name (S) — power user organization
+- O91: `--max-consecutive-failures N` circuit breaker (S-M) — cost protection for unattended runs
+
+---
+
+## Updated Open Questions (Iteration 7)
+
+44. **Should O85 (always append remaining) be the default or opt-in?** The behavior change could surprise users who intentionally exclude contexts via named-only mode. Options: (a) change default, add `{{ contexts.stop }}` to opt out, (b) add `--strict-placeholders` flag to opt INTO the old named-only behavior, (c) make it a ralph.toml setting. Recommendation: (a) — the new behavior is safer and more intuitive. The old behavior was a trap, not a feature.
+
+45. **Should the stuck-loop detection (O82) be per-check or aggregate?** Per-check: "tests has failed 3 times" catches a single stuck check. Aggregate: "2 of 3 checks have failed every iteration" catches broader patterns. Recommendation: per-check — it's simpler and the warning is more actionable ("fix THIS check").
+
+46. **Should `ralph assemble` (O84) execute context commands or just show placeholders?** If it executes commands, the preview is accurate but takes time. If it doesn't, it shows `{{ contexts.git-log }}` literally — not useful for verifying resolution. Recommendation: execute by default, add `--no-contexts` flag to skip.
+
+47. **How should the git change summary (O87) handle non-git projects?** The tool should gracefully degrade: if not in a git repo, skip the git summary silently. If in a git repo but no commits were made, show "no new commits." If the agent made uncommitted changes, show `git diff --stat` instead.
+
+48. **Should the consecutive failure circuit breaker (O91) be configurable per-check?** A slow integration test might reasonably fail 5 times before the fix stabilizes. A lint check failing 5 times is definitely stuck. Per-check thresholds in frontmatter would be more flexible but add configuration complexity. Recommendation: start with a global threshold, add per-check later if needed.
+
+49. **Should feedback escalation (O88) include the previous iteration's approach?** Currently the agent gets the same failure output each time. Including "Previous approach: [summary of what you tried]" would help the agent avoid repeating strategies. But this requires extracting agent intent from output, which is model-dependent and unreliable. Recommendation: keep it simple — just the escalation note, let the agent figure out what it tried.
+
+50. **Is the instructions-contexts redundancy (F156) worth resolving?** O10 proposed merging them (deferred as high-risk). An alternative: document the equivalence explicitly and recommend instructions for static rules, contexts for dynamic or static data. Accept the overlap rather than breaking changes. The concept count drops from "must learn 4" to "must learn 3 + 1 optional."
+
+---
+
+## Consolidated Priority Matrix (Updated with Iteration 7)
+
+### CRITICAL (implement immediately)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O44 | Non-zero exit code on failures | XS | F81 (CI showstopper) |
+| O55 | Run summary for all stop reasons | XS | F93 (crashed runs silent) |
+| ~~O56~~ | ~~Ctrl+C reports as STOPPED~~ | ~~XS~~ | ~~F91~~ — **IMPLEMENTED** |
+
+### Phase 1: Quick Wins (XS-S effort, high impact) — 36 items
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O4 | Suppress banner on `ralph run` | XS | F8 |
+| O14 | Show iteration progress N/M | XS | F20 |
+| O15 | Default `-n 1` for inline prompts | XS | F21 |
+| O24 | Render per-check events in CLI | XS | F22 |
+| O29 | Inline comments in generated toml | XS | F29 |
+| O35 | Pass/fail suffix in log filenames | XS | F49 |
+| O38 | Warn on shell operators in commands | XS | F66 |
+| O39 | Validate `run.*` script permissions | XS | F59 |
+| O46 | Handle type coercion errors gracefully | XS | F77 |
+| O47 | Warn on empty prompt file | XS | F87 |
+| O48 | `ralph list` command | XS | F68 |
+| O52 | Detect inline comments in frontmatter | XS | F78 |
+| O57 | Warn about unvalidated changes on Ctrl+C | XS | F92 |
+| O59 | Estimated token count per iteration | XS | F98 |
+| O67 | Truncate at line boundary | XS | F112 |
+| O68 | Remove exit code from failure format | XS | F113 |
+| O69 | Default failure instructions in template | XS | F110 |
+| O70 | Workflow hint in `ralph --help` | XS | F115 |
+| O71 | Examples in `ralph run --help` | XS | F118 |
+| O72 | Clearer PROMPT_NAME description | XS | F117 |
+| O79 | Clarify `--stop-on-error` scope in help | XS | F120 |
+| O80 | Add `-n` safety hint in help | XS | F119 |
+| O81 | Show active ralph/prompt in run output | XS | F154 |
+| O83 | Fix log file path alignment | XS | F153 |
+| O63 | Render PROMPT_ASSEMBLED/CONTEXTS_RESOLVED | XS-S | F105, F12 |
+| O7 | Show prompt assembly summary | S | F12, F14 |
+| O19 | Aggregate check stats in run summary | S | F23 |
+| O25 | Warn on unresolved named placeholders | S | F37 |
+| O31 | Validate `ralph.toml` schema on load | S | F45 |
+| O32 | Show context timeout warnings | S | F32 |
+| O40 | Show check output snippet on failure | S | F55 |
+| O45 | Validate frontmatter field names | S | F76 |
+| O54 | Detect missing colon in frontmatter | S | F75 |
+| O58 | Track prompt size trend | S | F97 |
+| O60 | Aggregate resource metrics in summary | S | F99 |
+| O82 | Detect stuck loops (3 consecutive failures) | S | F139, F141 |
+| O87 | Per-iteration git change summary | S | F146, F143 |
+
+### Phase 2: Smart Setup (S-M effort) — 16 items
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O1 | Smart `ralph init` with auto checks | S | F2, F3 |
+| O3 | Default iteration limit | S | F9, F100 |
+| O8 | Better init prompt template | S | F1 |
+| O17 | Soften dangerous flag in config | S | F17 |
+| O26 | Validate check commands in status | S | F34 |
+| O62 | Env var override for agent command | S | F102, F85 |
+| O73 | Instruction-first check failure format | S | F108, F109 |
+| O74 | Tab completion for ralph names | S | F126 |
+| O85 | Simplify placeholder resolution | S | F157 |
+| O86 | Warn on uncommitted changes | S | F145 |
+| O88 | Feedback escalation for consecutive failures | S | F144 |
+| O6 | Warn on silent context exclusion | S-M | F16 |
+| O34 | Status mirrors run resolution | S-M | F46, F47 |
+| O50 | `ralph use <name>` | S-M | F72 |
+| O64 | TTY detection for CI | S-M | F83 |
+| O41 | `ralph init --preset` | M | F56, F57 |
+
+### Phase 3: Observable Loop (M effort) — 14 items
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O28 | Fix non-Claude agent output | M | F43, F50 |
+| O2 | Default log directory | S (after O28) | F10 |
+| O16 | Show truncation details | S | F11 |
+| O30 | Save prompt to log directory | S | F31 |
+| O76 | Positive feedback injection | S | F114 |
+| O84 | `ralph assemble` for prompt preview | S-M | F133, F135 |
+| O89 | `ralph log [N]` command | S-M | F136 |
+| O90 | Separate logs by ralph name | S | F138 |
+| O91 | Max consecutive failures circuit breaker | S-M | F141 |
+| O33 | Unified config (`[run]` in toml) | M | F42, F51 |
+| O36 | Agent activity in CLI | S | F60, F152 |
+| O37 | Post-iteration git diff summary | S | F61 |
+| O51 | `--quiet` and `--verbose` modes | M | F83, F84 |
+| O61 | Interruptible delay with countdown | S-M | F41, F95 |
+| O75 | Self-healing loop metrics | M | F111 |
+
+### Phase 4: Power User Tools (M-L effort) — 15 items
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O5 | Remove `--prompt-file` flag | S-M | F6, F7 |
+| O9 | Hot-reload primitives | M | F13, F24 |
+| O21 | Fail-fast checks | S-M | F26 |
+| O23 | Preview command | M | F31, F25 |
+| O27 | Clarify stop-on-error | S-M | F33 |
+| O42 | CLI pause signal | M | F53 |
+| O43 | Diagnostic mode for assembly | M | F54 |
+| O49 | Full env var overrides | M | F85, F86 |
+| O53 | `ralph status --ralph` | M | F73, F74 |
+| O65 | Local override file | M | F102 |
+| O66 | Claude Code token extraction | M | F101 |
+| O77 | Check tags for per-ralph filtering | M | F127, F128 |
+| O78 | Prompt validation | M | F131 |
+
+### Deferred (L effort, high risk)
+| ID | What | Effort | Addresses |
+|---|---|---|---|
+| O10 | Merge instructions into prompt | L | Concept count |
+| O12 | Interactive init wizard | L | F5 |
+| O22 | Rename "ralphs" to "prompts" | L | F19, F28 |
