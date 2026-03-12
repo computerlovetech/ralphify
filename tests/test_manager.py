@@ -14,8 +14,8 @@ _MOCK_SUBPROCESS = "ralphify._agent.subprocess.run"
 
 
 def _make_config(tmp_path, **overrides):
-    """Create a RunConfig pointing at a temp directory with PROMPT.md."""
-    prompt_path = tmp_path / "PROMPT.md"
+    """Create a RunConfig pointing at a temp directory with RALPH.md."""
+    prompt_path = tmp_path / "RALPH.md"
     if not prompt_path.exists():
         prompt_path.write_text("test prompt")
     config = RunConfig(

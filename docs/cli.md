@@ -12,7 +12,7 @@ The `ralph.toml` file configures how ralphify runs your agent. It's created by `
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 ### Fields
@@ -21,7 +21,7 @@ prompt = "PROMPT.md"
 |---|---|---|---|
 | `command` | string | yes | The agent CLI executable to run |
 | `args` | list of strings | no | Arguments passed to the command |
-| `prompt` | string | yes | Path to a prompt file, or a [named prompt](primitives.md#prompts) name |
+| `ralph` | string | yes | Path to a ralph file, or a [named ralph](primitives.md#ralphs) name |
 
 The assembled prompt is piped to the agent command as **stdin**. The full command executed each iteration is:
 
@@ -38,7 +38,7 @@ Ralphify works with any CLI that reads a prompt from stdin. To use a different a
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 ```toml
@@ -46,7 +46,7 @@ prompt = "PROMPT.md"
 [agent]
 command = "bash"
 args = ["-c", "cat - | my-agent-wrapper"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 The only requirement is that the command reads the prompt from stdin and exits when done. See [Using with Different Agents](agents.md) for complete setup guides for popular agents and custom wrappers.
@@ -106,7 +106,7 @@ If you prefer to install manually, use `--show-completion` to print the script a
 
 ### `ralph init`
 
-Initialize a project with `ralph.toml` and `PROMPT.md`.
+Initialize a project with `ralph.toml` and `RALPH.md`.
 
 ```bash
 ralph init
@@ -115,7 +115,7 @@ ralph init --force   # Overwrite existing files
 
 | Option | Short | Default | Description |
 |---|---|---|---|
-| `--force` | `-f` | off | Overwrite existing `ralph.toml` and `PROMPT.md` |
+| `--force` | `-f` | off | Overwrite existing `ralph.toml` and `RALPH.md` |
 
 During init, ralphify detects your project type by looking for manifest files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`). The detected type is displayed but doesn't currently change the generated configuration — all project types get the same defaults.
 
@@ -125,9 +125,9 @@ Start the autonomous coding loop.
 
 ```bash
 ralph run                          # Run forever (Ctrl+C to stop)
-ralph run docs                     # Use the "docs" named prompt
+ralph run docs                     # Use the "docs" named ralph
 ralph run -n 5                     # Run 5 iterations
-ralph run -p "Fix the login bug"   # Ad-hoc prompt (no PROMPT.md needed)
+ralph run -p "Fix the login bug"   # Ad-hoc prompt (no RALPH.md needed)
 ralph run -f path/to/prompt.md     # Use a specific prompt file
 ralph run --stop-on-error          # Stop if agent exits non-zero
 ralph run --delay 10               # Wait 10s between iterations
@@ -137,10 +137,10 @@ ralph run --log-dir ralph_logs     # Save output to log files
 
 | Argument / Option | Short | Default | Description |
 |---|---|---|---|
-| `[PROMPT_NAME]` | | none | Name of a [named prompt](primitives.md#prompts) in `.ralph/prompts/` |
+| `[RALPH_NAME]` | | none | Name of a [named ralph](primitives.md#ralphs) in `.ralphify/ralphs/` |
 | `-n` | | unlimited | Max number of iterations |
-| `--prompt` | `-p` | none | Ad-hoc prompt text. Overrides the prompt file |
-| `--prompt-file` | `-f` | none | Path to a prompt file. Overrides `ralph.toml` |
+| `--prompt` | `-p` | none | Ad-hoc prompt text. Overrides the ralph file |
+| `--prompt-file` | `-f` | none | Path to a ralph file. Overrides `ralph.toml` |
 | `--stop-on-error` | `-s` | off | Stop loop if agent exits non-zero or times out |
 | `--delay` | `-d` | `0` | Seconds to wait between iterations |
 | `--timeout` | `-t` | none | Max seconds per iteration |
@@ -154,19 +154,19 @@ ralph run -n 10 --timeout 300 --log-dir ralph_logs --stop-on-error
 
 #### Ad-hoc prompts
 
-Use `-p` to pass a prompt directly on the command line, bypassing the prompt file entirely:
+Use `-p` to pass a prompt directly on the command line, bypassing the ralph file entirely:
 
 ```bash
 ralph run -n 1 -p "Add type hints to all public functions in src/"
 ```
 
-This is useful for quick one-off tasks where you don't want to create or edit a `PROMPT.md`. The ad-hoc prompt still supports placeholders — contexts and instructions resolve as normal:
+This is useful for quick one-off tasks where you don't want to create or edit a `RALPH.md`. The ad-hoc prompt still supports placeholders — contexts and instructions resolve as normal:
 
 ```bash
 ralph run -n 1 -p "{{ contexts.git-log }}\n\nFix the failing test."
 ```
 
-When `-p` is provided, `PROMPT.md` doesn't need to exist.
+When `-p` is provided, `RALPH.md` doesn't need to exist.
 
 ### `ralph status`
 
@@ -180,23 +180,23 @@ This command checks:
 
 - Whether the prompt file exists
 - Whether the agent command is on PATH
-- All discovered checks, contexts, instructions, and named prompts (with enabled/disabled status)
+- All discovered checks, contexts, instructions, and named ralphs (with enabled/disabled status)
 
 If everything is configured correctly, it prints "Ready to run." If not, it tells you exactly what's wrong.
 
-### `ralph prompts`
+### `ralph ralphs`
 
-Manage named prompts.
+Manage named ralphs.
 
-#### `ralph prompts list`
+#### `ralph ralphs list`
 
-List all available prompts — both the root `PROMPT.md` and any named prompts in `.ralph/prompts/`.
+List all available ralphs — both the root `RALPH.md` and any named ralphs in `.ralphify/ralphs/`.
 
 ```bash
-ralph prompts list
+ralph ralphs list
 ```
 
-Output shows enabled status, name, and description for each prompt.
+Output shows enabled status, name, and description for each ralph.
 
 ### `ralph ui`
 
@@ -223,27 +223,27 @@ See [Web Dashboard](dashboard.md) for a full walkthrough of the UI features and 
 
 ### `ralph new`
 
-Scaffold new primitives. Each command creates a directory under `.ralph/` with a template file.
+Scaffold new primitives. Each command creates a directory under `.ralphify/` with a template file.
 
 ```bash
-ralph new check <name>         # Create .ralph/checks/<name>/CHECK.md
-ralph new instruction <name>   # Create .ralph/instructions/<name>/INSTRUCTION.md
-ralph new context <name>       # Create .ralph/contexts/<name>/CONTEXT.md
-ralph new prompt <name>        # Create .ralph/prompts/<name>/PROMPT.md
+ralph new check <name>         # Create .ralphify/checks/<name>/CHECK.md
+ralph new instruction <name>   # Create .ralphify/instructions/<name>/INSTRUCTION.md
+ralph new context <name>       # Create .ralphify/contexts/<name>/CONTEXT.md
+ralph new ralph <name>         # Create .ralphify/ralphs/<name>/RALPH.md
 ```
 
-#### Prompt-scoped primitives
+#### Ralph-scoped primitives
 
-Checks, contexts, and instructions accept a `--prompt` option to create them inside a named prompt's directory. These [prompt-scoped primitives](primitives.md#prompt-scoped-primitives) only apply when running that specific prompt.
+Checks, contexts, and instructions accept a `--ralph` option to create them inside a named ralph's directory. These [ralph-scoped primitives](primitives.md#ralph-scoped-primitives) only apply when running that specific ralph.
 
 ```bash
-ralph new check docs-build --prompt docs        # .ralph/prompts/docs/checks/docs-build/CHECK.md
-ralph new context doc-coverage --prompt docs     # .ralph/prompts/docs/contexts/doc-coverage/CONTEXT.md
-ralph new instruction writing-style --prompt docs  # .ralph/prompts/docs/instructions/writing-style/INSTRUCTION.md
+ralph new check docs-build --ralph docs        # .ralphify/ralphs/docs/checks/docs-build/CHECK.md
+ralph new context doc-coverage --ralph docs     # .ralphify/ralphs/docs/contexts/doc-coverage/CONTEXT.md
+ralph new instruction writing-style --ralph docs  # .ralphify/ralphs/docs/instructions/writing-style/INSTRUCTION.md
 ```
 
 | Option | Description |
 |---|---|
-| `--prompt` | Name of a prompt in `.ralph/prompts/` to scope this primitive to |
+| `--ralph` | Name of a ralph in `.ralphify/ralphs/` to scope this primitive to |
 
 The created template files include placeholder frontmatter and comments explaining how to configure each primitive. See [Primitives](primitives.md) for full details on each type.

@@ -1,6 +1,6 @@
 """Discover and run validation checks after each loop iteration.
 
-Checks are scripts or commands in ``.ralph/checks/<name>/`` that validate
+Checks are scripts or commands in ``.ralphify/checks/<name>/`` that validate
 the agent's work (tests, linters, type checkers).  When a check fails its
 output and failure instruction are formatted for injection into the next
 iteration's prompt, creating a self-healing feedback loop.
@@ -20,7 +20,7 @@ _DEFAULT_TIMEOUT = 60
 
 @dataclass
 class Check:
-    """A validation check discovered from ``.ralph/checks/<name>/CHECK.md``.
+    """A validation check discovered from ``.ralphify/checks/<name>/CHECK.md``.
 
     Either *command* or *script* must be set.  If both exist, *script* wins.
     The *failure_instruction* (body text from CHECK.md) is appended to the
@@ -72,7 +72,7 @@ def _check_from_entry(prim) -> Check | None:
 
 
 def discover_checks(root: Path = Path(".")) -> list[Check]:
-    """Scan ``.ralph/checks/`` for subdirectories containing a ``CHECK.md``.
+    """Scan ``.ralphify/checks/`` for subdirectories containing a ``CHECK.md``.
 
     Checks without both a ``run.*`` script and a ``command`` in frontmatter
     are skipped with a warning.  Defaults: ``timeout=_DEFAULT_TIMEOUT``, ``enabled=True``.
@@ -89,7 +89,7 @@ def discover_checks_local(prompt_dir: Path) -> list[Check]:
     """Scan ``prompt_dir/checks/`` for prompt-scoped checks.
 
     Same construction logic as :func:`discover_checks` but reads from
-    a prompt directory instead of the global ``.ralph/checks/``.
+    a prompt directory instead of the global ``.ralphify/checks/``.
     """
     checks = []
     for prim in discover_local_primitives(prompt_dir, "checks", CHECK_MARKER):

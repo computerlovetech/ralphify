@@ -14,8 +14,8 @@ _MOCK_SUBPROCESS = "ralphify._agent.subprocess.run"
 
 
 def _make_config(tmp_path, **overrides):
-    """Create a RunConfig pointing at a temp directory with PROMPT.md."""
-    prompt_path = tmp_path / "PROMPT.md"
+    """Create a RunConfig pointing at a temp directory with RALPH.md."""
+    prompt_path = tmp_path / "RALPH.md"
     if not prompt_path.exists():
         prompt_path.write_text("test prompt")
     config = RunConfig(
@@ -233,7 +233,7 @@ class TestRunStateControls:
 
     @patch(_MOCK_SUBPROCESS, side_effect=_ok)
     def test_reload_rediscovers_primitives(self, mock_run, tmp_path):
-        (tmp_path / "PROMPT.md").write_text("test prompt")
+        (tmp_path / "RALPH.md").write_text("test prompt")
         config = _make_config(tmp_path, max_iterations=2)
         state = _make_state()
         q = QueueEmitter()
@@ -288,14 +288,14 @@ class TestPromptLocalPrimitives:
     def test_prompt_local_primitives_merged(self, mock_run, tmp_path):
         """Both global and local primitives are discovered."""
         # Global instruction
-        gi = tmp_path / ".ralph" / "instructions" / "global-style"
+        gi = tmp_path / ".ralphify" / "instructions" / "global-style"
         gi.mkdir(parents=True)
         (gi / "INSTRUCTION.md").write_text("---\n---\nGlobal style.")
 
         # Named prompt
-        prompt_dir = tmp_path / ".ralph" / "prompts" / "ui"
+        prompt_dir = tmp_path / ".ralphify" / "ralphs" / "ui"
         prompt_dir.mkdir(parents=True)
-        (prompt_dir / "PROMPT.md").write_text("---\n---\nBuild the UI.")
+        (prompt_dir / "RALPH.md").write_text("---\n---\nBuild the UI.")
 
         # Local instruction
         li = prompt_dir / "instructions" / "focus"
@@ -304,7 +304,7 @@ class TestPromptLocalPrimitives:
 
         config = _make_config(
             tmp_path,
-            prompt_file=str(prompt_dir / "PROMPT.md"),
+            prompt_file=str(prompt_dir / "RALPH.md"),
             prompt_name="ui",
             max_iterations=1,
         )
@@ -320,14 +320,14 @@ class TestPromptLocalPrimitives:
     def test_prompt_local_overrides_global(self, mock_run, tmp_path):
         """A prompt-local primitive with the same name replaces the global one."""
         # Global instruction
-        gi = tmp_path / ".ralph" / "instructions" / "style"
+        gi = tmp_path / ".ralphify" / "instructions" / "style"
         gi.mkdir(parents=True)
         (gi / "INSTRUCTION.md").write_text("---\n---\nGlobal style rules.")
 
         # Named prompt
-        prompt_dir = tmp_path / ".ralph" / "prompts" / "ui"
+        prompt_dir = tmp_path / ".ralphify" / "ralphs" / "ui"
         prompt_dir.mkdir(parents=True)
-        (prompt_dir / "PROMPT.md").write_text("---\n---\nBuild the UI.")
+        (prompt_dir / "RALPH.md").write_text("---\n---\nBuild the UI.")
 
         # Local instruction with SAME name
         li = prompt_dir / "instructions" / "style"
@@ -336,7 +336,7 @@ class TestPromptLocalPrimitives:
 
         config = _make_config(
             tmp_path,
-            prompt_file=str(prompt_dir / "PROMPT.md"),
+            prompt_file=str(prompt_dir / "RALPH.md"),
             prompt_name="ui",
             max_iterations=1,
         )
@@ -351,7 +351,7 @@ class TestPromptLocalPrimitives:
     def test_adhoc_prompt_only_globals(self, mock_run, tmp_path):
         """Ad-hoc prompt text (-p) should not trigger local discovery."""
         # Global instruction
-        gi = tmp_path / ".ralph" / "instructions" / "style"
+        gi = tmp_path / ".ralphify" / "instructions" / "style"
         gi.mkdir(parents=True)
         (gi / "INSTRUCTION.md").write_text("---\n---\nGlobal style.")
 
@@ -371,14 +371,14 @@ class TestPromptLocalPrimitives:
     def test_disabled_local_suppresses_global(self, mock_run, tmp_path):
         """A disabled local primitive with the same name hides the global one."""
         # Global instruction (enabled)
-        gi = tmp_path / ".ralph" / "instructions" / "style"
+        gi = tmp_path / ".ralphify" / "instructions" / "style"
         gi.mkdir(parents=True)
         (gi / "INSTRUCTION.md").write_text("---\n---\nGlobal style.")
 
         # Named prompt
-        prompt_dir = tmp_path / ".ralph" / "prompts" / "ui"
+        prompt_dir = tmp_path / ".ralphify" / "ralphs" / "ui"
         prompt_dir.mkdir(parents=True)
-        (prompt_dir / "PROMPT.md").write_text("---\n---\nBuild the UI.")
+        (prompt_dir / "RALPH.md").write_text("---\n---\nBuild the UI.")
 
         # Local instruction: same name, disabled
         li = prompt_dir / "instructions" / "style"
@@ -387,7 +387,7 @@ class TestPromptLocalPrimitives:
 
         config = _make_config(
             tmp_path,
-            prompt_file=str(prompt_dir / "PROMPT.md"),
+            prompt_file=str(prompt_dir / "RALPH.md"),
             prompt_name="ui",
             max_iterations=1,
         )
@@ -402,13 +402,13 @@ class TestPromptLocalPrimitives:
     def test_reload_rediscovers_local(self, mock_run, tmp_path):
         """Reload should re-discover prompt-local primitives."""
         # Named prompt
-        prompt_dir = tmp_path / ".ralph" / "prompts" / "ui"
+        prompt_dir = tmp_path / ".ralphify" / "ralphs" / "ui"
         prompt_dir.mkdir(parents=True)
-        (prompt_dir / "PROMPT.md").write_text("---\n---\nBuild the UI.")
+        (prompt_dir / "RALPH.md").write_text("---\n---\nBuild the UI.")
 
         config = _make_config(
             tmp_path,
-            prompt_file=str(prompt_dir / "PROMPT.md"),
+            prompt_file=str(prompt_dir / "RALPH.md"),
             prompt_name="ui",
             max_iterations=2,
         )
@@ -488,16 +488,16 @@ class TestResolvePromptDir:
         from pathlib import Path
         config = RunConfig(
             command="echo", args=[],
-            prompt_file="/project/.ralph/prompts/ui/PROMPT.md",
+            prompt_file="/project/.ralphify/ralphs/ui/RALPH.md",
             prompt_name="ui",
         )
         result = _resolve_prompt_dir(config)
-        assert result == Path("/project/.ralph/prompts/ui")
+        assert result == Path("/project/.ralphify/ralphs/ui")
 
     def test_adhoc_text_returns_none(self):
         config = RunConfig(
             command="echo", args=[],
-            prompt_file="PROMPT.md",
+            prompt_file="RALPH.md",
             prompt_text="ad-hoc",
             prompt_name="ui",
         )
@@ -506,6 +506,6 @@ class TestResolvePromptDir:
     def test_no_prompt_name_returns_none(self):
         config = RunConfig(
             command="echo", args=[],
-            prompt_file="PROMPT.md",
+            prompt_file="RALPH.md",
         )
         assert _resolve_prompt_dir(config) is None

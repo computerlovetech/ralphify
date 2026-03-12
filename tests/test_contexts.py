@@ -22,12 +22,12 @@ class TestDiscoverContexts:
         assert result == []
 
     def test_empty_contexts_dir(self, tmp_path):
-        (tmp_path / ".ralph" / "contexts").mkdir(parents=True)
+        (tmp_path / ".ralphify" / "contexts").mkdir(parents=True)
         result = discover_contexts(tmp_path)
         assert result == []
 
     def test_single_context_with_command(self, tmp_path):
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "git-history"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "git-history"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text(
             "---\ncommand: git log --oneline -10\n---\nRecent commits:"
@@ -40,7 +40,7 @@ class TestDiscoverContexts:
         assert result[0].static_content == "Recent commits:"
 
     def test_static_only_context(self, tmp_path):
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "project-info"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "project-info"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text(
             "---\nenabled: true\n---\nThis is a Python project."
@@ -53,7 +53,7 @@ class TestDiscoverContexts:
         assert result[0].static_content == "This is a Python project."
 
     def test_context_with_script(self, tmp_path):
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "custom"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "custom"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text("---\n---\nHeader:")
         script = ctx_dir / "run.sh"
@@ -65,7 +65,7 @@ class TestDiscoverContexts:
         assert result[0].script == script
 
     def test_alphabetical_ordering(self, tmp_path):
-        contexts_dir = tmp_path / ".ralph" / "contexts"
+        contexts_dir = tmp_path / ".ralphify" / "contexts"
         for name in ["zebra", "alpha", "middle"]:
             d = contexts_dir / name
             d.mkdir(parents=True)
@@ -75,7 +75,7 @@ class TestDiscoverContexts:
         assert [c.name for c in result] == ["alpha", "middle", "zebra"]
 
     def test_skips_dir_without_context_md(self, tmp_path):
-        contexts_dir = tmp_path / ".ralph" / "contexts"
+        contexts_dir = tmp_path / ".ralphify" / "contexts"
         valid = contexts_dir / "valid"
         valid.mkdir(parents=True)
         (valid / "CONTEXT.md").write_text("---\ncommand: echo ok\n---\n")
@@ -89,7 +89,7 @@ class TestDiscoverContexts:
         assert result[0].name == "valid"
 
     def test_skips_files_in_contexts_dir(self, tmp_path):
-        contexts_dir = tmp_path / ".ralph" / "contexts"
+        contexts_dir = tmp_path / ".ralphify" / "contexts"
         contexts_dir.mkdir(parents=True)
         (contexts_dir / "not-a-dir.md").write_text("content")
 
@@ -97,7 +97,7 @@ class TestDiscoverContexts:
         assert result == []
 
     def test_default_values(self, tmp_path):
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "basic"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "basic"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text("---\ncommand: echo hi\n---\n")
 
@@ -106,7 +106,7 @@ class TestDiscoverContexts:
         assert result[0].enabled is True
 
     def test_custom_timeout_and_enabled(self, tmp_path):
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "custom"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "custom"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text(
             "---\ncommand: echo hi\ntimeout: 10\nenabled: false\n---\n"
@@ -117,7 +117,7 @@ class TestDiscoverContexts:
         assert result[0].enabled is False
 
     def test_disabled_context(self, tmp_path):
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "off"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "off"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text(
             "---\ncommand: echo off\nenabled: false\n---\nDisabled."
@@ -128,7 +128,7 @@ class TestDiscoverContexts:
         assert result[0].static_content == "Disabled."
 
     def test_strips_html_comments(self, tmp_path):
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "commented"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "commented"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text(
             "---\ncommand: echo hi\n---\n<!-- remove this -->Keep this."

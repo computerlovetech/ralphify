@@ -32,7 +32,7 @@ The default configuration. Claude Code's `-p` flag reads from stdin and runs non
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 | Flag | Purpose |
@@ -57,7 +57,7 @@ npm install -g @anthropic-ai/claude-code
 [agent]
 command = "bash"
 args = ["-c", "aider --yes-always --no-auto-commits --message \"$(cat -)\""]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 | Flag | Purpose |
@@ -75,7 +75,7 @@ prompt = "PROMPT.md"
 [agent]
 command = "bash"
 args = ["-c", "aider --yes-always --no-auto-commits --model claude-sonnet-4-6 --message \"$(cat -)\""]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 ## Codex CLI
@@ -86,7 +86,7 @@ prompt = "PROMPT.md"
 [agent]
 command = "bash"
 args = ["-c", "codex --approval-mode full-auto \"$(cat -)\""]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 | Flag | Purpose |
@@ -125,7 +125,7 @@ chmod +x ralph-agent.sh
 [agent]
 command = "./ralph-agent.sh"
 args = []
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 ### Python wrapper example
@@ -158,7 +158,7 @@ chmod +x ralph-agent.py
 [agent]
 command = "./ralph-agent.py"
 args = []
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 ## Testing your agent setup
@@ -200,7 +200,7 @@ You should see a green checkmark next to your command:
 
 ## Tips for non-Claude-Code agents
 
-**Disable auto-commits if your prompt handles commits.** Most agents have an auto-commit feature. If your `PROMPT.md` includes commit instructions, disable the agent's built-in commits to avoid double-committing or conflicts.
+**Disable auto-commits if your prompt handles commits.** Most agents have an auto-commit feature. If your `RALPH.md` includes commit instructions, disable the agent's built-in commits to avoid double-committing or conflicts.
 
 **Test with `-n 1` first.** Run a single iteration to verify the agent receives the prompt correctly and produces useful output:
 

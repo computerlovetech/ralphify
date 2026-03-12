@@ -115,7 +115,7 @@ This keeps iterations short, commits atomic, and makes it easy to revert individ
 If you have multiple checks, order them by speed. Ralphify runs checks alphabetically by name, so use naming to control order:
 
 ```
-.ralph/checks/
+.ralphify/checks/
 ├── 01-lint/          # Fast — runs in seconds
 │   └── CHECK.md
 ├── 02-typecheck/     # Medium — runs in 10-30s
@@ -214,7 +214,7 @@ The loop is running. When should you step in?
 - Check failures are being fixed in the next iteration
 - The agent is making steady progress through the task list
 
-**Intervene** (edit `PROMPT.md`) when:
+**Intervene** (edit `RALPH.md`) when:
 
 - The agent repeats the same mistake across multiple iterations — add a sign
 - The agent is doing work that's not in the plan — add "Only work on tasks from PLAN.md"
@@ -228,9 +228,9 @@ The loop is running. When should you step in?
 - You need to add, remove, or reconfigure checks/contexts/instructions (these require a restart)
 - You need to manually fix something the agent can't figure out
 
-## Chain prompts for multi-phase workflows
+## Chain ralphs for multi-phase workflows
 
-Named prompts let you break a large project into phases, each with its own focus and constraints. Instead of one prompt that tries to do everything, run specialized prompts in sequence:
+Named ralphs let you break a large project into phases, each with its own focus and constraints. Instead of one prompt that tries to do everything, run specialized ralphs in sequence:
 
 ```bash
 ralph run implement -n 5      # Build features from the plan
@@ -240,18 +240,18 @@ ralph run docs -n 2            # Document what was built
 
 Each phase uses a prompt tuned for that job. The `implement` prompt focuses on shipping features fast. The `add-tests` prompt treats existing code as a given and writes tests for it. The `docs` prompt reads the codebase and fills documentation gaps.
 
-### Setting up the prompts
+### Setting up the ralphs
 
 ```bash
-ralph new prompt implement
-ralph new prompt add-tests
-ralph new prompt docs
+ralph new ralph implement
+ralph new ralph add-tests
+ralph new ralph docs
 ```
 
-Each gets its own `PROMPT.md` in `.ralph/prompts/<name>/` with tailored instructions:
+Each gets its own `RALPH.md` in `.ralphify/ralphs/<name>/` with tailored instructions:
 
 ```markdown
-# .ralph/prompts/implement/PROMPT.md
+# .ralphify/ralphs/implement/RALPH.md
 ---
 description: Ship features from the plan file
 enabled: true
@@ -263,7 +263,7 @@ Commit with `feat: <description>`.
 ```
 
 ```markdown
-# .ralph/prompts/add-tests/PROMPT.md
+# .ralphify/ralphs/add-tests/RALPH.md
 ---
 description: Write tests for untested code
 enabled: true
@@ -276,13 +276,13 @@ One module per iteration. Do NOT modify source code.
 Commit with `test: add tests for <module>`.
 ```
 
-The key insight: **checks and contexts are shared across all prompts.** Your test check still validates every iteration regardless of which prompt is active. Only the instructions to the agent change.
+The key insight: **checks and contexts are shared across all ralphs.** Your test check still validates every iteration regardless of which ralph is active. Only the instructions to the agent change.
 
-### When to use phases vs. a single prompt
+### When to use phases vs. a single ralph
 
 **Use phases when** the quality of each phase depends on the previous one completing — you want features built before you write tests for them, and tests passing before you document the behavior.
 
-**Use a single prompt when** the work is uniform — fixing bugs from a test suite, applying the same refactoring pattern across files, or writing documentation for existing code. In these cases, switching prompts adds friction without benefit.
+**Use a single ralph when** the work is uniform — fixing bugs from a test suite, applying the same refactoring pattern across files, or writing documentation for existing code. In these cases, switching ralphs adds friction without benefit.
 
 ## Common mistakes
 

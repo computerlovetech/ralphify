@@ -12,7 +12,7 @@ Everything you need to look up on one page. For detailed explanations, follow th
 [agent]
 command = "claude"                                # Agent CLI executable
 args = ["-p", "--dangerously-skip-permissions"]   # Arguments passed to the command
-prompt = "PROMPT.md"                              # Path to the prompt file
+ralph = "RALPH.md"                                # Path to the ralph file
 ```
 
 The assembled prompt is piped to the agent as stdin: `<command> <args...> < assembled_prompt`
@@ -25,17 +25,17 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 
 | Command | Description |
 |---|---|
-| `ralph init` | Create `ralph.toml` and `PROMPT.md` |
+| `ralph init` | Create `ralph.toml` and `RALPH.md` |
 | `ralph init --force` | Overwrite existing files |
 | `ralph run` | Start the loop (Ctrl+C to stop) |
-| `ralph run <prompt-name>` | Start the loop with a [named prompt](primitives.md#prompts) |
+| `ralph run <ralph-name>` | Start the loop with a [named ralph](primitives.md#ralphs) |
 | `ralph status` | Validate setup and list primitives |
-| `ralph prompts list` | List all available prompts |
+| `ralph ralphs list` | List all available ralphs |
 | `ralph new check <name>` | Scaffold a new check |
 | `ralph new context <name>` | Scaffold a new context |
 | `ralph new instruction <name>` | Scaffold a new instruction |
-| `ralph new prompt <name>` | Scaffold a new named prompt |
-| `ralph new check <name> --prompt <prompt>` | Scaffold a [prompt-scoped](primitives.md#prompt-scoped-primitives) check |
+| `ralph new ralph <name>` | Scaffold a new named ralph |
+| `ralph new check <name> --ralph <ralph>` | Scaffold a [ralph-scoped](primitives.md#ralph-scoped-primitives) check |
 | `ralph ui` | Launch the [web dashboard](dashboard.md) |
 | `ralph ui --port 9000` | Dashboard on a custom port |
 | `ralph ui --host 0.0.0.0` | Expose dashboard on network |
@@ -45,10 +45,10 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 
 | Argument / Option | Short | Default | Description |
 |---|---|---|---|
-| `[PROMPT_NAME]` | | none | Name of a named prompt in `.ralph/prompts/` |
+| `[RALPH_NAME]` | | none | Name of a named ralph in `.ralphify/ralphs/` |
 | `-n` | | unlimited | Max iterations |
-| `--prompt` | `-p` | none | Ad-hoc prompt text (overrides prompt file) |
-| `--prompt-file` | `-f` | none | Path to a prompt file (overrides `ralph.toml`) |
+| `--prompt` | `-p` | none | Ad-hoc prompt text (overrides ralph file) |
+| `--prompt-file` | `-f` | none | Path to a ralph file (overrides `ralph.toml`) |
 | `--stop-on-error` | `-s` | off | Stop if agent exits non-zero or times out |
 | `--delay` | `-d` | `0` | Seconds between iterations |
 | `--timeout` | `-t` | none | Max seconds per iteration |
@@ -56,7 +56,7 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 
 ```bash
 # Common combinations
-ralph run docs                              # Use the "docs" named prompt
+ralph run docs                              # Use the "docs" named ralph
 ralph run -n 1 --log-dir ralph_logs         # Single test iteration
 ralph run -n 1 -p "Fix the login bug"       # Quick one-off task
 ralph run -n 5 --stop-on-error              # Short batch, stop on failure
@@ -72,8 +72,8 @@ When multiple prompt sources are specified, the first match wins:
 | 1 | `-p` flag (inline text) | `ralph run -p "Fix the bug"` |
 | 2 | Positional name | `ralph run docs` |
 | 3 | `-f` flag (file path) | `ralph run -f path/to/prompt.md` |
-| 4 | `ralph.toml` `prompt` field | Can be a named prompt or a file path |
-| 5 | Fallback | `PROMPT.md` in the project root |
+| 4 | `ralph.toml` `ralph` field | Can be a named ralph or a file path |
+| 5 | Fallback | `RALPH.md` in the project root |
 
 See [How It Works — Prompt assembly](how-it-works.md#prompt-assembly) for details.
 
@@ -81,7 +81,7 @@ See [How It Works — Prompt assembly](how-it-works.md#prompt-assembly) for deta
 
 ## Template placeholders
 
-Use these in `PROMPT.md` to control where contexts and instructions appear.
+Use these in `RALPH.md` to control where contexts and instructions appear.
 
 | Placeholder | What it does |
 |---|---|
@@ -104,19 +104,19 @@ Same rules apply for `{{ instructions }}`.
 !!! warning "Named-only drops remaining"
     If you use `{{ contexts.git-log }}` without `{{ contexts }}`, other contexts are silently excluded. Add `{{ contexts }}` to catch the rest.
 
-See [Writing Your Prompt](prompts.md#using-placeholders) and [Placeholder resolution rules](how-it-works.md#placeholder-resolution-rules).
+See [Writing Your Ralph](ralphs.md#using-placeholders) and [Placeholder resolution rules](how-it-works.md#placeholder-resolution-rules).
 
 ---
 
 ## Primitives
 
-All primitives live under `.ralph/` and are discovered automatically at startup.
+All primitives live under `.ralphify/` and are discovered automatically at startup.
 
 ### Checks
 
 Run **after** each iteration. Failures feed into the next prompt.
 
-**Location:** `.ralph/checks/<name>/CHECK.md`
+**Location:** `.ralphify/checks/<name>/CHECK.md`
 
 ```markdown
 ---
@@ -131,7 +131,7 @@ Failure instruction text goes here — included in prompt when check fails.
 
 Run **before** each iteration. Output injected into the prompt.
 
-**Location:** `.ralph/contexts/<name>/CONTEXT.md`
+**Location:** `.ralphify/contexts/<name>/CONTEXT.md`
 
 ```markdown
 ---
@@ -146,7 +146,7 @@ Static content appears above command output. Omit command for static-only.
 
 Static text injected into the prompt. No commands.
 
-**Location:** `.ralph/instructions/<name>/INSTRUCTION.md`
+**Location:** `.ralphify/instructions/<name>/INSTRUCTION.md`
 
 ```markdown
 ---
@@ -155,23 +155,23 @@ enabled: true   # Set false to skip (default: true)
 Instruction content goes here — injected via {{ instructions.name }} or {{ instructions }}.
 ```
 
-### Prompts
+### Ralphs
 
-Reusable task-focused prompts. Switch between tasks without editing root `PROMPT.md`.
+Reusable task-focused ralphs. Switch between tasks without editing root `RALPH.md`.
 
-**Location:** `.ralph/prompts/<name>/PROMPT.md`
+**Location:** `.ralphify/ralphs/<name>/RALPH.md`
 
 ```markdown
 ---
-description: Improve project documentation   # Shown in `ralph prompts list`
+description: Improve project documentation   # Shown in `ralph ralphs list`
 enabled: true                                 # Set false to hide (default: true)
 ---
 Your full prompt content here, with {{ contexts }} and {{ instructions }} as usual.
 ```
 
 ```bash
-ralph run docs        # Run with the "docs" prompt
-ralph prompts list    # See all available prompts
+ralph run docs        # Run with the "docs" ralph
+ralph ralphs list     # See all available ralphs
 ```
 
 ### Script alternative
@@ -179,7 +179,7 @@ ralph prompts list    # See all available prompts
 Any check or context can use an executable `run.*` script instead of a frontmatter `command`:
 
 ```
-.ralph/checks/my-check/
+.ralphify/checks/my-check/
 ├── CHECK.md       # Frontmatter + failure instruction
 └── run.sh         # Executable script (takes precedence over command)
 ```
@@ -195,16 +195,16 @@ See [Primitives](primitives.md) for full details.
 ```
 your-project/
 ├── ralph.toml                 # Loop configuration
-├── PROMPT.md                  # Root prompt file (re-read every iteration)
-├── .ralph/
+├── RALPH.md                   # Root ralph file (re-read every iteration)
+├── .ralphify/
 │   ├── checks/
 │   │   └── <name>/CHECK.md
 │   ├── contexts/
 │   │   └── <name>/CONTEXT.md
 │   ├── instructions/
 │   │   └── <name>/INSTRUCTION.md
-│   └── prompts/
-│       └── <name>/PROMPT.md   # Named prompts (ralph run <name>)
+│   └── ralphs/
+│       └── <name>/RALPH.md    # Named ralphs (ralph run <name>)
 └── ralph_logs/                # Iteration logs (add to .gitignore)
 ```
 
@@ -236,7 +236,7 @@ Frontmatter `command` values are split with `shlex` and run **directly** (no she
 
 | What | When loaded | Editable while running? |
 |---|---|---|
-| `PROMPT.md` | Every iteration | Yes |
+| `RALPH.md` | Every iteration | Yes |
 | Context command output | Every iteration | Yes (commands re-run) |
 | Context/instruction config | Startup only | No — restart required |
 | Check config | Startup only | No — restart required |
@@ -260,7 +260,7 @@ See [Web Dashboard](dashboard.md#keyboard-shortcuts) for details.
 
 Each iteration assembles the prompt in this order:
 
-1. Read prompt (from `PROMPT.md`, or from `-p` flag if provided)
+1. Read prompt (from `RALPH.md`, or from `-p` flag if provided)
 2. Run context commands and resolve `{{ contexts }}` placeholders
 3. Resolve `{{ instructions }}` placeholders
 4. Append check failures from previous iteration (if any)

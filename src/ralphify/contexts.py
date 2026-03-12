@@ -1,6 +1,6 @@
 """Discover and run dynamic data contexts injected before each iteration.
 
-Contexts live in ``.ralph/contexts/<name>/`` and provide fresh data to the
+Contexts live in ``.ralphify/contexts/<name>/`` and provide fresh data to the
 prompt each loop — for example recent git history or current test status.
 A context can run a command/script, provide static text, or both.
 """
@@ -19,7 +19,7 @@ _DEFAULT_TIMEOUT = 30
 
 @dataclass
 class Context:
-    """A dynamic data context discovered from ``.ralph/contexts/<name>/CONTEXT.md``.
+    """A dynamic data context discovered from ``.ralphify/contexts/<name>/CONTEXT.md``.
 
     A context may have a *command* or *script* (whose stdout is captured),
     *static_content* (the body text from CONTEXT.md), or both.  When both
@@ -64,7 +64,7 @@ def _context_from_entry(prim) -> Context:
 
 
 def discover_contexts(root: Path = Path(".")) -> list[Context]:
-    """Scan ``.ralph/contexts/`` for subdirectories containing a ``CONTEXT.md``.
+    """Scan ``.ralphify/contexts/`` for subdirectories containing a ``CONTEXT.md``.
 
     Returns all discovered contexts (both enabled and disabled) sorted
     alphabetically by name.  The caller is responsible for filtering by
@@ -77,7 +77,7 @@ def discover_contexts_local(prompt_dir: Path) -> list[Context]:
     """Scan ``prompt_dir/contexts/`` for prompt-scoped contexts.
 
     Same construction logic as :func:`discover_contexts` but reads from
-    a prompt directory instead of the global ``.ralph/contexts/``.
+    a prompt directory instead of the global ``.ralphify/contexts/``.
     """
     return [_context_from_entry(prim) for prim in discover_local_primitives(prompt_dir, "contexts", CONTEXT_MARKER)]
 

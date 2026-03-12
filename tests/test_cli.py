@@ -9,7 +9,7 @@ from ralphify._frontmatter import parse_frontmatter
 from ralphify.checks import Check, CheckResult
 from ralphify.contexts import Context, ContextResult
 from ralphify.cli import app, CONFIG_FILENAME
-from ralphify._templates import RALPH_TOML_TEMPLATE, PROMPT_TEMPLATE
+from ralphify._templates import RALPH_TOML_TEMPLATE, ROOT_RALPH_TEMPLATE
 
 runner = CliRunner()
 
@@ -35,14 +35,14 @@ class TestVersion:
 
 
 class TestInit:
-    def test_creates_config_and_prompt(self, tmp_path, monkeypatch):
+    def test_creates_config_and_ralph(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["init"])
         assert result.exit_code == 0
         assert (tmp_path / CONFIG_FILENAME).exists()
-        assert (tmp_path / "PROMPT.md").exists()
+        assert (tmp_path / "RALPH.md").exists()
         assert (tmp_path / CONFIG_FILENAME).read_text() == RALPH_TOML_TEMPLATE
-        assert (tmp_path / "PROMPT.md").read_text() == PROMPT_TEMPLATE
+        assert (tmp_path / "RALPH.md").read_text() == ROOT_RALPH_TEMPLATE
 
     def test_refuses_overwrite_without_force(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -54,18 +54,18 @@ class TestInit:
     def test_force_overwrites(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text("old")
-        (tmp_path / "PROMPT.md").write_text("old")
+        (tmp_path / "RALPH.md").write_text("old")
         result = runner.invoke(app, ["init", "--force"])
         assert result.exit_code == 0
         assert (tmp_path / CONFIG_FILENAME).read_text() == RALPH_TOML_TEMPLATE
-        assert (tmp_path / "PROMPT.md").read_text() == PROMPT_TEMPLATE
+        assert (tmp_path / "RALPH.md").read_text() == ROOT_RALPH_TEMPLATE
 
-    def test_skips_prompt_if_exists_without_force(self, tmp_path, monkeypatch):
+    def test_skips_ralph_if_exists_without_force(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        (tmp_path / "PROMPT.md").write_text("my custom prompt")
+        (tmp_path / "RALPH.md").write_text("my custom prompt")
         result = runner.invoke(app, ["init"])
         assert result.exit_code == 0
-        assert (tmp_path / "PROMPT.md").read_text() == "my custom prompt"
+        assert (tmp_path / "RALPH.md").read_text() == "my custom prompt"
 
 
 class TestStatus:
@@ -78,16 +78,16 @@ class TestStatus:
     def test_shows_config(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("my prompt")
+        (tmp_path / "RALPH.md").write_text("my prompt")
         result = runner.invoke(app, ["status"])
         assert "claude" in result.output
-        assert "PROMPT.md" in result.output
+        assert "RALPH.md" in result.output
 
     @patch("ralphify.cli.shutil.which", return_value="/usr/bin/claude")
     def test_ready_when_all_valid(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("my prompt")
+        (tmp_path / "RALPH.md").write_text("my prompt")
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
         assert "Ready to run" in result.output
@@ -96,7 +96,7 @@ class TestStatus:
     def test_not_ready_when_command_missing(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("my prompt")
+        (tmp_path / "RALPH.md").write_text("my prompt")
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 1
         assert "not found on PATH" in result.output
@@ -116,14 +116,14 @@ class TestStatus:
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 1
-        assert "Prompt file" in result.output
+        assert "Ralph file" in result.output
         assert "not found on PATH" in result.output
 
     @patch("ralphify.cli.shutil.which", return_value="/usr/bin/myagent")
     def test_shows_prompt_size(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("x" * 150)
+        (tmp_path / "RALPH.md").write_text("x" * 150)
         result = runner.invoke(app, ["status"])
         assert "150 chars" in result.output
 
@@ -146,7 +146,7 @@ class TestRun:
     def test_runs_n_iterations(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("test prompt")
+        (tmp_path / "RALPH.md").write_text("test prompt")
 
         result = runner.invoke(app, ["run", "-n", "3"])
         assert result.exit_code == 0
@@ -160,7 +160,7 @@ class TestRun:
         """Prompt file is re-read each iteration so edits take effect."""
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        prompt_path = tmp_path / "PROMPT.md"
+        prompt_path = tmp_path / "RALPH.md"
         prompt_path.write_text("v1")
 
         call_count = 0
@@ -182,9 +182,9 @@ class TestRun:
     @patch("ralphify._agent.subprocess.run", side_effect=_ok)
     def test_custom_command_and_args(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        config = '[agent]\ncommand = "myagent"\nargs = ["--fast"]\nprompt = "PROMPT.md"\n'
+        config = '[agent]\ncommand = "myagent"\nargs = ["--fast"]\nralph = "RALPH.md"\n'
         (tmp_path / CONFIG_FILENAME).write_text(config)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "1"])
         assert result.exit_code == 0
@@ -196,7 +196,7 @@ class TestRun:
     def test_shows_success_per_iteration(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "2"])
         assert result.exit_code == 0
@@ -208,7 +208,7 @@ class TestRun:
     def test_continues_on_error_by_default(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "3"])
         assert result.exit_code == 0
@@ -219,7 +219,7 @@ class TestRun:
     def test_stop_on_error(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "5", "--stop-on-error"])
         assert result.exit_code == 0
@@ -231,7 +231,7 @@ class TestRun:
     def test_mixed_success_and_failure(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         mock_run.side_effect = [
             subprocess.CompletedProcess(args=[], returncode=0),
@@ -249,7 +249,7 @@ class TestRun:
     def test_delay_between_iterations(self, mock_run, mock_sleep, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "3", "--delay", "5"])
         assert result.exit_code == 0
@@ -263,7 +263,7 @@ class TestRun:
     def test_no_delay_with_single_iteration(self, mock_run, mock_sleep, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "1", "--delay", "5"])
         assert result.exit_code == 0
@@ -282,10 +282,10 @@ class TestRunAdHocPrompt:
 
     @patch("ralphify._agent.subprocess.run", side_effect=_ok)
     def test_skips_prompt_file_check(self, mock_run, tmp_path, monkeypatch):
-        """Works without PROMPT.md when -p is provided."""
+        """Works without RALPH.md when -p is provided."""
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        # No PROMPT.md created
+        # No RALPH.md created
 
         result = runner.invoke(app, ["run", "-n", "1", "-p", "ad-hoc prompt"])
         assert result.exit_code == 0
@@ -309,7 +309,7 @@ class TestRunPromptFile:
     def test_prompt_file_overrides_config(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("default prompt")
+        (tmp_path / "RALPH.md").write_text("default prompt")
         (tmp_path / "alt.md").write_text("alternate prompt")
 
         result = runner.invoke(app, ["run", "-n", "1", "--prompt-file", "alt.md"])
@@ -319,7 +319,7 @@ class TestRunPromptFile:
     def test_prompt_file_missing_exits(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("default prompt")
+        (tmp_path / "RALPH.md").write_text("default prompt")
 
         result = runner.invoke(app, ["run", "-n", "1", "--prompt-file", "nonexistent.md"])
         assert result.exit_code == 1
@@ -341,7 +341,7 @@ class TestRunLogging:
     def test_creates_log_files(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
         log_dir = tmp_path / "logs"
 
         mock_run.return_value = subprocess.CompletedProcess(
@@ -359,7 +359,7 @@ class TestRunLogging:
     def test_log_file_contains_output(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
         log_dir = tmp_path / "logs"
 
         mock_run.return_value = subprocess.CompletedProcess(
@@ -377,7 +377,7 @@ class TestRunLogging:
     def test_log_dir_created_automatically(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
         log_dir = tmp_path / "nested" / "log" / "dir"
 
         mock_run.return_value = subprocess.CompletedProcess(
@@ -393,19 +393,19 @@ class TestRunLogging:
     def test_no_log_files_without_flag(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "1"])
         assert result.exit_code == 0
-        # No .ralph or logs directory should be created
-        assert not (tmp_path / ".ralph").exists()
+        # No .ralphify or logs directory should be created
+        assert not (tmp_path / ".ralphify").exists()
         assert not (tmp_path / "logs").exists()
 
     @patch("ralphify._agent.subprocess.run")
     def test_log_shows_path_in_status(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
         log_dir = tmp_path / "logs"
 
         mock_run.return_value = subprocess.CompletedProcess(
@@ -422,7 +422,7 @@ class TestRunLogging:
         """When logging, subprocess.run is called with capture_output=True."""
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
         log_dir = tmp_path / "logs"
 
         mock_run.return_value = subprocess.CompletedProcess(
@@ -438,7 +438,7 @@ class TestRunTimeout:
     def test_timeout_passed_to_subprocess(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "1", "--timeout", "30"])
         assert result.exit_code == 0
@@ -448,7 +448,7 @@ class TestRunTimeout:
     def test_no_timeout_by_default(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "1"])
         assert result.exit_code == 0
@@ -458,7 +458,7 @@ class TestRunTimeout:
     def test_timeout_counts_as_failure(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         mock_run.side_effect = subprocess.TimeoutExpired(cmd="claude", timeout=10)
 
@@ -472,7 +472,7 @@ class TestRunTimeout:
     def test_timeout_continues_by_default(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         mock_run.side_effect = [
             subprocess.TimeoutExpired(cmd="claude", timeout=10),
@@ -489,7 +489,7 @@ class TestRunTimeout:
     def test_timeout_stops_with_stop_on_error(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         mock_run.side_effect = subprocess.TimeoutExpired(cmd="claude", timeout=10)
 
@@ -502,7 +502,7 @@ class TestRunTimeout:
     def test_timeout_with_logging(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
         log_dir = tmp_path / "logs"
 
         exc = subprocess.TimeoutExpired(cmd="claude", timeout=10)
@@ -521,7 +521,7 @@ class TestRunTimeout:
     def test_timeout_shows_in_header(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("go")
+        (tmp_path / "RALPH.md").write_text("go")
 
         result = runner.invoke(app, ["run", "-n", "1", "--timeout", "300"])
         assert result.exit_code == 0
@@ -531,7 +531,7 @@ class TestRunTimeout:
 def _setup_check(tmp_path, name="ruff-lint", command="ruff check .", enabled=True,
                  body="Fix lint errors."):
     """Helper to create a check directory with CHECK.md."""
-    check_dir = tmp_path / ".ralph" / "checks" / name
+    check_dir = tmp_path / ".ralphify" / "checks" / name
     check_dir.mkdir(parents=True, exist_ok=True)
     enabled_str = "true" if enabled else "false"
     (check_dir / "CHECK.md").write_text(
@@ -545,7 +545,7 @@ class TestStatusChecks:
     def test_no_checks_dir(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
 
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
@@ -556,7 +556,7 @@ class TestStatusChecks:
     def test_found_checks(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_check(tmp_path, "ruff-lint", "ruff check .")
         _setup_check(tmp_path, "typecheck", "mypy .")
 
@@ -570,7 +570,7 @@ class TestStatusChecks:
     def test_disabled_check_display(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_check(tmp_path, "enabled-check", "echo ok", enabled=True)
         _setup_check(tmp_path, "disabled-check", "echo skip", enabled=False)
 
@@ -604,7 +604,7 @@ class TestRunChecks:
     def test_checks_run_after_iteration(self, mock_agent, mock_run_checks, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("test prompt")
+        (tmp_path / "RALPH.md").write_text("test prompt")
         _setup_check(tmp_path, "lint", "ruff check .")
 
         mock_run_checks.return_value = [_make_check_result()]
@@ -619,7 +619,7 @@ class TestRunChecks:
     def test_failure_text_appended_to_next_prompt(self, mock_agent, mock_run_checks, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("base prompt")
+        (tmp_path / "RALPH.md").write_text("base prompt")
         _setup_check(tmp_path, "lint", "ruff check .", body="Fix lint errors.")
 
         mock_run_checks.return_value = [
@@ -648,7 +648,7 @@ class TestRunChecks:
     def test_checks_run_even_when_agent_fails(self, mock_agent, mock_run_checks, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_check(tmp_path, "lint", "ruff check .")
 
         mock_run_checks.return_value = [_make_check_result()]
@@ -662,7 +662,7 @@ class TestRunChecks:
     def test_check_failure_does_not_trigger_stop_on_error(self, mock_agent, mock_run_checks, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_check(tmp_path, "lint", "ruff check .")
 
         mock_run_checks.return_value = [
@@ -680,7 +680,7 @@ class TestRunChecks:
     def test_disabled_checks_not_run(self, mock_agent, mock_run_checks, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_check(tmp_path, "enabled", "echo ok", enabled=True)
         _setup_check(tmp_path, "disabled", "echo skip", enabled=False)
 
@@ -699,7 +699,7 @@ class TestNewCheck:
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["new", "check", "my-lint"])
         assert result.exit_code == 0
-        check_md = tmp_path / ".ralph" / "checks" / "my-lint" / "CHECK.md"
+        check_md = tmp_path / ".ralphify" / "checks" / "my-lint" / "CHECK.md"
         assert check_md.exists()
         content = check_md.read_text()
         assert "command:" in content
@@ -708,7 +708,7 @@ class TestNewCheck:
 
     def test_refuses_existing_check(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        check_dir = tmp_path / ".ralph" / "checks" / "my-lint"
+        check_dir = tmp_path / ".ralphify" / "checks" / "my-lint"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("original content")
 
@@ -719,23 +719,23 @@ class TestNewCheck:
 
     def test_creates_ralph_dirs_if_missing(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        assert not (tmp_path / ".ralph").exists()
+        assert not (tmp_path / ".ralphify").exists()
         result = runner.invoke(app, ["new", "check", "fresh"])
         assert result.exit_code == 0
-        assert (tmp_path / ".ralph" / "checks" / "fresh" / "CHECK.md").exists()
+        assert (tmp_path / ".ralphify" / "checks" / "fresh" / "CHECK.md").exists()
 
     def test_default_body_stripped_to_empty(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["new", "check", "empty-body"])
         assert result.exit_code == 0
-        check_md = tmp_path / ".ralph" / "checks" / "empty-body" / "CHECK.md"
+        check_md = tmp_path / ".ralphify" / "checks" / "empty-body" / "CHECK.md"
         _, body = parse_frontmatter(check_md.read_text())
         assert body == ""
 
 
 def _setup_instruction(tmp_path, name="coding-style", enabled=True, content="Use type hints."):
     """Helper to create an instruction directory with INSTRUCTION.md."""
-    inst_dir = tmp_path / ".ralph" / "instructions" / name
+    inst_dir = tmp_path / ".ralphify" / "instructions" / name
     inst_dir.mkdir(parents=True, exist_ok=True)
     enabled_str = "true" if enabled else "false"
     (inst_dir / "INSTRUCTION.md").write_text(
@@ -749,14 +749,14 @@ class TestNewInstruction:
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["new", "instruction", "my-style"])
         assert result.exit_code == 0
-        inst_md = tmp_path / ".ralph" / "instructions" / "my-style" / "INSTRUCTION.md"
+        inst_md = tmp_path / ".ralphify" / "instructions" / "my-style" / "INSTRUCTION.md"
         assert inst_md.exists()
         content = inst_md.read_text()
         assert "enabled:" in content
 
     def test_refuses_existing_instruction(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        inst_dir = tmp_path / ".ralph" / "instructions" / "my-style"
+        inst_dir = tmp_path / ".ralphify" / "instructions" / "my-style"
         inst_dir.mkdir(parents=True)
         (inst_dir / "INSTRUCTION.md").write_text("original content")
 
@@ -767,16 +767,16 @@ class TestNewInstruction:
 
     def test_creates_ralph_dirs_if_missing(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        assert not (tmp_path / ".ralph").exists()
+        assert not (tmp_path / ".ralphify").exists()
         result = runner.invoke(app, ["new", "instruction", "fresh"])
         assert result.exit_code == 0
-        assert (tmp_path / ".ralph" / "instructions" / "fresh" / "INSTRUCTION.md").exists()
+        assert (tmp_path / ".ralphify" / "instructions" / "fresh" / "INSTRUCTION.md").exists()
 
     def test_default_body_stripped_to_empty(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["new", "instruction", "empty-body"])
         assert result.exit_code == 0
-        inst_md = tmp_path / ".ralph" / "instructions" / "empty-body" / "INSTRUCTION.md"
+        inst_md = tmp_path / ".ralphify" / "instructions" / "empty-body" / "INSTRUCTION.md"
         _, body = parse_frontmatter(inst_md.read_text())
         assert body == ""
 
@@ -786,7 +786,7 @@ class TestStatusInstructions:
     def test_no_instructions_shows_none(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
 
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
@@ -797,7 +797,7 @@ class TestStatusInstructions:
     def test_found_instructions_shown(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_instruction(tmp_path, "coding-style", content="Use type hints.")
         _setup_instruction(tmp_path, "testing", content="Write tests first.")
 
@@ -811,7 +811,7 @@ class TestStatusInstructions:
     def test_disabled_instruction_display(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_instruction(tmp_path, "enabled-inst", enabled=True)
         _setup_instruction(tmp_path, "disabled-inst", enabled=False)
 
@@ -825,7 +825,7 @@ class TestRunInstructions:
     def test_instructions_injected_into_prompt(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("Base prompt.\n\n{{ instructions }}")
+        (tmp_path / "RALPH.md").write_text("Base prompt.\n\n{{ instructions }}")
         _setup_instruction(tmp_path, "style", content="Use black formatting.")
 
         result = runner.invoke(app, ["run", "-n", "1"])
@@ -839,7 +839,7 @@ class TestRunInstructions:
     def test_instructions_resolved_before_check_failures(self, mock_agent, mock_run_checks, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("Base.\n\n{{ instructions }}")
+        (tmp_path / "RALPH.md").write_text("Base.\n\n{{ instructions }}")
         _setup_instruction(tmp_path, "style", content="Use black.")
         _setup_check(tmp_path, "lint", "ruff check .", body="Fix lint.")
 
@@ -863,7 +863,7 @@ class TestRunInstructions:
 def _setup_context(tmp_path, name="git-history", command="git log --oneline -5",
                    enabled=True, body=""):
     """Helper to create a context directory with CONTEXT.md."""
-    ctx_dir = tmp_path / ".ralph" / "contexts" / name
+    ctx_dir = tmp_path / ".ralphify" / "contexts" / name
     ctx_dir.mkdir(parents=True, exist_ok=True)
     enabled_str = "true" if enabled else "false"
     parts = [f"---\nenabled: {enabled_str}"]
@@ -879,7 +879,7 @@ class TestNewContext:
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["new", "context", "git-history"])
         assert result.exit_code == 0
-        ctx_md = tmp_path / ".ralph" / "contexts" / "git-history" / "CONTEXT.md"
+        ctx_md = tmp_path / ".ralphify" / "contexts" / "git-history" / "CONTEXT.md"
         assert ctx_md.exists()
         content = ctx_md.read_text()
         assert "command:" in content
@@ -888,7 +888,7 @@ class TestNewContext:
 
     def test_refuses_existing_context(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        ctx_dir = tmp_path / ".ralph" / "contexts" / "git-history"
+        ctx_dir = tmp_path / ".ralphify" / "contexts" / "git-history"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text("original content")
 
@@ -899,16 +899,16 @@ class TestNewContext:
 
     def test_creates_ralph_dirs_if_missing(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        assert not (tmp_path / ".ralph").exists()
+        assert not (tmp_path / ".ralphify").exists()
         result = runner.invoke(app, ["new", "context", "fresh"])
         assert result.exit_code == 0
-        assert (tmp_path / ".ralph" / "contexts" / "fresh" / "CONTEXT.md").exists()
+        assert (tmp_path / ".ralphify" / "contexts" / "fresh" / "CONTEXT.md").exists()
 
     def test_default_body_stripped_to_empty(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["new", "context", "empty-body"])
         assert result.exit_code == 0
-        ctx_md = tmp_path / ".ralph" / "contexts" / "empty-body" / "CONTEXT.md"
+        ctx_md = tmp_path / ".ralphify" / "contexts" / "empty-body" / "CONTEXT.md"
         _, body = parse_frontmatter(ctx_md.read_text())
         assert body == ""
 
@@ -918,7 +918,7 @@ class TestStatusContexts:
     def test_no_contexts_shows_none(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
 
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
@@ -929,7 +929,7 @@ class TestStatusContexts:
     def test_found_contexts_shown(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_context(tmp_path, "git-history", "git log --oneline -5")
         _setup_context(tmp_path, "coverage", "coverage report")
 
@@ -943,7 +943,7 @@ class TestStatusContexts:
     def test_disabled_context_display(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_context(tmp_path, "enabled-ctx", "echo ok", enabled=True)
         _setup_context(tmp_path, "disabled-ctx", "echo skip", enabled=False)
 
@@ -958,7 +958,7 @@ class TestRunContexts:
     def test_contexts_injected_into_prompt(self, mock_agent, mock_run_contexts, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("Base.\n\n{{ contexts }}")
+        (tmp_path / "RALPH.md").write_text("Base.\n\n{{ contexts }}")
         _setup_context(tmp_path, "git-log", "git log --oneline -5")
 
         ctx = Context(name="git-log", path=Path("/fake"), command="git log", enabled=True)
@@ -977,7 +977,7 @@ class TestRunContexts:
     def test_contexts_resolved_before_instructions(self, mock_agent, mock_run_contexts, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("Base.\n\n{{ contexts }}\n\n{{ instructions }}")
+        (tmp_path / "RALPH.md").write_text("Base.\n\n{{ contexts }}\n\n{{ instructions }}")
         _setup_context(tmp_path, "git-log", "git log --oneline -5")
         _setup_instruction(tmp_path, "style", content="Use black.")
 
@@ -1001,7 +1001,7 @@ class TestRunContexts:
     def test_disabled_contexts_not_run(self, mock_agent, mock_run_contexts, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
         _setup_context(tmp_path, "enabled", "echo ok", enabled=True)
         _setup_context(tmp_path, "disabled", "echo skip", enabled=False)
 
@@ -1022,7 +1022,7 @@ class TestRunContexts:
     def test_contexts_run_each_iteration(self, mock_agent, mock_run_contexts, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("{{ contexts }}")
+        (tmp_path / "RALPH.md").write_text("{{ contexts }}")
         _setup_context(tmp_path, "info", "echo hi")
 
         ctx = Context(name="info", path=Path("/fake"), command="echo hi", enabled=True)
@@ -1035,99 +1035,99 @@ class TestRunContexts:
         assert mock_run_contexts.call_count == 3
 
 
-def _setup_prompt(tmp_path, name="improve-docs", description="Improve docs", enabled=True, content="Fix the docs."):
-    """Helper to create a prompt directory with PROMPT.md."""
-    p_dir = tmp_path / ".ralph" / "prompts" / name
+def _setup_ralph(tmp_path, name="improve-docs", description="Improve docs", enabled=True, content="Fix the docs."):
+    """Helper to create a ralph directory with RALPH.md."""
+    p_dir = tmp_path / ".ralphify" / "ralphs" / name
     p_dir.mkdir(parents=True, exist_ok=True)
     enabled_str = "true" if enabled else "false"
-    (p_dir / "PROMPT.md").write_text(
+    (p_dir / "RALPH.md").write_text(
         f"---\ndescription: {description}\nenabled: {enabled_str}\n---\n{content}"
     )
     return p_dir
 
 
-class TestNewPrompt:
-    def test_creates_prompt_directory_and_file(self, tmp_path, monkeypatch):
+class TestNewRalph:
+    def test_creates_ralph_directory_and_file(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        result = runner.invoke(app, ["new", "prompt", "improve-docs"])
+        result = runner.invoke(app, ["new", "ralph", "improve-docs"])
         assert result.exit_code == 0
-        prompt_md = tmp_path / ".ralph" / "prompts" / "improve-docs" / "PROMPT.md"
+        prompt_md = tmp_path / ".ralphify" / "ralphs" / "improve-docs" / "RALPH.md"
         assert prompt_md.exists()
         content = prompt_md.read_text()
         assert "description:" in content
         assert "enabled:" in content
 
-    def test_refuses_existing_prompt(self, tmp_path, monkeypatch):
+    def test_refuses_existing_ralph(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        p_dir = tmp_path / ".ralph" / "prompts" / "improve-docs"
+        p_dir = tmp_path / ".ralphify" / "ralphs" / "improve-docs"
         p_dir.mkdir(parents=True)
-        (p_dir / "PROMPT.md").write_text("original content")
+        (p_dir / "RALPH.md").write_text("original content")
 
-        result = runner.invoke(app, ["new", "prompt", "improve-docs"])
+        result = runner.invoke(app, ["new", "ralph", "improve-docs"])
         assert result.exit_code == 1
         assert "already exists" in result.output
-        assert (p_dir / "PROMPT.md").read_text() == "original content"
+        assert (p_dir / "RALPH.md").read_text() == "original content"
 
     def test_creates_ralph_dirs_if_missing(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        assert not (tmp_path / ".ralph").exists()
-        result = runner.invoke(app, ["new", "prompt", "fresh"])
+        assert not (tmp_path / ".ralphify").exists()
+        result = runner.invoke(app, ["new", "ralph", "fresh"])
         assert result.exit_code == 0
-        assert (tmp_path / ".ralph" / "prompts" / "fresh" / "PROMPT.md").exists()
+        assert (tmp_path / ".ralphify" / "ralphs" / "fresh" / "RALPH.md").exists()
 
     def test_default_template_has_placeholder_body(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        result = runner.invoke(app, ["new", "prompt", "empty-body"])
+        result = runner.invoke(app, ["new", "ralph", "empty-body"])
         assert result.exit_code == 0
-        prompt_md = tmp_path / ".ralph" / "prompts" / "empty-body" / "PROMPT.md"
+        prompt_md = tmp_path / ".ralphify" / "ralphs" / "empty-body" / "RALPH.md"
         _, body = parse_frontmatter(prompt_md.read_text())
         assert "Your prompt content here." in body
 
 
-class TestPromptsList:
-    def test_no_prompts_shows_message(self, tmp_path, monkeypatch):
+class TestRalphsList:
+    def test_no_ralphs_shows_message(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        result = runner.invoke(app, ["prompts", "list"])
+        result = runner.invoke(app, ["ralphs", "list"])
         assert result.exit_code == 0
-        assert "No prompts found" in result.output
+        assert "No ralphs found" in result.output
 
-    def test_shows_root_prompt(self, tmp_path, monkeypatch):
+    def test_shows_root_ralph(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        (tmp_path / "PROMPT.md").write_text("my prompt")
-        result = runner.invoke(app, ["prompts", "list"])
+        (tmp_path / "RALPH.md").write_text("my prompt")
+        result = runner.invoke(app, ["ralphs", "list"])
         assert result.exit_code == 0
-        assert "PROMPT.md" in result.output
+        assert "RALPH.md" in result.output
         assert "root" in result.output
 
-    def test_shows_named_prompts(self, tmp_path, monkeypatch):
+    def test_shows_named_ralphs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        _setup_prompt(tmp_path, "improve-docs", description="Improve docs")
-        _setup_prompt(tmp_path, "refactor", description="Refactor code")
-        result = runner.invoke(app, ["prompts", "list"])
+        _setup_ralph(tmp_path, "improve-docs", description="Improve docs")
+        _setup_ralph(tmp_path, "refactor", description="Refactor code")
+        result = runner.invoke(app, ["ralphs", "list"])
         assert result.exit_code == 0
         assert "improve-docs" in result.output
         assert "refactor" in result.output
 
 
-class TestStatusPrompts:
+class TestStatusRalphs:
     @patch("ralphify.cli.shutil.which", return_value="/usr/bin/claude")
-    def test_no_prompts_shows_none(self, mock_which, tmp_path, monkeypatch):
+    def test_no_ralphs_shows_none(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
+        (tmp_path / "RALPH.md").write_text("prompt")
 
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
-        assert "Prompts:" in result.output
+        assert "Ralphs:" in result.output
         assert "none" in result.output
 
     @patch("ralphify.cli.shutil.which", return_value="/usr/bin/claude")
-    def test_found_prompts_shown(self, mock_which, tmp_path, monkeypatch):
+    def test_found_ralphs_shown(self, mock_which, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("prompt")
-        _setup_prompt(tmp_path, "improve-docs")
-        _setup_prompt(tmp_path, "refactor", description="Refactor code")
+        (tmp_path / "RALPH.md").write_text("prompt")
+        _setup_ralph(tmp_path, "improve-docs")
+        _setup_ralph(tmp_path, "refactor", description="Refactor code")
 
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
@@ -1136,18 +1136,18 @@ class TestStatusPrompts:
         assert "refactor" in result.output
 
 
-class TestRunPromptName:
+class TestRunRalphName:
     @patch("ralphify._agent.subprocess.run", side_effect=_ok)
-    def test_run_with_prompt_name(self, mock_run, tmp_path, monkeypatch):
+    def test_run_with_ralph_name(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+        _setup_ralph(tmp_path, "improve-docs", content="Fix the docs.")
 
         result = runner.invoke(app, ["run", "improve-docs", "-n", "1"])
         assert result.exit_code == 0
         assert mock_run.call_args.kwargs["input"] == "Fix the docs."
 
-    def test_run_with_nonexistent_prompt_name(self, tmp_path, monkeypatch):
+    def test_run_with_nonexistent_ralph_name(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
 
@@ -1158,7 +1158,7 @@ class TestRunPromptName:
     def test_run_with_name_and_prompt_file_conflicts(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+        _setup_ralph(tmp_path, "improve-docs", content="Fix the docs.")
         (tmp_path / "alt.md").write_text("alt prompt")
 
         result = runner.invoke(app, ["run", "improve-docs", "-n", "1", "--prompt-file", "alt.md"])
@@ -1169,19 +1169,19 @@ class TestRunPromptName:
     def test_run_without_name_falls_back_to_toml(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        (tmp_path / "PROMPT.md").write_text("default prompt")
+        (tmp_path / "RALPH.md").write_text("default prompt")
 
         result = runner.invoke(app, ["run", "-n", "1"])
         assert result.exit_code == 0
         assert mock_run.call_args.kwargs["input"] == "default prompt"
 
     @patch("ralphify._agent.subprocess.run", side_effect=_ok)
-    def test_toml_prompt_as_name(self, mock_run, tmp_path, monkeypatch):
-        """When ralph.toml agent.prompt is a prompt name, resolve it."""
+    def test_toml_ralph_as_name(self, mock_run, tmp_path, monkeypatch):
+        """When ralph.toml agent.ralph is a ralph name, resolve it."""
         monkeypatch.chdir(tmp_path)
-        config = '[agent]\ncommand = "claude"\nargs = ["-p"]\nprompt = "improve-docs"\n'
+        config = '[agent]\ncommand = "claude"\nargs = ["-p"]\nralph = "improve-docs"\n'
         (tmp_path / CONFIG_FILENAME).write_text(config)
-        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+        _setup_ralph(tmp_path, "improve-docs", content="Fix the docs.")
 
         result = runner.invoke(app, ["run", "-n", "1"])
         assert result.exit_code == 0
@@ -1191,7 +1191,7 @@ class TestRunPromptName:
     def test_inline_prompt_overrides_name(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
-        _setup_prompt(tmp_path, "improve-docs", content="Fix the docs.")
+        _setup_ralph(tmp_path, "improve-docs", content="Fix the docs.")
 
         result = runner.invoke(app, ["run", "-n", "1", "-p", "inline text"])
         assert result.exit_code == 0

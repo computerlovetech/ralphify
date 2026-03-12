@@ -77,7 +77,7 @@ This creates two files:
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 !!! info "What does `--dangerously-skip-permissions` do?"
@@ -85,11 +85,11 @@ prompt = "PROMPT.md"
 
     This is safe to use when ralphify is the only thing running the agent, because **checks** act as your guardrails — they validate the agent's work after each iteration and feed failures back for the agent to fix.
 
-**`PROMPT.md`** — the prompt that gets piped to the agent each iteration. The default is a generic starting point — you'll customize it next.
+**`RALPH.md`** — the prompt that gets piped to the agent each iteration. The default is a generic starting point — you'll customize it next.
 
-## Step 3: Write your prompt
+## Step 3: Write your ralph
 
-Replace the contents of `PROMPT.md` with a prompt tailored to your project. Here's an example for a Python project with a TODO list:
+Replace the contents of `RALPH.md` with a prompt tailored to your project. Here's an example for a Python project with a TODO list:
 
 ```markdown
 # Prompt
@@ -146,7 +146,7 @@ Create a check that runs your test suite:
 ralph new check tests
 ```
 
-This creates `.ralph/checks/tests/CHECK.md`. Edit it:
+This creates `.ralphify/checks/tests/CHECK.md`. Edit it:
 
 ```markdown
 ---
@@ -168,7 +168,7 @@ Add a second check for linting:
 ralph new check lint
 ```
 
-Edit `.ralph/checks/lint/CHECK.md`:
+Edit `.ralphify/checks/lint/CHECK.md`:
 
 ```markdown
 ---
@@ -187,7 +187,7 @@ Contexts inject dynamic data into the prompt before each iteration. A useful def
 ralph new context git-log
 ```
 
-Edit `.ralph/contexts/git-log/CONTEXT.md`:
+Edit `.ralphify/contexts/git-log/CONTEXT.md`:
 
 ```markdown
 ---
@@ -202,7 +202,7 @@ The command runs each iteration and its output is appended to the prompt. The bo
 
 ### Place the context in your prompt
 
-By default, context output is appended to the end of the prompt. You can control placement with a placeholder in `PROMPT.md`:
+By default, context output is appended to the end of the prompt. You can control placement with a placeholder in `RALPH.md`:
 
 ```markdown
 # Prompt
@@ -233,9 +233,9 @@ You should see output like:
 ```
 Configuration
   Command: claude -p --dangerously-skip-permissions
-  Prompt:  PROMPT.md
+  Ralph:   RALPH.md
 
-✓ Prompt file exists (342 chars)
+✓ Ralph file exists (342 chars)
 ✓ Command 'claude' found on PATH
 
 Checks:  2 found
@@ -247,7 +247,7 @@ Contexts:  1 found
 
 Instructions:  none
 
-Prompts:  none
+Ralphs:  none
 
 Ready to run.
 ```
@@ -286,7 +286,7 @@ The agent in iteration 3 receives the test failure output and the failure instru
 
 ## Step 10: Add signs while running
 
-The prompt is re-read every iteration. If you see the agent doing something unhelpful, **edit `PROMPT.md` while the loop is running** — add a constraint:
+The prompt is re-read every iteration. If you see the agent doing something unhelpful, **edit `RALPH.md` while the loop is running** — add a constraint:
 
 ```markdown
 ## Rules
@@ -348,7 +348,7 @@ Open [http://127.0.0.1:8765](http://127.0.0.1:8765) in your browser. From there 
 
 - **Start, pause, and stop runs** with a click from the Runs tab
 - **Watch iterations complete in real time** — check results stream in over WebSocket
-- **Browse and edit all primitives** (prompts, checks, contexts, instructions) on the Configure tab
+- **Browse and edit all primitives** (ralphs, checks, contexts, instructions) on the Configure tab
 - **Review past runs** on the History tab
 
 The dashboard uses the same `run_loop()` engine as the CLI, so everything works exactly the same — it's just a different interface.
@@ -363,9 +363,9 @@ After setup, your project should look something like this:
 ```
 your-project/
 ├── ralph.toml              # Loop configuration
-├── PROMPT.md               # The prompt (edit anytime)
+├── RALPH.md                # The prompt (edit anytime)
 ├── TODO.md                 # Task list the agent reads
-├── .ralph/
+├── .ralphify/
 │   ├── checks/
 │   │   ├── tests/
 │   │   │   └── CHECK.md    # Runs pytest after each iteration
@@ -384,9 +384,9 @@ your-project/
 ## Next steps
 
 - [How It Works](how-it-works.md) — understand the iteration lifecycle, prompt assembly, and feedback loop
-- [Writing Your Prompt](prompts.md) — prompt anatomy, patterns, and tips for getting better results
+- [Writing Your Ralph](ralphs.md) — ralph anatomy, patterns, and tips for getting better results
 - [Best Practices](best-practices.md) — habits and patterns for getting the most out of your loops
 - [Cookbook](cookbook.md) — complete example setups for Python, TypeScript, bug fixing, and docs
-- [Primitives](primitives.md) — full reference for checks, contexts, instructions, and named prompts
+- [Primitives](primitives.md) — full reference for checks, contexts, instructions, and named ralphs
 - [Web Dashboard](dashboard.md) — manage runs, watch iterations live, and edit primitives from your browser
 - [Configuration & CLI](cli.md) — `ralph.toml` format, all commands, and options

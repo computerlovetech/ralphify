@@ -42,11 +42,11 @@ Ralphify is a minimal CLI harness for autonomous AI coding loops, inspired by th
 ## Two commands to start
 
 ```bash
-ralph init      # Creates ralph.toml + PROMPT.md
+ralph init      # Creates ralph.toml + RALPH.md
 ralph run       # Starts the loop (Ctrl+C to stop)
 ```
 
-`ralph init` creates a config file and a starter prompt. `ralph run` reads the prompt, pipes it to the agent, waits for it to finish, and does it again. Edit `PROMPT.md` while the loop is running — changes take effect on the next iteration.
+`ralph init` creates a config file and a starter prompt. `ralph run` reads the prompt, pipes it to the agent, waits for it to finish, and does it again. Edit `RALPH.md` while the loop is running — changes take effect on the next iteration.
 
 Or skip setup and pass a prompt directly:
 
@@ -98,7 +98,7 @@ Iteration 2 broke a test. Iteration 3 automatically received the failure output 
 
     ---
 
-    Each iteration re-reads `PROMPT.md` and the codebase from scratch. The agent always works from the current state, not stale assumptions.
+    Each iteration re-reads `RALPH.md` and the codebase from scratch. The agent always works from the current state, not stale assumptions.
 
 -   :material-source-branch:{ .lg .middle } **Progress lives in git**
 
@@ -118,7 +118,7 @@ Iteration 2 broke a test. Iteration 3 automatically received the failure output 
 
 ## Four primitives
 
-Ralphify extends the basic loop with four building blocks that live in the `.ralph/` directory:
+Ralphify extends the basic loop with four building blocks that live in the `.ralphify/` directory:
 
 <div class="grid cards" markdown>
 
@@ -142,17 +142,17 @@ Ralphify extends the basic loop with four building blocks that live in the `.ral
 
     ---
 
-    Reusable rules and coding standards injected into the prompt. Toggle them on and off without editing `PROMPT.md` — useful for style guides, commit conventions, or safety constraints.
+    Reusable rules and coding standards injected into the prompt. Toggle them on and off without editing `RALPH.md` — useful for style guides, commit conventions, or safety constraints.
 
     [:octicons-arrow-right-24: Learn more](primitives.md#instructions)
 
--   :material-text-box-multiple-outline:{ .lg .middle } **Prompts**
+-   :material-text-box-multiple-outline:{ .lg .middle } **Ralphs**
 
     ---
 
-    Named, task-focused prompts you can switch between without editing your root `PROMPT.md`. Keep a `docs` prompt, a `refactor` prompt, and a `bug-fix` prompt — select the one you need at run time with `ralph run docs`.
+    Named, task-focused ralphs you can switch between without editing your root `RALPH.md`. Keep a `docs` ralph, a `refactor` ralph, and a `bug-fix` ralph — select the one you need at run time with `ralph run docs`.
 
-    [:octicons-arrow-right-24: Learn more](primitives.md#prompts)
+    [:octicons-arrow-right-24: Learn more](primitives.md#ralphs)
 
 </div>
 
@@ -197,7 +197,7 @@ ralph ui                          # opens http://127.0.0.1:8765
 
     ---
 
-    Launch runs from named prompts or ad-hoc text, pause mid-loop, and resume when ready.
+    Launch runs from named ralphs or ad-hoc text, pause mid-loop, and resume when ready.
 
 -   :material-lightning-bolt-outline:{ .lg .middle } **Live agent activity**
 
@@ -209,7 +209,7 @@ ralph ui                          # opens http://127.0.0.1:8765
 
     ---
 
-    Create, edit, and delete checks, contexts, instructions, and prompts from the Configure tab.
+    Create, edit, and delete checks, contexts, instructions, and ralphs from the Configure tab.
 
 -   :material-history:{ .lg .middle } **Persistent run history**
 
@@ -240,11 +240,11 @@ ralph ui                          # opens http://127.0.0.1:8765
 
     Step-by-step tutorial from install to a running loop with checks and contexts.
 
--   **[Writing Your Prompt](prompts.md)**
+-   **[Writing Your Ralph](ralphs.md)**
 
     ---
 
-    How to write prompts that produce useful work — anatomy, patterns, and tips.
+    How to write ralphs that produce useful work — anatomy, patterns, and tips.
 
 -   **[Cookbook](cookbook.md)**
 

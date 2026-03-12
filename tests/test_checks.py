@@ -123,12 +123,12 @@ class TestDiscoverChecks:
         assert result == []
 
     def test_empty_checks_dir(self, tmp_path):
-        (tmp_path / ".ralph" / "checks").mkdir(parents=True)
+        (tmp_path / ".ralphify" / "checks").mkdir(parents=True)
         result = discover_checks(tmp_path)
         assert result == []
 
     def test_single_check_with_command(self, tmp_path):
-        check_dir = tmp_path / ".ralph" / "checks" / "ruff-lint"
+        check_dir = tmp_path / ".ralphify" / "checks" / "ruff-lint"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("---\ncommand: ruff check .\n---\nFix lint errors.")
 
@@ -139,7 +139,7 @@ class TestDiscoverChecks:
         assert result[0].failure_instruction == "Fix lint errors."
 
     def test_single_check_with_script(self, tmp_path):
-        check_dir = tmp_path / ".ralph" / "checks" / "typecheck"
+        check_dir = tmp_path / ".ralphify" / "checks" / "typecheck"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("---\ndescription: Type check\n---\nFix types.")
         script = check_dir / "run.sh"
@@ -153,7 +153,7 @@ class TestDiscoverChecks:
 
     def test_script_takes_precedence(self, tmp_path):
         """run.* script should be found even when command is also set."""
-        check_dir = tmp_path / ".ralph" / "checks" / "mycheck"
+        check_dir = tmp_path / ".ralphify" / "checks" / "mycheck"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("---\ncommand: echo fallback\n---\n")
         script = check_dir / "run.sh"
@@ -166,7 +166,7 @@ class TestDiscoverChecks:
         assert result[0].command == "echo fallback"
 
     def test_alphabetical_ordering(self, tmp_path):
-        checks_dir = tmp_path / ".ralph" / "checks"
+        checks_dir = tmp_path / ".ralphify" / "checks"
         for name in ["zcheck", "acheck", "mcheck"]:
             d = checks_dir / name
             d.mkdir(parents=True)
@@ -176,7 +176,7 @@ class TestDiscoverChecks:
         assert [c.name for c in result] == ["acheck", "mcheck", "zcheck"]
 
     def test_skips_dir_without_check_md(self, tmp_path):
-        checks_dir = tmp_path / ".ralph" / "checks"
+        checks_dir = tmp_path / ".ralphify" / "checks"
         valid = checks_dir / "valid"
         valid.mkdir(parents=True)
         (valid / "CHECK.md").write_text("---\ncommand: echo ok\n---\n")
@@ -190,7 +190,7 @@ class TestDiscoverChecks:
         assert result[0].name == "valid"
 
     def test_skips_check_without_command_or_script(self, tmp_path):
-        check_dir = tmp_path / ".ralph" / "checks" / "broken"
+        check_dir = tmp_path / ".ralphify" / "checks" / "broken"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("---\ndescription: no command\n---\nBody.")
 
@@ -200,7 +200,7 @@ class TestDiscoverChecks:
         mock_warn.assert_called_once()
 
     def test_default_values(self, tmp_path):
-        check_dir = tmp_path / ".ralph" / "checks" / "basic"
+        check_dir = tmp_path / ".ralphify" / "checks" / "basic"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("---\ncommand: echo hi\n---\n")
 
@@ -209,7 +209,7 @@ class TestDiscoverChecks:
         assert result[0].enabled is True
 
     def test_custom_timeout_and_enabled(self, tmp_path):
-        check_dir = tmp_path / ".ralph" / "checks" / "custom"
+        check_dir = tmp_path / ".ralphify" / "checks" / "custom"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("---\ncommand: echo hi\ntimeout: 120\nenabled: false\n---\n")
 
@@ -219,7 +219,7 @@ class TestDiscoverChecks:
 
     def test_skips_files_in_checks_dir(self, tmp_path):
         """Only directories are considered, not files."""
-        checks_dir = tmp_path / ".ralph" / "checks"
+        checks_dir = tmp_path / ".ralphify" / "checks"
         checks_dir.mkdir(parents=True)
         (checks_dir / "not-a-dir.md").write_text("---\ncommand: echo\n---\n")
 

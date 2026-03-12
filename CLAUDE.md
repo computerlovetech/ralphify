@@ -27,7 +27,7 @@ Key modules:
 - `_frontmatter.py` — YAML frontmatter parsing and marker/config filename constants
 - `_discovery.py` — Primitive directory scanning (`discover_primitives`, `find_run_script`)
 - `resolver.py` — Template placeholder resolution (`{{ contexts.name }}`, `{{ instructions }}`)
-- `prompts.py` — Named prompt discovery and resolution
+- `ralphs.py` — Named ralph discovery and resolution
 - `checks.py`, `contexts.py`, `instructions.py` — The other three primitive types
 
 Tests are in `tests/` with one file per module. Docs are in `docs/` using MkDocs with Material theme.
@@ -41,7 +41,7 @@ Tests are in `tests/` with one file per module. Docs are in `docs/` using MkDocs
 
 ## Traps
 
-- Primitive marker filenames (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `PROMPT.md`) are defined as constants in `_frontmatter.py` (`CHECK_MARKER`, `CONTEXT_MARKER`, etc.). All modules import from there — change the constant to rename everywhere.
+- Primitive marker filenames (`CHECK.md`, `CONTEXT.md`, `INSTRUCTION.md`, `RALPH.md`) are defined as constants in `_frontmatter.py` (`CHECK_MARKER`, `CONTEXT_MARKER`, `RALPH_MARKER`, etc.). The primitives directory name is `PRIMITIVES_DIR`. All modules import from there — change the constant to rename everywhere.
 - `timeout` and `enabled` frontmatter fields have special type coercion via `_FIELD_COERCIONS` in `_frontmatter.py`. To add a new typed field, add an entry to that dict.
 - Both contexts and instructions share `resolver.py:resolve_placeholders()`. Changes affect both.
 - Output is truncated to 5000 chars in `_output.py`. This is intentional.

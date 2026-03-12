@@ -8,25 +8,25 @@ All notable changes to ralphify are documented here.
 
 ## 0.1.6 — 2026-03-12
 
-Named prompts, prompt-scoped primitives, live agent activity streaming, and a redesigned dashboard with persistent history.
+Named ralphs, ralph-scoped primitives, live agent activity streaming, and a redesigned dashboard with persistent history.
 
 ### Added
 
-- **Named prompts** — save reusable, task-focused prompts in `.ralph/prompts/<name>/PROMPT.md` and switch between them with `ralph run <name>`. Create with `ralph new prompt <name>`, list with `ralph prompts list`. The `prompt` field in `ralph.toml` also accepts a prompt name.
-- **`--prompt` flag on `ralph new`** — scope checks, contexts, and instructions to a named prompt with `ralph new check <name> --prompt <prompt>`. Creates the primitive inside `.ralph/prompts/<prompt>/` so it only applies when running that prompt.
+- **Named ralphs** — save reusable, task-focused ralphs in `.ralphify/ralphs/<name>/RALPH.md` and switch between them with `ralph run <name>`. Create with `ralph new ralph <name>`, list with `ralph ralphs list`. The `ralph` field in `ralph.toml` also accepts a ralph name.
+- **`--ralph` flag on `ralph new`** — scope checks, contexts, and instructions to a named ralph with `ralph new check <name> --ralph <ralph>`. Creates the primitive inside `.ralphify/ralphs/<ralph>/` so it only applies when running that ralph.
 - **`--prompt-file` / `-f` flag** — point `ralph run` at any prompt file by path, overriding `ralph.toml`.
-- **Prompts in Configure** — browse, create, edit, and delete named prompts alongside other primitives in the Configure tab. Each prompt shows as an interactive card with description, content preview, and edit button.
-- **Redesigned dashboard to three tabs** — the dashboard now uses three tabs (Runs, Configure, History). The History tab shows rich run cards with visual pass rates and status badges. The Configure tab has an overview dashboard with drill-down views and inline editors for creating, editing, and deleting prompts, checks, contexts, and instructions.
+- **Ralphs in Configure** — browse, create, edit, and delete named ralphs alongside other primitives in the Configure tab. Each ralph shows as an interactive card with description, content preview, and edit button.
+- **Redesigned dashboard to three tabs** — the dashboard now uses three tabs (Runs, Configure, History). The History tab shows rich run cards with visual pass rates and status badges. The Configure tab has an overview dashboard with drill-down views and inline editors for creating, editing, and deleting ralphs, checks, contexts, and instructions.
 - **Dashboard reads `ralph.toml`** — the UI reads `command` and `args` from your project's `ralph.toml` so it no longer hardcodes agent configuration.
 - **Responsive dashboard** — the dashboard adapts to tablets (≤ 900px) and phones (≤ 600px) with a collapsible slide-out sidebar, tighter spacing, and adjusted modal widths.
-- **Prompt preview in New Run modal** — expand a preview panel to see the full prompt content before launching a run.
-- **Run buttons in Configure** — each prompt card in the Configure tab has a "Run" button (visible on hover, always on mobile) and the prompt editor has a "Run this prompt" header button. Both open the New Run modal with the prompt pre-selected, connecting the configure and run workflows.
+- **Ralph preview in New Run modal** — expand a preview panel to see the full ralph content before launching a run.
+- **Run buttons in Configure** — each ralph card in the Configure tab has a "Run" button (visible on hover, always on mobile) and the ralph editor has a "Run this ralph" header button. Both open the New Run modal with the ralph pre-selected, connecting the configure and run workflows.
 - **Command and timeout in Configure** — the Configure tab now shows editable command and timeout fields for checks and contexts, so you can see and change what each primitive runs without leaving the browser.
 - **WebSocket event type reference** — dashboard docs now include a complete table of all event types and their data fields.
 - **Codebase migration cookbook recipe** — step-by-step guide for automating JavaScript-to-TypeScript migrations, with adaptation tips for Python 2→3, CommonJS→ESM, and more.
 - **Contributor docs** — new `docs/contributing/` section with a codebase map, replacing the old `agent_docs/` directory.
 - **Iterations API endpoint** — `GET /api/runs/{run_id}/iterations` returns persisted iteration data with per-check results, enabling History tab drill-downs and custom reporting.
-- **Persistent run history** — the dashboard stores run history, iterations, and check results in a SQLite database at `~/.ralph/ui.db` that survives across restarts.
+- **Persistent run history** — the dashboard stores run history, iterations, and check results in a SQLite database at `~/.ralphify/ui.db` that survives across restarts.
 - **Keyboard shortcuts in dashboard** — press Cmd+S / Ctrl+S to save changes in primitive editors and create forms. Escape closes the New Run modal.
 - **History runs API endpoint** — `GET /api/history/runs` returns all persisted runs from the SQLite store, enabling custom history queries and reporting.
 - **Live agent activity stream** — when the agent command is Claude Code, the dashboard streams tool calls, text output, and cost/token stats in real time during each iteration. The engine auto-detects Claude Code and uses `--output-format stream-json` with `subprocess.Popen` for line-by-line streaming. Other agents continue to use the standard `subprocess.run()` path. The activity feed shows color-coded tool badges (Read, Edit, Bash, Grep, etc.) with expandable results and auto-scrolling.
@@ -44,13 +44,13 @@ Named prompts, prompt-scoped primitives, live agent activity streaming, and a re
 ### Improved
 
 - CI now validates the docs build on pull requests, catching broken documentation before merge.
-- Dashboard prompt cards strip markdown formatting and use line-clamp for cleaner content previews.
+- Dashboard ralph cards strip markdown formatting and use line-clamp for cleaner content previews.
 
 ### Internal
 
 - Extracted `ConsoleEmitter` from `cli.py` into dedicated `_console_emitter.py` module.
 - Extracted scaffold templates from `cli.py` into `_templates.py`.
-- Centralized primitive marker filenames into constants in `_frontmatter.py`.
+- Centralized primitive marker filenames and primitives directory name into constants in `_frontmatter.py`.
 - Major engine refactoring: extracted helper functions, reduced parameter counts, replaced untyped tuples with `NamedTuple`, and encapsulated `RunState` threading internals.
 - Event types use `EventType` enums instead of raw strings.
 - `FanoutEmitter` moved to `_events` module alongside other emitter implementations.
@@ -66,15 +66,15 @@ Redesigned New Run modal and polished dashboard styling.
 
 ### Added
 
-- **Redesigned New Run modal** — the modal now features a card-based prompt picker, clearer section labels with icons, and a collapsible settings panel instead of exposing every field at once.
-- **Prompt card grid** — named prompts display as selectable cards with descriptions, replacing the old chip-style buttons.
-- **Ad-hoc prompt mode** — users can toggle between selecting a named prompt and typing a one-off prompt directly in the modal.
+- **Redesigned New Run modal** — the modal now features a card-based ralph picker, clearer section labels with icons, and a collapsible settings panel instead of exposing every field at once.
+- **Ralph card grid** — named ralphs display as selectable cards with descriptions, replacing the old chip-style buttons.
+- **Ad-hoc prompt mode** — users can toggle between selecting a named ralph and typing a one-off prompt directly in the modal.
 
 ### Improved
 
 - Dashboard CSS overhaul — new modal layout classes, better spacing, softer card styling, and consistent use of the Dusk design system.
 - Simplified New Run form state — replaced single config object with focused individual state hooks for clarity.
-- Updated project prompt (`PROMPT.md`) to focus on UI/design iteration with the Dusk palette and design principles.
+- Updated project prompt (`RALPH.md`) to focus on UI/design iteration with the Dusk palette and design principles.
 
 ---
 
@@ -84,7 +84,7 @@ Ad-hoc prompts, better discoverability, and expanded cookbook recipes.
 
 ### Added
 
-- **Ad-hoc prompts** — `ralph run -p "Fix the login bug"` passes a prompt directly on the command line, bypassing `PROMPT.md` entirely. Useful for quick one-off tasks. Placeholders (contexts and instructions) resolve as normal.
+- **Ad-hoc prompts** — `ralph run -p "Fix the login bug"` passes a prompt directly on the command line, bypassing `RALPH.md` entirely. Useful for quick one-off tasks. Placeholders (contexts and instructions) resolve as normal.
 - **Test coverage cookbook recipe** — step-by-step setup for systematically increasing test coverage with a coverage context, threshold check, and focused prompt.
 - **Rust and Go cookbook recipes** — complete copy-pasteable setups for `cargo test`/`cargo clippy`/`cargo fmt` and `go test`/`go vet` workflows.
 
@@ -102,9 +102,9 @@ The primitives release. Checks, contexts, and instructions turn the basic loop i
 
 ### Added
 
-- **Checks** — post-iteration validation scripts in `.ralph/checks/`. When a check fails, its output is fed into the next iteration so the agent can fix its own mistakes. Supports both `command` in frontmatter and `run.*` scripts.
-- **Contexts** — dynamic data injection in `.ralph/contexts/`. Run a command before each iteration and inject its output into the prompt via `{{ contexts.name }}` placeholders. Static-only contexts (no command) are also supported.
-- **Instructions** — reusable prompt rules in `.ralph/instructions/`. Toggle coding standards, commit conventions, or safety constraints on and off without editing `PROMPT.md`. Use `{{ instructions }}` or `{{ instructions.name }}` in the prompt.
+- **Checks** — post-iteration validation scripts in `.ralphify/checks/`. When a check fails, its output is fed into the next iteration so the agent can fix its own mistakes. Supports both `command` in frontmatter and `run.*` scripts.
+- **Contexts** — dynamic data injection in `.ralphify/contexts/`. Run a command before each iteration and inject its output into the prompt via `{{ contexts.name }}` placeholders. Static-only contexts (no command) are also supported.
+- **Instructions** — reusable prompt rules in `.ralphify/instructions/`. Toggle coding standards, commit conventions, or safety constraints on and off without editing `RALPH.md`. Use `{{ instructions }}` or `{{ instructions.name }}` in the prompt.
 - `ralph new check|context|instruction <name>` scaffolding commands
 - HTML comment stripping — comments in primitive markdown files are stripped before injection, so you can leave notes that don't leak into the assembled prompt
 - Placeholder resolution with three strategies: named (`{{ contexts.name }}`), bulk (`{{ contexts }}`), and implicit (append to end)
@@ -140,7 +140,7 @@ Initial release.
 
 ### Added
 
-- `ralph init` — create `ralph.toml` and `PROMPT.md` in your project
+- `ralph init` — create `ralph.toml` and `RALPH.md` in your project
 - `ralph run` — the core autonomous loop: read prompt, pipe to agent, repeat
 - Iteration tracking with exit codes and duration
 - `--stop-on-error` / `-s` — halt the loop if the agent exits non-zero

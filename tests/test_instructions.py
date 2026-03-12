@@ -9,12 +9,12 @@ class TestDiscoverInstructions:
         assert result == []
 
     def test_empty_instructions_dir(self, tmp_path):
-        (tmp_path / ".ralph" / "instructions").mkdir(parents=True)
+        (tmp_path / ".ralphify" / "instructions").mkdir(parents=True)
         result = discover_instructions(tmp_path)
         assert result == []
 
     def test_single_instruction(self, tmp_path):
-        inst_dir = tmp_path / ".ralph" / "instructions" / "coding-style"
+        inst_dir = tmp_path / ".ralphify" / "instructions" / "coding-style"
         inst_dir.mkdir(parents=True)
         (inst_dir / "INSTRUCTION.md").write_text(
             "---\nenabled: true\n---\nAlways use type hints."
@@ -27,7 +27,7 @@ class TestDiscoverInstructions:
         assert result[0].enabled is True
 
     def test_alphabetical_ordering(self, tmp_path):
-        instructions_dir = tmp_path / ".ralph" / "instructions"
+        instructions_dir = tmp_path / ".ralphify" / "instructions"
         for name in ["zebra", "alpha", "middle"]:
             d = instructions_dir / name
             d.mkdir(parents=True)
@@ -37,7 +37,7 @@ class TestDiscoverInstructions:
         assert [i.name for i in result] == ["alpha", "middle", "zebra"]
 
     def test_skips_dir_without_instruction_md(self, tmp_path):
-        instructions_dir = tmp_path / ".ralph" / "instructions"
+        instructions_dir = tmp_path / ".ralphify" / "instructions"
         valid = instructions_dir / "valid"
         valid.mkdir(parents=True)
         (valid / "INSTRUCTION.md").write_text("---\n---\nContent here.")
@@ -51,7 +51,7 @@ class TestDiscoverInstructions:
         assert result[0].name == "valid"
 
     def test_skips_files_in_instructions_dir(self, tmp_path):
-        instructions_dir = tmp_path / ".ralph" / "instructions"
+        instructions_dir = tmp_path / ".ralphify" / "instructions"
         instructions_dir.mkdir(parents=True)
         (instructions_dir / "not-a-dir.md").write_text("content")
 
@@ -59,7 +59,7 @@ class TestDiscoverInstructions:
         assert result == []
 
     def test_default_enabled_true(self, tmp_path):
-        inst_dir = tmp_path / ".ralph" / "instructions" / "basic"
+        inst_dir = tmp_path / ".ralphify" / "instructions" / "basic"
         inst_dir.mkdir(parents=True)
         (inst_dir / "INSTRUCTION.md").write_text("---\n---\nSome content.")
 
@@ -67,7 +67,7 @@ class TestDiscoverInstructions:
         assert result[0].enabled is True
 
     def test_disabled_instruction(self, tmp_path):
-        inst_dir = tmp_path / ".ralph" / "instructions" / "off"
+        inst_dir = tmp_path / ".ralphify" / "instructions" / "off"
         inst_dir.mkdir(parents=True)
         (inst_dir / "INSTRUCTION.md").write_text(
             "---\nenabled: false\n---\nDisabled content."
@@ -78,7 +78,7 @@ class TestDiscoverInstructions:
         assert result[0].content == "Disabled content."
 
     def test_strips_html_comments(self, tmp_path):
-        inst_dir = tmp_path / ".ralph" / "instructions" / "commented"
+        inst_dir = tmp_path / ".ralphify" / "instructions" / "commented"
         inst_dir.mkdir(parents=True)
         (inst_dir / "INSTRUCTION.md").write_text(
             "---\n---\n<!-- remove this -->Keep this."

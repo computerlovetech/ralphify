@@ -44,7 +44,7 @@ Tests use temporary directories and have no external dependencies — no API key
 tests/
 ├── conftest.py            # Shared fixtures (disables streaming path for all tests)
 ├── test_checks.py         # Check discovery and execution
-├── test_cli.py            # CLI commands (init, run, status, new, prompts)
+├── test_cli.py            # CLI commands (init, run, status, new, ralphs)
 ├── test_contexts.py       # Context discovery and injection
 ├── test_detector.py       # Project type detection
 ├── test_discovery.py      # Primitive directory scanning (discover_local_primitives)
@@ -53,7 +53,7 @@ tests/
 ├── test_manager.py        # Multi-run orchestration
 ├── test_output.py         # Output combining and truncation
 ├── test_persistence.py    # UI persistence layer (SQLite)
-├── test_prompts.py        # Named prompt discovery and resolution
+├── test_ralphs.py         # Named ralph discovery and resolution
 ├── test_resolver.py       # Template placeholder resolution (named, bulk, implicit)
 ├── test_runner.py         # Command execution with timeout
 └── ...
@@ -89,7 +89,7 @@ docs/
 ├── why-ralphify.md       # Design philosophy and comparison to alternatives
 ├── getting-started.md    # Step-by-step tutorial
 ├── how-it-works.md       # Iteration lifecycle and prompt assembly
-├── prompts.md            # Prompt writing guide
+├── ralphs.md             # Ralph writing guide
 ├── best-practices.md     # Habits and patterns for productive loops
 ├── agents.md             # Setup guides for different agents
 ├── cookbook.md            # Complete copy-pasteable setups

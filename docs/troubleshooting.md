@@ -10,7 +10,7 @@ Common issues and how to fix them. If your problem isn't listed here, run `ralph
 
 ### "ralph.toml not found"
 
-You haven't initialized the project yet. Run `ralph init` in your project directory to create `ralph.toml` and `PROMPT.md`.
+You haven't initialized the project yet. Run `ralph init` in your project directory to create `ralph.toml` and `RALPH.md`.
 
 ### "Command 'claude' not found on PATH"
 
@@ -26,10 +26,10 @@ If it's installed but not found, check that your PATH includes the directory whe
 
 `ralph status` found one or more problems. The output tells you exactly what's wrong:
 
-- **Prompt file not found** → Create it with `ralph init`, or check that the `prompt` path in `ralph.toml` is correct
+- **Ralph file not found** → Create it with `ralph init`, or check that the `ralph` path in `ralph.toml` is correct
 - **Command not found** → Install the agent CLI or fix the `command` in `ralph.toml`
 
-### "PROMPT.md already exists"
+### "RALPH.md already exists"
 
 `ralph init` won't overwrite existing files by default. If you want to start fresh:
 
@@ -108,7 +108,7 @@ Primitives are discovered once when `ralph run` starts. If you add, remove, or m
 3. Run `ralph status` to verify the changes are detected
 4. Run `ralph run` again
 
-This is different from `PROMPT.md`, which **is** re-read every iteration. See [What's fresh and what's fixed](how-it-works.md#whats-fresh-and-whats-fixed) for details.
+This is different from `RALPH.md`, which **is** re-read every iteration. See [What's fresh and what's fixed](how-it-works.md#whats-fresh-and-whats-fixed) for details.
 
 ## Check issues
 
@@ -126,12 +126,12 @@ command: pytest --tb=line -q 2>&1 | tail -20
 
 ```bash
 #!/bin/bash
-# .ralph/checks/my-check/run.sh
+# .ralphify/checks/my-check/run.sh
 pytest --tb=line -q 2>&1 | tail -20
 ```
 
 ```bash
-chmod +x .ralph/checks/my-check/run.sh
+chmod +x .ralphify/checks/my-check/run.sh
 ```
 
 See [command parsing](primitives.md#command-parsing) for details.
@@ -142,7 +142,7 @@ Run the check command manually to see if it works:
 
 ```bash
 # Look up the command in your check file
-cat .ralph/checks/tests/CHECK.md
+cat .ralphify/checks/tests/CHECK.md
 
 # Run it directly
 uv run pytest -x
@@ -169,7 +169,7 @@ The default is 60 seconds. Long test suites may need 300+ seconds.
 If you're using a `run.sh` or `run.py` script instead of a frontmatter `command`, make sure it's executable:
 
 ```bash
-chmod +x .ralph/checks/my-check/run.sh
+chmod +x .ralphify/checks/my-check/run.sh
 ```
 
 ### Check has neither command nor script
@@ -185,7 +185,7 @@ If `ralph status` warns that a check has neither a `run.*` script nor a `command
 
 If a `{{ contexts.my-context }}` placeholder silently disappears (the prompt has nothing where you expected content), the context name doesn't match any discovered context. Ralphify replaces unmatched named placeholders with an empty string — you won't see raw placeholder text. Check:
 
-1. The directory name matches: `.ralph/contexts/my-context/CONTEXT.md`
+1. The directory name matches: `.ralphify/contexts/my-context/CONTEXT.md`
 2. The placeholder uses the exact directory name: `{{ contexts.my-context }}`
 3. The context is enabled (check with `ralph status`)
 4. If the context has a command, verify the command produces output by running it manually
@@ -201,7 +201,7 @@ Run the context command manually:
 
 ```bash
 # Check what command is configured
-cat .ralph/contexts/git-log/CONTEXT.md
+cat .ralphify/contexts/git-log/CONTEXT.md
 
 # Run it directly
 git log --oneline -10

@@ -16,20 +16,20 @@ from rich.console import Console
 
 from ralphify import __version__
 from ralphify._console_emitter import ConsoleEmitter
-from ralphify._frontmatter import CHECK_MARKER, CONFIG_FILENAME, CONTEXT_MARKER, INSTRUCTION_MARKER, PROMPT_MARKER
+from ralphify._frontmatter import CHECK_MARKER, CONFIG_FILENAME, CONTEXT_MARKER, INSTRUCTION_MARKER, PRIMITIVES_DIR, RALPH_MARKER
 from ralphify.checks import discover_checks
 from ralphify.contexts import discover_contexts
 from ralphify._run_types import RunConfig, RunState
 from ralphify.engine import run_loop
 from ralphify.instructions import discover_instructions
-from ralphify.prompts import discover_prompts, resolve_prompt_source
+from ralphify.ralphs import discover_ralphs, resolve_ralph_source
 from ralphify.detector import detect_project
 from ralphify._templates import (
     CHECK_MD_TEMPLATE,
     CONTEXT_MD_TEMPLATE,
     INSTRUCTION_MD_TEMPLATE,
-    PROMPT_MD_TEMPLATE,
-    PROMPT_TEMPLATE,
+    RALPH_MD_TEMPLATE,
+    ROOT_RALPH_TEMPLATE,
     RALPH_TOML_TEMPLATE,
 )
 
@@ -45,8 +45,8 @@ app = typer.Typer()
 new_app = typer.Typer(help="Scaffold new ralph primitives.", invoke_without_command=True)
 app.add_typer(new_app, name="new")
 
-prompts_app = typer.Typer(help="Manage prompt primitives.", invoke_without_command=True)
-app.add_typer(prompts_app, name="prompts")
+ralphs_app = typer.Typer(help="Manage ralph primitives.", invoke_without_command=True)
+app.add_typer(ralphs_app, name="ralphs")
 
 
 @new_app.callback()
@@ -57,26 +57,26 @@ def new_callback(ctx: typer.Context) -> None:
         raise typer.Exit()
 
 
-@prompts_app.callback()
-def prompts_callback(ctx: typer.Context) -> None:
-    """Manage prompt primitives."""
+@ralphs_app.callback()
+def ralphs_callback(ctx: typer.Context) -> None:
+    """Manage ralph primitives."""
     if ctx.invoked_subcommand is None:
         rprint(ctx.get_help())
         raise typer.Exit()
 
 
-@prompts_app.command("list")
-def prompts_list() -> None:
-    """List available prompts."""
-    prompts = discover_prompts()
-    root_prompt = Path("PROMPT.md")
-    if not prompts and not root_prompt.exists():
-        rprint("[dim]No prompts found.[/dim]")
+@ralphs_app.command("list")
+def ralphs_list() -> None:
+    """List available ralphs."""
+    ralphs = discover_ralphs()
+    root_ralph = Path("RALPH.md")
+    if not ralphs and not root_ralph.exists():
+        rprint("[dim]No ralphs found.[/dim]")
         return
-    if root_prompt.exists():
-        size = len(root_prompt.read_text())
-        rprint(f"  [cyan]PROMPT.md[/cyan]  (root, {size} chars)")
-    for p in prompts:
+    if root_ralph.exists():
+        size = len(root_ralph.read_text())
+        rprint(f"  [cyan]RALPH.md[/cyan]  (root, {size} chars)")
+    for p in ralphs:
         icon = "[green]✓[/green]" if p.enabled else "[dim]○[/dim]"
         desc = f"  {p.description}" if p.description else ""
         rprint(f"  {icon} {p.name:<18}{desc}")
@@ -166,7 +166,7 @@ def init(
 ) -> None:
     """Initialize ralph config and prompt template."""
     config_path = Path(CONFIG_FILENAME)
-    prompt_path = Path("PROMPT.md")
+    prompt_path = Path("RALPH.md")
 
     project_type = detect_project()
 
@@ -178,29 +178,29 @@ def init(
     rprint(f"[green]Created {CONFIG_FILENAME}[/green]")
 
     if prompt_path.exists() and not force:
-        rprint("[yellow]PROMPT.md already exists. Use --force to overwrite.[/yellow]")
+        rprint("[yellow]RALPH.md already exists. Use --force to overwrite.[/yellow]")
     else:
-        prompt_path.write_text(PROMPT_TEMPLATE)
-        rprint("[green]Created PROMPT.md[/green]")
+        prompt_path.write_text(ROOT_RALPH_TEMPLATE)
+        rprint("[green]Created RALPH.md[/green]")
 
     rprint(f"\nDetected project type: [bold]{project_type}[/bold]")
-    rprint("Edit PROMPT.md to customize your agent's behavior.")
+    rprint("Edit RALPH.md to customize your agent's behavior.")
 
 
 def _scaffold_primitive(
     kind: str, name: str, filename: str, template: str,
-    prompt: str | None = None,
+    ralph: str | None = None,
 ) -> None:
     """Create a new ralph primitive directory and template file.
 
-    When *prompt* is set, the primitive is created under
-    ``.ralph/prompts/{prompt}/{kind}/{name}/`` instead of the global
-    ``.ralph/{kind}/{name}/``.
+    When *ralph* is set, the primitive is created under
+    ``.ralphify/ralphs/{ralph}/{kind}/{name}/`` instead of the global
+    ``.ralphify/{kind}/{name}/``.
     """
-    if prompt:
-        prim_dir = Path(".ralph") / "prompts" / prompt / kind / name
+    if ralph:
+        prim_dir = Path(PRIMITIVES_DIR) / "ralphs" / ralph / kind / name
     else:
-        prim_dir = Path(".ralph") / kind / name
+        prim_dir = Path(PRIMITIVES_DIR) / kind / name
     prim_file = prim_dir / filename
     label = filename.split(".")[0].capitalize()
     if prim_file.exists():
@@ -214,36 +214,36 @@ def _scaffold_primitive(
 @new_app.command()
 def check(
     name: str = typer.Argument(help="Name of the new check."),
-    prompt: str | None = typer.Option(None, "--prompt", help="Scope check to a named prompt."),
+    ralph: str | None = typer.Option(None, "--ralph", help="Scope check to a named ralph."),
 ) -> None:
     """Create a new check. Checks are scripts that run after each iteration to validate the agent's work (e.g. tests, linters)."""
-    _scaffold_primitive("checks", name, CHECK_MARKER, CHECK_MD_TEMPLATE, prompt=prompt)
+    _scaffold_primitive("checks", name, CHECK_MARKER, CHECK_MD_TEMPLATE, ralph=ralph)
 
 
 @new_app.command()
 def instruction(
     name: str = typer.Argument(help="Name of the new instruction."),
-    prompt: str | None = typer.Option(None, "--prompt", help="Scope instruction to a named prompt."),
+    ralph: str | None = typer.Option(None, "--ralph", help="Scope instruction to a named ralph."),
 ) -> None:
     """Create a new instruction. Instructions are template-based prompts injected into the agent's context each iteration."""
-    _scaffold_primitive("instructions", name, INSTRUCTION_MARKER, INSTRUCTION_MD_TEMPLATE, prompt=prompt)
+    _scaffold_primitive("instructions", name, INSTRUCTION_MARKER, INSTRUCTION_MD_TEMPLATE, ralph=ralph)
 
 
 @new_app.command()
 def context(
     name: str = typer.Argument(help="Name of the new context."),
-    prompt: str | None = typer.Option(None, "--prompt", help="Scope context to a named prompt."),
+    ralph: str | None = typer.Option(None, "--ralph", help="Scope context to a named ralph."),
 ) -> None:
     """Create a new context. Contexts are dynamic data sources (scripts or static text) injected before each iteration."""
-    _scaffold_primitive("contexts", name, CONTEXT_MARKER, CONTEXT_MD_TEMPLATE, prompt=prompt)
+    _scaffold_primitive("contexts", name, CONTEXT_MARKER, CONTEXT_MD_TEMPLATE, ralph=ralph)
 
 
-@new_app.command()
-def prompt(
-    name: str = typer.Argument(help="Name of the new prompt."),
+@new_app.command("ralph")
+def new_ralph(
+    name: str = typer.Argument(help="Name of the new ralph."),
 ) -> None:
-    """Create a new prompt. Prompts are reusable task-focused prompt files you can switch between."""
-    _scaffold_primitive("prompts", name, PROMPT_MARKER, PROMPT_MD_TEMPLATE)
+    """Create a new ralph. Ralphs are reusable task-focused prompt files you can switch between."""
+    _scaffold_primitive("ralphs", name, RALPH_MARKER, RALPH_MD_TEMPLATE)
 
 
 @app.command()
@@ -253,21 +253,21 @@ def status() -> None:
     agent = config["agent"]
     command = agent["command"]
     args = agent.get("args", [])
-    prompt_file = agent["prompt"]
-    prompt_path = Path(prompt_file)
+    ralph_file = agent["ralph"]
+    ralph_path = Path(ralph_file)
 
     rprint("[bold]Configuration[/bold]")
     rprint(f"  Command: [cyan]{command} {' '.join(args)}[/cyan]")
-    rprint(f"  Prompt:  [cyan]{prompt_file}[/cyan]")
+    rprint(f"  Ralph:   [cyan]{ralph_file}[/cyan]")
 
     issues = []
 
-    if prompt_path.exists():
-        size = len(prompt_path.read_text())
-        rprint(f"\n[green]✓[/green] Prompt file exists ({size} chars)")
+    if ralph_path.exists():
+        size = len(ralph_path.read_text())
+        rprint(f"\n[green]✓[/green] Ralph file exists ({size} chars)")
     else:
-        issues.append("prompt")
-        rprint(f"\n[red]✗[/red] Prompt file '{prompt_file}' not found")
+        issues.append("ralph")
+        rprint(f"\n[red]✗[/red] Ralph file '{ralph_file}' not found")
 
     if shutil.which(command):
         rprint(f"[green]✓[/green] Command '{command}' found on PATH")
@@ -287,8 +287,8 @@ def status() -> None:
     _print_primitives_section("Instructions", instructions,
         lambda i: (i.content[:50] + "...") if len(i.content) > 50 else i.content)
 
-    prompts = discover_prompts()
-    _print_primitives_section("Prompts", prompts,
+    ralphs = discover_ralphs()
+    _print_primitives_section("Ralphs", ralphs,
         lambda p: p.description or "(no description)")
 
     if issues:
@@ -300,7 +300,7 @@ def status() -> None:
 
 @app.command()
 def run(
-    prompt_name: str | None = typer.Argument(None, help="Name of a prompt in .ralph/prompts/."),
+    prompt_name: str | None = typer.Argument(None, help="Name of a ralph in .ralphify/ralphs/."),
     n: int | None = typer.Option(None, "-n", help="Max number of iterations. Infinite if not set."),
     prompt_text: str | None = typer.Option(None, "-p", "--prompt", help="Ad-hoc prompt text. Overrides the prompt file."),
     prompt_file: str | None = typer.Option(None, "--prompt-file", "-f", help="Path to prompt file. Overrides ralph.toml."),
@@ -311,7 +311,7 @@ def run(
 ) -> None:
     """Run the autonomous coding loop.
 
-    Each iteration: read PROMPT.md, resolve context placeholders, resolve
+    Each iteration: read RALPH.md, resolve context placeholders, resolve
     instruction placeholders, append any check failures from the previous
     iteration, pipe the assembled prompt to the agent, then run checks.
     Repeat until *n* iterations or Ctrl+C.
@@ -324,18 +324,18 @@ def run(
 
     # Inline text (-p/--prompt) bypasses file resolution entirely.
     if prompt_text:
-        prompt_file_path = agent.get("prompt", "PROMPT.md")
+        prompt_file_path = agent.get("ralph", "RALPH.md")
         resolved_prompt_name: str | None = None
     else:
         if prompt_name and prompt_file:
-            rprint("[red]Cannot use both a prompt name and --prompt-file.[/red]")
+            rprint("[red]Cannot use both a ralph name and --prompt-file.[/red]")
             raise typer.Exit(1)
 
         try:
-            prompt_file_path, resolved_prompt_name = resolve_prompt_source(
+            prompt_file_path, resolved_prompt_name = resolve_ralph_source(
                 prompt_name=prompt_name,
                 prompt_file=prompt_file,
-                toml_prompt=agent.get("prompt", "PROMPT.md"),
+                toml_ralph=agent.get("ralph", "RALPH.md"),
             )
         except ValueError as e:
             rprint(f"[red]{e}[/red]")

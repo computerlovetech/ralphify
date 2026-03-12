@@ -1,6 +1,6 @@
 """Parse YAML frontmatter from primitive markdown files.
 
-All primitive types (checks, contexts, instructions, prompts) store their
+All primitive types (checks, contexts, instructions, ralphs) store their
 configuration in markdown files with ``---``-delimited frontmatter.
 This module provides the shared parsing logic.
 
@@ -19,8 +19,9 @@ from collections.abc import Callable
 CHECK_MARKER = "CHECK.md"
 CONTEXT_MARKER = "CONTEXT.md"
 INSTRUCTION_MARKER = "INSTRUCTION.md"
-PROMPT_MARKER = "PROMPT.md"
+RALPH_MARKER = "RALPH.md"
 CONFIG_FILENAME = "ralph.toml"
+PRIMITIVES_DIR = ".ralphify"
 
 # Pre-compiled pattern to strip HTML comments from body text.
 _HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)

@@ -23,7 +23,7 @@ Yes. Ralphify works with any CLI that reads a prompt from **stdin** and exits wh
 [agent]
 command = "bash"
 args = ["-c", "cat - | my-agent-wrapper --non-interactive"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 Claude Code is the default because its `-p` flag is designed for exactly this use case — reading a prompt from stdin and running non-interactively. See [Using with Different Agents](agents.md) for setup guides for Aider, Codex CLI, and custom wrappers.
@@ -61,7 +61,7 @@ See [Running in GitHub Actions](cookbook.md#running-in-github-actions) for a com
 
 ### Can I edit the prompt while the loop is running?
 
-Yes — this is a core feature. `PROMPT.md` is re-read from disk at the start of every iteration. Edit it, save, and the next iteration uses the updated version. This is the main way to steer the agent in real time.
+Yes — this is a core feature. `RALPH.md` is re-read from disk at the start of every iteration. Edit it, save, and the next iteration uses the updated version. This is the main way to steer the agent in real time.
 
 ### Can I add or change checks/contexts/instructions while running?
 
@@ -89,7 +89,7 @@ This usually means the check command itself doesn't work, not that the agent is 
 
 ```bash
 # See what's configured
-cat .ralph/checks/my-check/CHECK.md
+cat .ralphify/checks/my-check/CHECK.md
 
 # Run the command directly
 uv run pytest -x  # or whatever the command is
@@ -130,8 +130,8 @@ Ralphify creates several files and directories. Here's what belongs in version c
 | File / directory | Commit? | Why |
 |---|---|---|
 | `ralph.toml` | **Yes** | Loop configuration — shared across your team |
-| `PROMPT.md` | **Yes** | The prompt is the core of your loop |
-| `.ralph/` | **Yes** | Checks, contexts, and instructions — project config your team should share |
+| `RALPH.md` | **Yes** | The prompt is the core of your loop |
+| `.ralphify/` | **Yes** | Checks, contexts, and instructions — project config your team should share |
 | `ralph_logs/` | **No** | Iteration output logs — large, machine-specific, regenerated every run |
 
 Add `ralph_logs/` to your `.gitignore`:
@@ -140,34 +140,34 @@ Add `ralph_logs/` to your `.gitignore`:
 echo "ralph_logs/" >> .gitignore
 ```
 
-### Should I commit the `.ralph/` directory?
+### Should I commit the `.ralphify/` directory?
 
 Yes. It contains your checks, contexts, and instructions — this is project configuration that your team should share:
 
 ```bash
-git add .ralph/
+git add .ralphify/
 git commit -m "chore: add ralph checks and contexts"
 ```
 
-### What's the difference between instructions and just writing rules in PROMPT.md?
+### What's the difference between instructions and just writing rules in RALPH.md?
 
 Instructions are **modular** — you can enable, disable, or swap them without editing the prompt. This is useful when:
 
-- Multiple prompts share the same coding standards
+- Multiple ralphs share the same coding standards
 - You want to temporarily disable a rule without deleting it
 - Team members maintain different instruction sets
 
-If you have one prompt with a few simple rules, writing them directly in `PROMPT.md` is simpler and easier to maintain.
+If you have one prompt with a few simple rules, writing them directly in `RALPH.md` is simpler and easier to maintain.
 
-### Can I use a different prompt file name?
+### Can I use a different ralph file name?
 
-Yes. Change the `prompt` field in `ralph.toml`:
+Yes. Change the `ralph` field in `ralph.toml`:
 
 ```toml
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "my-custom-prompt.md"
+ralph = "my-custom-ralph.md"
 ```
 
 The file can be named anything and placed anywhere relative to the project root.
@@ -186,7 +186,7 @@ Use a **script** when you need setup/teardown, multiple steps, or conditional lo
 
 ```bash
 #!/bin/bash
-# .ralph/checks/integration/run.sh
+# .ralphify/checks/integration/run.sh
 set -e
 docker compose up -d
 pytest tests/integration/

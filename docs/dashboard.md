@@ -1,5 +1,5 @@
 ---
-description: How to install, launch, and use the ralphify web dashboard to manage runs, browse prompts, edit primitives, and review history.
+description: How to install, launch, and use the ralphify web dashboard to manage runs, browse ralphs, edit primitives, and review history.
 ---
 
 # Web Dashboard
@@ -87,7 +87,7 @@ Events stream over WebSocket, so the page updates without refreshing.
 ### Configure
 
 The Configure tab is your central hub for managing all primitives. The overview
-shows four cards — **Prompts**, **Checks**, **Contexts**, and **Instructions** —
+shows four cards — **Ralphs**, **Checks**, **Contexts**, and **Instructions** —
 each displaying how many items exist.
 
 <figure markdown="span">
@@ -116,19 +116,19 @@ Click an item to open its editor, where you can:
   <figcaption>Click a check to edit its command, timeout, failure instruction, and enabled toggle.</figcaption>
 </figure>
 
-The Prompts section works the same way — browse, create, edit, and delete named
-prompts without leaving the browser. Each prompt card also has a **Run** button
+The Ralphs section works the same way — browse, create, edit, and delete named
+ralphs without leaving the browser. Each ralph card also has a **Run** button
 (visible on hover, always visible on mobile) that opens the New Run modal with
-that prompt pre-selected — so you can go from browsing prompts to launching a run
-in one click. The prompt editor has a **Run this prompt** button in the header
+that ralph pre-selected — so you can go from browsing ralphs to launching a run
+in one click. The ralph editor has a **Run this ralph** button in the header
 for the same shortcut.
 
 <figure markdown="span">
-  ![Prompts list in Configure](assets/dashboard/configure-prompts.png){ loading=lazy }
-  <figcaption>Drill into Prompts to browse and manage your named prompts. Hover over a card to see the Run button.</figcaption>
+  ![Ralphs list in Configure](assets/dashboard/configure-prompts.png){ loading=lazy }
+  <figcaption>Drill into Ralphs to browse and manage your named ralphs. Hover over a card to see the Run button.</figcaption>
 </figure>
 
-Changes are written directly to the `.ralph/` directory on disk.
+Changes are written directly to the `.ralphify/` directory on disk.
 
 ### History
 
@@ -149,19 +149,19 @@ button to start your first run.
 
 Click **New Run** in the sidebar to open the run modal. It lets you:
 
-- **Pick a named prompt** — cards show every prompt discovered in `.ralph/prompts/`
-- **Preview the prompt** — after selecting a prompt, expand the preview panel to see its full content before launching
+- **Pick a named ralph** — cards show every ralph discovered in `.ralphify/ralphs/`
+- **Preview the ralph** — after selecting a ralph, expand the preview panel to see its full content before launching
 - **Enter an ad-hoc prompt** — toggle to ad-hoc mode and type a one-off task
 - **Configure settings** — expand the settings panel to set max iterations, delay between iterations, timeout, and stop-on-error
 
 <figure markdown="span">
   ![New Run dialog](assets/dashboard/new-run-dialog.png){ loading=lazy }
-  <figcaption>Pick a named prompt or write an ad-hoc one. The Settings panel is collapsed by default.</figcaption>
+  <figcaption>Pick a named ralph or write an ad-hoc one. The Settings panel is collapsed by default.</figcaption>
 </figure>
 
 <figure markdown="span">
   ![New Run with settings expanded](assets/dashboard/new-run-settings.png){ loading=lazy }
-  <figcaption>Select a prompt and expand Settings to configure iterations, delay, timeout, and stop-on-error before launching.</figcaption>
+  <figcaption>Select a ralph and expand Settings to configure iterations, delay, timeout, and stop-on-error before launching.</figcaption>
 </figure>
 
 Once a run starts, you can **pause**, **resume**, or **stop** it from the
@@ -234,7 +234,7 @@ The dashboard lets you edit primitives via the Configure tab while a run is in p
 
 | What you change | When it takes effect |
 |---|---|
-| `PROMPT.md` content | Next iteration — the prompt is re-read from disk every iteration |
+| `RALPH.md` content | Next iteration — the prompt is re-read from disk every iteration |
 | Context command output | Next iteration — context commands re-run every iteration |
 | Run settings (iterations, delay, timeout, stop-on-error) | Next iteration — applied via the [settings panel](#adjusting-settings-mid-run) |
 | Check/context/instruction config (frontmatter, body, enable/disable) | After restart — primitive configurations are loaded once when a run starts |
@@ -248,14 +248,14 @@ To apply primitive configuration changes to a running run, **stop** the run and 
 ## Data storage
 
 The dashboard persists run history, iterations, check results, and raw events
-in a SQLite database at `~/.ralph/ui.db`. This is what powers the History tab
+in a SQLite database at `~/.ralphify/ui.db`. This is what powers the History tab
 and the iterations endpoint — data survives across dashboard restarts.
 
 The database is created automatically on first launch. To reset all history,
 stop the dashboard and delete the file:
 
 ```bash
-rm ~/.ralph/ui.db
+rm ~/.ralphify/ui.db
 ```
 
 ## Architecture
@@ -330,9 +330,9 @@ The request body accepts these fields:
 | Field            | Type          | Default      | Description                                         |
 |------------------|---------------|--------------|-----------------------------------------------------|
 | `project_dir`    | string        | `"."`        | Path to the project directory                       |
-| `prompt_file`    | string        | `"PROMPT.md"`| Path to the prompt file                             |
+| `prompt_file`    | string        | `"RALPH.md"` | Path to the ralph file                              |
 | `prompt_text`    | string\|null  | `null`       | Inline prompt text (overrides `prompt_file`)        |
-| `prompt_name`    | string\|null  | `null`       | Named prompt to use from `.ralph/prompts/`          |
+| `prompt_name`    | string\|null  | `null`       | Named ralph to use from `.ralphify/ralphs/`         |
 | `command`        | string\|null  | `null`       | Agent command (reads from `ralph.toml` if omitted)  |
 | `args`           | list\|null    | `null`       | Agent arguments (reads from `ralph.toml` if omitted)|
 | `max_iterations` | int\|null     | `null`       | Max iterations (`null` = unlimited)                 |
@@ -362,9 +362,9 @@ Response:
 
 You can provide a prompt three ways — pick one:
 
-- **`prompt_file`** — path to a markdown file (default: reads `PROMPT.md`)
+- **`prompt_file`** — path to a markdown file (default: reads `RALPH.md`)
 - **`prompt_text`** — raw prompt string passed inline
-- **`prompt_name`** — name of a prompt in `.ralph/prompts/`
+- **`prompt_name`** — name of a ralph in `.ralphify/ralphs/`
 
 #### List all runs
 
@@ -527,7 +527,7 @@ curl http://127.0.0.1:8765/api/history/runs
     "run_id": "a1b2c3d4",
     "status": "completed",
     "command": "claude",
-    "prompt_file": "PROMPT.md",
+    "prompt_file": "RALPH.md",
     "started_at": "2026-03-11T14:23:01",
     "stopped_at": "2026-03-11T14:35:12",
     "iterations": 5,
@@ -545,7 +545,7 @@ Each run includes:
 | `run_id`     | string       | Unique run identifier                          |
 | `status`     | string       | `"running"`, `"completed"`, `"stopped"`, etc.  |
 | `command`    | string       | Agent command used                             |
-| `prompt_file`| string       | Path to the prompt file                        |
+| `prompt_file`| string       | Path to the ralph file                         |
 | `started_at` | string\|null | ISO 8601 start timestamp                       |
 | `stopped_at` | string\|null | ISO 8601 stop timestamp                        |
 | `iterations` | int          | Total iterations executed                      |
@@ -612,7 +612,7 @@ curl -X POST http://127.0.0.1:8765/api/projects/$PROJECT/primitives/checks \
 ```
 
 The `name` field in `frontmatter` is required — it determines the directory name
-under `.ralph/checks/typecheck/CHECK.md`.
+under `.ralphify/checks/typecheck/CHECK.md`.
 
 #### Update a primitive
 

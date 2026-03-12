@@ -12,7 +12,7 @@ Each time the loop runs an iteration, ralphify follows these steps in order:
 
 ``` mermaid
 flowchart TD
-    A["📄 Read PROMPT.md from disk"] --> B["Run context commands"]
+    A["📄 Read RALPH.md from disk"] --> B["Run context commands"]
     B --> C["Inject context output into prompt"]
     C --> D["Inject instruction content"]
     D --> E{"Check failures\nfrom previous\niteration?"}
@@ -55,7 +55,7 @@ The prompt file is re-read from disk at the start of **every** iteration, and co
 
 | What | When it's loaded | Can you change it while running? |
 |---|---|---|
-| `PROMPT.md` | Re-read every iteration | Yes — edits take effect next iteration |
+| `RALPH.md` | Re-read every iteration | Yes — edits take effect next iteration |
 | Context command output | Re-run every iteration | Yes — commands always produce fresh data |
 | Context static content | Loaded at startup | No — restart the loop to pick up changes |
 | Instruction content | Loaded at startup | No — restart the loop to pick up changes |
@@ -64,7 +64,7 @@ The prompt file is re-read from disk at the start of **every** iteration, and co
 
 This means:
 
-- You can edit `PROMPT.md` while the loop is running, and changes take effect on the next iteration — this is the primary way to steer the agent in real time
+- You can edit `RALPH.md` while the loop is running, and changes take effect on the next iteration — this is the primary way to steer the agent in real time
 - Context commands run fresh each iteration, so the agent always sees current data (latest git log, current test status, etc.)
 - But if you add a new check, modify a check's command, change an instruction's content, or toggle a primitive's `enabled` flag, you need to stop the loop (`Ctrl+C`) and restart it
 - The agent has no memory of previous iterations — all continuity comes from the codebase, git history, and any plan files the agent reads
@@ -75,12 +75,12 @@ Ralphify builds the final prompt in three layers, applied in this order:
 
 ``` mermaid
 flowchart LR
-    A["PROMPT.md"] --> B["1. Context\nresolution"]
+    A["RALPH.md"] --> B["1. Context\nresolution"]
     B --> C["2. Instruction\nresolution"]
     C --> D["3. Check failure\ninjection"]
     D --> E["Assembled\nprompt"]
-    F[(".ralph/contexts/")] --> B
-    G[(".ralph/instructions/")] --> C
+    F[(".ralphify/contexts/")] --> B
+    G[(".ralphify/instructions/")] --> C
     H["Previous iteration\nfailures"] --> D
     E --> I["stdin → agent"]
 
@@ -93,10 +93,10 @@ But first — where does the prompt come from? Ralphify resolves the prompt sour
 | Priority | Source | How to use |
 |---|---|---|
 | 1 | `-p` flag | `ralph run -p "Fix the login bug"` — inline ad-hoc text |
-| 2 | Positional name | `ralph run docs` — looks up `.ralph/prompts/docs/PROMPT.md` |
+| 2 | Positional name | `ralph run docs` — looks up `.ralphify/ralphs/docs/RALPH.md` |
 | 3 | `-f` / `--prompt-file` flag | `ralph run -f path/to/prompt.md` — explicit file path |
-| 4 | `ralph.toml` `prompt` field | Can be a [named prompt](primitives.md#prompts) or a file path |
-| 5 | Fallback | `PROMPT.md` in the project root |
+| 4 | `ralph.toml` `ralph` field | Can be a [named ralph](primitives.md#ralphs) or a file path |
+| 5 | Fallback | `RALPH.md` in the project root |
 
 Once the prompt text is loaded, the three assembly layers run in order:
 
@@ -162,10 +162,10 @@ On the **first** iteration, no check failures are injected (there's no previous 
 
 Here's a concrete example showing how all three layers combine into the final prompt. Given these files:
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
-# Prompt
+# Ralph
 
 {{ contexts.git-log }}
 
@@ -180,7 +180,7 @@ Read PLAN.md and implement the next task.
 - Commit with a descriptive message
 ```
 
-**`.ralph/contexts/git-log/CONTEXT.md`**
+**`.ralphify/contexts/git-log/CONTEXT.md`**
 
 ```markdown
 ---
@@ -191,7 +191,7 @@ enabled: true
 ## Recent commits
 ```
 
-**`.ralph/instructions/code-style/INSTRUCTION.md`**
+**`.ralphify/instructions/code-style/INSTRUCTION.md`**
 
 ```markdown
 ---
@@ -207,7 +207,7 @@ And suppose the previous iteration's test check failed with exit code 1.
 The **assembled prompt** piped to the agent as stdin:
 
 ````markdown
-# Prompt
+# Ralph
 
 ## Recent commits
 a1b2c3d feat: add user model
@@ -257,7 +257,7 @@ The assembled prompt is piped to the agent command as **stdin**. The agent comma
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
 This runs as:
@@ -374,4 +374,4 @@ When you run `ralph init`, ralphify detects your project type by looking for mar
 
 Files are checked in the order shown above. If a project contains multiple manifest files (e.g. both `package.json` and `pyproject.toml`), the first match wins.
 
-The detected type is displayed during init but doesn't currently change the generated configuration. All project types get the same default `ralph.toml` and `PROMPT.md`.
+The detected type is displayed during init but doesn't currently change the generated configuration. All project types get the same default `ralph.toml` and `RALPH.md`.

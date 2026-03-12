@@ -4,7 +4,7 @@ description: Copy-pasteable ralphify setups for Python, TypeScript, Rust, Go, bu
 
 # Cookbook
 
-Complete, copy-pasteable setups for common use cases. Each example includes the full configuration — `ralph.toml`, `PROMPT.md`, checks, and contexts — so you can get a productive loop running quickly.
+Complete, copy-pasteable setups for common use cases. Each example includes the full configuration — `ralph.toml`, `RALPH.md`, checks, and contexts — so you can get a productive loop running quickly.
 
 ## Python library development
 
@@ -18,10 +18,10 @@ Ship features from a plan file, with test and lint guardrails.
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -47,7 +47,7 @@ implement it fully, then mark it done.
 
 ### Checks
 
-**`.ralph/checks/tests/CHECK.md`**
+**`.ralphify/checks/tests/CHECK.md`**
 
 ```markdown
 ---
@@ -59,7 +59,7 @@ Fix all failing tests. Do not skip or delete tests.
 Do not add `# type: ignore` or `# noqa` comments.
 ```
 
-**`.ralph/checks/lint/CHECK.md`**
+**`.ralphify/checks/lint/CHECK.md`**
 
 ```markdown
 ---
@@ -72,7 +72,7 @@ Fix all lint errors. Do not suppress warnings with noqa comments.
 
 ### Context
 
-**`.ralph/contexts/git-log/CONTEXT.md`**
+**`.ralphify/contexts/git-log/CONTEXT.md`**
 
 ```markdown
 ---
@@ -112,10 +112,10 @@ Point the agent at a failing test suite and let it fix bugs one at a time.
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -140,7 +140,7 @@ the root cause in the source code, fix it, and verify the fix passes.
 
 ### Checks
 
-**`.ralph/checks/tests/CHECK.md`**
+**`.ralphify/checks/tests/CHECK.md`**
 
 ```markdown
 ---
@@ -155,7 +155,7 @@ Do not modify tests unless they are incorrect.
 
 ### Context
 
-**`.ralph/contexts/test-status/CONTEXT.md`**
+**`.ralphify/contexts/test-status/CONTEXT.md`**
 
 ```markdown
 ---
@@ -202,10 +202,10 @@ Improve project documentation one page at a time. This is the pattern ralphify u
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -230,7 +230,7 @@ page per iteration.
 
 ### Checks
 
-**`.ralph/checks/docs-build/CHECK.md`**
+**`.ralphify/checks/docs-build/CHECK.md`**
 
 ```markdown
 ---
@@ -245,7 +245,7 @@ invalid admonition syntax.
 
 ### Context
 
-**`.ralph/contexts/git-log/CONTEXT.md`**
+**`.ralphify/contexts/git-log/CONTEXT.md`**
 
 ```markdown
 ---
@@ -278,10 +278,10 @@ Feature development in a TypeScript project with type checking and test guardrai
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -308,7 +308,7 @@ implement it fully, then mark it done.
 
 ### Checks
 
-**`.ralph/checks/tests/CHECK.md`**
+**`.ralphify/checks/tests/CHECK.md`**
 
 ```markdown
 ---
@@ -319,7 +319,7 @@ enabled: true
 Fix all failing tests. Do not skip tests with `.skip` or delete them.
 ```
 
-**`.ralph/checks/typecheck/CHECK.md`**
+**`.ralphify/checks/typecheck/CHECK.md`**
 
 ```markdown
 ---
@@ -330,7 +330,7 @@ enabled: true
 Fix all type errors. Do not use `// @ts-ignore` or `as any`.
 ```
 
-**`.ralph/checks/lint/CHECK.md`**
+**`.ralphify/checks/lint/CHECK.md`**
 
 ```markdown
 ---
@@ -343,7 +343,7 @@ Fix all lint errors. Do not disable rules with eslint-disable comments.
 
 ### Context
 
-**`.ralph/contexts/git-log/CONTEXT.md`**
+**`.ralphify/contexts/git-log/CONTEXT.md`**
 
 ```markdown
 ---
@@ -378,10 +378,10 @@ Feature development in a Rust project with cargo tests and clippy linting.
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -407,7 +407,7 @@ implement it fully, then mark it done.
 
 ### Checks
 
-**`.ralph/checks/tests/CHECK.md`**
+**`.ralphify/checks/tests/CHECK.md`**
 
 ```markdown
 ---
@@ -419,7 +419,7 @@ Fix all failing tests. Do not ignore or delete tests.
 Do not add `#[ignore]` attributes to skip tests.
 ```
 
-**`.ralph/checks/clippy/CHECK.md`**
+**`.ralphify/checks/clippy/CHECK.md`**
 
 ```markdown
 ---
@@ -431,7 +431,7 @@ Fix all clippy warnings. Do not suppress warnings with `#[allow(...)]`
 unless there is a genuine reason documented in a comment.
 ```
 
-**`.ralph/checks/fmt/CHECK.md`**
+**`.ralphify/checks/fmt/CHECK.md`**
 
 ```markdown
 ---
@@ -444,7 +444,7 @@ Run `cargo fmt` to fix formatting. Do not manually adjust formatting.
 
 ### Context
 
-**`.ralph/contexts/git-log/CONTEXT.md`**
+**`.ralphify/contexts/git-log/CONTEXT.md`**
 
 ```markdown
 ---
@@ -485,10 +485,10 @@ Feature development in a Go project with tests, vet, and staticcheck.
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -514,7 +514,7 @@ implement it fully, then mark it done.
 
 ### Checks
 
-**`.ralph/checks/tests/CHECK.md`**
+**`.ralphify/checks/tests/CHECK.md`**
 
 ```markdown
 ---
@@ -525,7 +525,7 @@ enabled: true
 Fix all failing tests. Do not skip tests with `t.Skip()` or delete them.
 ```
 
-**`.ralph/checks/vet/CHECK.md`**
+**`.ralphify/checks/vet/CHECK.md`**
 
 ```markdown
 ---
@@ -538,7 +538,7 @@ Fix all issues reported by `go vet`. These are likely bugs, not style issues.
 
 ### Context
 
-**`.ralph/contexts/git-log/CONTEXT.md`**
+**`.ralphify/contexts/git-log/CONTEXT.md`**
 
 ```markdown
 ---
@@ -584,9 +584,9 @@ ralph run -n 3 --log-dir ralph_logs
 
 ## Adding instructions for coding standards
 
-Instructions are reusable rules you can toggle on and off without editing the prompt. They're useful for enforcing coding standards across different prompts.
+Instructions are reusable rules you can toggle on and off without editing the prompt. They're useful for enforcing coding standards across different ralphs.
 
-**`.ralph/instructions/code-style/INSTRUCTION.md`**
+**`.ralphify/instructions/code-style/INSTRUCTION.md`**
 
 ```markdown
 ---
@@ -601,7 +601,7 @@ enabled: true
 - Write docstrings for all public functions and classes
 ```
 
-**`.ralph/instructions/git-conventions/INSTRUCTION.md`**
+**`.ralphify/instructions/git-conventions/INSTRUCTION.md`**
 
 ```markdown
 ---
@@ -638,7 +638,7 @@ Read PLAN.md and pick the next task.
 
 For validation logic that's more complex than a single command, use a `run.sh` or `run.py` script instead of a frontmatter `command`.
 
-**`.ralph/checks/integration/CHECK.md`**
+**`.ralphify/checks/integration/CHECK.md`**
 
 ```markdown
 ---
@@ -650,7 +650,7 @@ Make sure the API server is configured correctly and all endpoints
 return the expected responses.
 ```
 
-**`.ralph/checks/integration/run.sh`**
+**`.ralphify/checks/integration/run.sh`**
 
 ```bash
 #!/bin/bash
@@ -671,7 +671,7 @@ pytest tests/integration/ -x --timeout=30
 Make the script executable:
 
 ```bash
-chmod +x .ralph/checks/integration/run.sh
+chmod +x .ralphify/checks/integration/run.sh
 ```
 
 When both a `command` in frontmatter and a `run.*` script exist, the script takes precedence.
@@ -803,10 +803,10 @@ Systematically improve test coverage by having the agent write tests for uncover
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -835,7 +835,7 @@ module — cover the happy path, edge cases, and error conditions.
 
 ### Checks
 
-**`.ralph/checks/tests/CHECK.md`**
+**`.ralphify/checks/tests/CHECK.md`**
 
 ```markdown
 ---
@@ -848,7 +848,7 @@ If a new test is failing, the test is likely wrong — fix the test,
 not the source code.
 ```
 
-**`.ralph/checks/coverage-threshold/CHECK.md`**
+**`.ralphify/checks/coverage-threshold/CHECK.md`**
 
 This check ensures overall coverage doesn't decrease. Use a `run.sh` script since we need shell features (pipes, exit codes based on output):
 
@@ -861,7 +861,7 @@ Coverage has dropped below the minimum threshold. Check which tests
 are missing and add them. Do not lower the threshold.
 ```
 
-**`.ralph/checks/coverage-threshold/run.sh`**
+**`.ralphify/checks/coverage-threshold/run.sh`**
 
 ```bash
 #!/bin/bash
@@ -873,7 +873,7 @@ uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
 
 ### Context
 
-**`.ralph/contexts/coverage/CONTEXT.md`**
+**`.ralphify/contexts/coverage/CONTEXT.md`**
 
 This context shows the agent which modules need tests:
 
@@ -885,7 +885,7 @@ enabled: true
 ## Current test coverage
 ```
 
-**`.ralph/contexts/coverage/run.sh`**
+**`.ralphify/contexts/coverage/run.sh`**
 
 ```bash
 #!/bin/bash
@@ -909,19 +909,19 @@ Create the `run.sh` scripts:
 
 ```bash
 # Coverage threshold check script
-cat > .ralph/checks/coverage-threshold/run.sh << 'EOF'
+cat > .ralphify/checks/coverage-threshold/run.sh << 'EOF'
 #!/bin/bash
 set -e
 uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
 EOF
-chmod +x .ralph/checks/coverage-threshold/run.sh
+chmod +x .ralphify/checks/coverage-threshold/run.sh
 
 # Coverage context script
-cat > .ralph/contexts/coverage/run.sh << 'EOF'
+cat > .ralphify/contexts/coverage/run.sh << 'EOF'
 #!/bin/bash
 uv run pytest --cov=src --cov-report=term-missing -q 2>/dev/null || true
 EOF
-chmod +x .ralph/contexts/coverage/run.sh
+chmod +x .ralphify/contexts/coverage/run.sh
 ```
 
 Edit the CHECK.md and CONTEXT.md files to match the contents above, then run:
@@ -949,10 +949,10 @@ This recipe shows a JavaScript-to-TypeScript migration. Adapt the commands and r
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`**
+**`RALPH.md`**
 
 ```markdown
 # Prompt
@@ -982,7 +982,7 @@ with the fewest dependencies on other unmigrated files (leaf nodes first).
 
 ### Checks
 
-**`.ralph/checks/01-typecheck/CHECK.md`**
+**`.ralphify/checks/01-typecheck/CHECK.md`**
 
 ```markdown
 ---
@@ -995,7 +995,7 @@ Fix all type errors introduced by the migration. Do not use `any` or
 and return value.
 ```
 
-**`.ralph/checks/02-tests/CHECK.md`**
+**`.ralphify/checks/02-tests/CHECK.md`**
 
 ```markdown
 ---
@@ -1008,7 +1008,7 @@ migration — only types are added. Revert any accidental behavior changes
 and fix the type errors differently.
 ```
 
-**`.ralph/checks/03-lint/CHECK.md`**
+**`.ralphify/checks/03-lint/CHECK.md`**
 
 ```markdown
 ---
@@ -1021,7 +1021,7 @@ Fix all lint errors. Do not disable rules with eslint-disable comments.
 
 ### Contexts
 
-**`.ralph/contexts/migration-status/CONTEXT.md`**
+**`.ralphify/contexts/migration-status/CONTEXT.md`**
 
 Use a script to show which files still need migrating:
 
@@ -1033,7 +1033,7 @@ enabled: true
 ## Migration progress
 ```
 
-**`.ralph/contexts/migration-status/run.sh`**
+**`.ralphify/contexts/migration-status/run.sh`**
 
 ```bash
 #!/bin/bash
@@ -1052,7 +1052,7 @@ if [ "$JS_COUNT" -gt 0 ]; then
 fi
 ```
 
-**`.ralph/contexts/git-log/CONTEXT.md`**
+**`.ralphify/contexts/git-log/CONTEXT.md`**
 
 ```markdown
 ---
@@ -1077,7 +1077,7 @@ ralph new context git-log
 Create the migration status script:
 
 ```bash
-cat > .ralph/contexts/migration-status/run.sh << 'SCRIPT'
+cat > .ralphify/contexts/migration-status/run.sh << 'SCRIPT'
 #!/bin/bash
 JS_COUNT=$(find src -name '*.js' -o -name '*.jsx' | wc -l | tr -d ' ')
 TS_COUNT=$(find src -name '*.ts' -o -name '*.tsx' | wc -l | tr -d ' ')
@@ -1090,7 +1090,7 @@ if [ "$JS_COUNT" -gt 0 ]; then
     find src -name '*.js' -o -name '*.jsx' | sort
 fi
 SCRIPT
-chmod +x .ralph/contexts/migration-status/run.sh
+chmod +x .ralphify/contexts/migration-status/run.sh
 ```
 
 Edit each CHECK.md and CONTEXT.md to match the contents above, then run:
@@ -1121,7 +1121,7 @@ ralph run --log-dir ralph_logs --stop-on-error
 
 Contexts don't need a command — you can use them for static text that you want to inject without editing the prompt file.
 
-**`.ralph/contexts/architecture/CONTEXT.md`**
+**`.ralphify/contexts/architecture/CONTEXT.md`**
 
 ```markdown
 ---

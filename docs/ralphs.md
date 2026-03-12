@@ -1,28 +1,28 @@
 ---
-description: How to write effective prompts for autonomous AI coding loops. Covers prompt anatomy, placeholder usage, prompt patterns for features, bugs, and docs.
+description: How to write effective ralphs for autonomous AI coding loops. Covers ralph anatomy, placeholder usage, ralph patterns for features, bugs, and docs.
 ---
 
-# Writing Your Prompt
+# Writing Your Ralph
 
-Your `PROMPT.md` is the most important file in a ralphify project. It's the only thing the agent reads each iteration — it determines what gets built, how it's validated, and whether the loop produces useful work or noise.
+Your `RALPH.md` is the most important file in a ralphify project. It's the only thing the agent reads each iteration — it determines what gets built, how it's validated, and whether the loop produces useful work or noise.
 
-## How the prompt works
+## How the ralph works
 
 Each iteration, ralphify:
 
-1. Reads `PROMPT.md` from disk
+1. Reads `RALPH.md` from disk
 2. Resolves any `{{ contexts }}` and `{{ instructions }}` placeholders
 3. Appends check failure output (if any checks failed last iteration)
 4. Pipes the assembled text to your agent as stdin
 
 Because the file is re-read every iteration, you can **edit it while the loop is running**. Changes take effect on the next iteration.
 
-## Anatomy of a good prompt
+## Anatomy of a good ralph
 
-A good loop prompt has four parts:
+A good loop ralph has four parts:
 
 ```markdown
-# Prompt
+# Ralph
 
 <!-- 1. ROLE: Tell the agent what it is -->
 You are an autonomous coding agent running in a loop.
@@ -91,7 +91,7 @@ Placeholders let you inject [contexts](primitives.md#contexts) and [instructions
 Place a specific context or instruction exactly where you want it:
 
 ```markdown
-# Prompt
+# Ralph
 
 Here is the current project status:
 {{ contexts.git-log }}
@@ -107,7 +107,7 @@ Now implement the next feature from the plan.
 Place all remaining (not yet placed by name) contexts or instructions:
 
 ```markdown
-# Prompt
+# Ralph
 
 {{ contexts.git-log }}
 
@@ -128,7 +128,7 @@ If your prompt has no placeholders at all, contexts and instructions are automat
 
 ## The check feedback loop
 
-When you have [checks](primitives.md#checks) configured, failed check output is automatically appended to the next iteration's prompt. You don't need to add anything to your `PROMPT.md` for this — it happens automatically.
+When you have [checks](primitives.md#checks) configured, failed check output is automatically appended to the next iteration's prompt. You don't need to add anything to your `RALPH.md` for this — it happens automatically.
 
 The feedback looks like:
 
@@ -149,12 +149,12 @@ Fix all lint errors. Do not add noqa comments.
 
 This creates a self-healing loop: the agent breaks something, the check catches it, and the next iteration gets instructions to fix it.
 
-## Prompt patterns
+## Ralph patterns
 
 ### Feature implementation loop
 
 ```markdown
-# Prompt
+# Ralph
 
 You are an autonomous coding agent. Each iteration starts fresh.
 Progress lives in the code and git.
@@ -176,7 +176,7 @@ Rules:
 ### Bug fix loop
 
 ```markdown
-# Prompt
+# Ralph
 
 You are a bug-fixing agent. Each iteration starts fresh.
 
@@ -192,7 +192,7 @@ unless the test itself is wrong.
 ### Documentation loop
 
 ```markdown
-# Prompt
+# Ralph
 
 You are a documentation agent. Each iteration starts fresh.
 
@@ -206,24 +206,24 @@ one page per iteration.
 - Commit with `docs: <what you documented>`
 ```
 
-## Named prompts for task switching
+## Named ralphs for task switching
 
-If you regularly switch between different tasks — documentation, refactoring, bug fixing, test coverage — you can save each prompt as a **named prompt** instead of rewriting `PROMPT.md` every time.
+If you regularly switch between different tasks — documentation, refactoring, bug fixing, test coverage — you can save each ralph as a **named ralph** instead of rewriting `RALPH.md` every time.
 
 ```bash
-ralph new prompt docs        # Create .ralph/prompts/docs/PROMPT.md
-ralph new prompt refactor    # Create .ralph/prompts/refactor/PROMPT.md
-ralph new prompt add-tests   # Create .ralph/prompts/add-tests/PROMPT.md
+ralph new ralph docs        # Create .ralphify/ralphs/docs/RALPH.md
+ralph new ralph refactor    # Create .ralphify/ralphs/refactor/RALPH.md
+ralph new ralph add-tests   # Create .ralphify/ralphs/add-tests/RALPH.md
 ```
 
-Each named prompt is a full `PROMPT.md` with its own frontmatter, content, and placeholders. Run it by name:
+Each named ralph is a full `RALPH.md` with its own frontmatter, content, and placeholders. Run it by name:
 
 ```bash
-ralph run docs           # Use the docs prompt
+ralph run docs           # Use the docs ralph
 ralph run refactor -n 5  # Use refactor for 5 iterations
 ```
 
-Named prompts live in `.ralph/prompts/<name>/PROMPT.md`. Add a `description` to the frontmatter so `ralph prompts list` shows what each one does:
+Named ralphs live in `.ralphify/ralphs/<name>/RALPH.md`. Add a `description` to the frontmatter so `ralph ralphs list` shows what each one does:
 
 ```markdown
 ---
@@ -231,14 +231,14 @@ description: Systematically increase test coverage
 enabled: true
 ---
 
-# Prompt
+# Ralph
 
 You are a test-writing agent. Each iteration starts fresh...
 ```
 
-You can also attach checks, contexts, and instructions to a specific named prompt — they'll only apply when that prompt runs. See [prompt-scoped primitives](primitives.md#prompt-scoped-primitives) for details.
+You can also attach checks, contexts, and instructions to a specific named ralph — they'll only apply when that ralph runs. See [ralph-scoped primitives](primitives.md#ralph-scoped-primitives) for details.
 
-See [Primitives — Prompts](primitives.md#prompts) for the full reference.
+See [Primitives — Ralphs](primitives.md#ralphs) for the full reference.
 
 ## Tips
 

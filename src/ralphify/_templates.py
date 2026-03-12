@@ -4,7 +4,7 @@ RALPH_TOML_TEMPLATE = """\
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 """
 
 CHECK_MD_TEMPLATE = """\
@@ -27,9 +27,9 @@ enabled: true
 ---
 <!--
 Write your instruction content below.
-This text will be injected into PROMPT.md every iteration.
+This text will be injected into RALPH.md every iteration.
 
-Use {{ instructions.<name> }} in PROMPT.md to place this specifically,
+Use {{ instructions.<name> }} in RALPH.md to place this specifically,
 or {{ instructions }} to inject all enabled instructions.
 -->
 """
@@ -44,21 +44,21 @@ enabled: true
 Optional static text injected above the command output.
 The command runs each iteration and its stdout is appended.
 
-Use {{ contexts.<name> }} in PROMPT.md to place this specifically,
+Use {{ contexts.<name> }} in RALPH.md to place this specifically,
 or {{ contexts }} to inject all enabled contexts.
 -->
 """
 
-PROMPT_MD_TEMPLATE = """\
+RALPH_MD_TEMPLATE = """\
 ---
-description: Describe what this prompt does
+description: Describe what this ralph does
 enabled: true
 ---
 
 Your prompt content here.
 """
 
-PROMPT_TEMPLATE = """\
+ROOT_RALPH_TEMPLATE = """\
 # Prompt
 
 You are an autonomous coding agent running in a loop. Each iteration

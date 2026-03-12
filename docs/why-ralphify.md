@@ -13,7 +13,7 @@ You put it in a loop. And that's where things get interesting.
 The raw loop is simple:
 
 ```bash
-while :; do cat PROMPT.md | claude -p; done
+while :; do cat RALPH.md | claude -p; done
 ```
 
 This works — until it doesn't. Common failure modes:
@@ -39,7 +39,7 @@ Ralphify wraps the raw loop with exactly the machinery you need to make autonomo
 | Stuck iterations | Runs forever | `--timeout` kills hung agents |
 | No cost control | No limits | `-n` caps iterations, `--stop-on-error` halts on failure |
 | No visibility | No logs | `--log-dir` saves every iteration, summary printed on exit |
-| Hard to steer | Stop, edit, restart | **Edit `PROMPT.md` while running** — changes take effect next iteration |
+| Hard to steer | Stop, edit, restart | **Edit `RALPH.md` while running** — changes take effect next iteration |
 
 The core insight: **an autonomous loop needs a feedback mechanism.** Without one, the agent can't self-correct. Ralphify's check system creates that feedback loop automatically.
 
@@ -101,7 +101,7 @@ There's no plugin API to learn, no configuration language to master. It's files 
 
 ### The prompt is the interface
 
-The most important file in a ralphify project is `PROMPT.md`. It's plain markdown that you write and edit directly. No abstraction layer between you and what the agent sees. When the agent does something wrong, you edit the prompt — not a config file three levels deep.
+The most important file in a ralphify project is `RALPH.md`. It's plain markdown that you write and edit directly. No abstraction layer between you and what the agent sees. When the agent does something wrong, you edit the prompt — not a config file three levels deep.
 
 ## When ralphify is the right choice
 

@@ -1,10 +1,10 @@
 ---
-description: Full reference for ralphify's four primitives — checks (post-iteration validation), contexts (dynamic data injection), instructions (reusable prompt rules), and prompts (named task-focused prompts).
+description: Full reference for ralphify's four primitives — checks (post-iteration validation), contexts (dynamic data injection), instructions (reusable prompt rules), and ralphs (named task-focused ralphs).
 ---
 
 # Primitives
 
-Primitives are reusable building blocks that extend your loop. They live in the `.ralph/` directory and are automatically discovered by ralphify.
+Primitives are reusable building blocks that extend your loop. They live in the `.ralphify/` directory and are automatically discovered by ralphify.
 
 There are four kinds:
 
@@ -13,7 +13,7 @@ There are four kinds:
 | [Checks](#checks) | Validate the agent's work (tests, linters) | After each iteration |
 | [Contexts](#contexts) | Inject dynamic data into the prompt | Before each iteration |
 | [Instructions](#instructions) | Inject static text into the prompt | Before each iteration |
-| [Prompts](#prompts) | Reusable task-focused prompts you can switch between | At run start |
+| [Ralphs](#ralphs) | Reusable task-focused ralphs you can switch between | At run start |
 
 ## Checks
 
@@ -25,7 +25,7 @@ Checks run **after** each iteration to validate what the agent did. If a check f
 ralph new check my-tests
 ```
 
-This creates `.ralph/checks/my-tests/CHECK.md`:
+This creates `.ralphify/checks/my-tests/CHECK.md`:
 
 ```markdown
 ---
@@ -74,7 +74,7 @@ If you need shell features, use a [script](#using-a-script-instead-of-a-command)
 Instead of a `command` in frontmatter, you can place an executable script named `run.*` (e.g. `run.sh`, `run.py`) in the check directory:
 
 ```
-.ralph/checks/my-tests/
+.ralphify/checks/my-tests/
 ├── CHECK.md
 └── run.sh
 ```
@@ -127,7 +127,7 @@ Contexts inject **dynamic data** into the prompt before each iteration. Use them
 ralph new context git-log
 ```
 
-This creates `.ralph/contexts/git-log/CONTEXT.md`:
+This creates `.ralphify/contexts/git-log/CONTEXT.md`:
 
 ```markdown
 ---
@@ -169,7 +169,7 @@ A context can also be purely static (no command) — just omit the `command` fie
 Just like checks, you can place an executable script named `run.*` (e.g. `run.sh`, `run.py`) in the context directory instead of using a `command` in frontmatter:
 
 ```
-.ralph/contexts/project-info/
+.ralphify/contexts/project-info/
 ├── CONTEXT.md
 └── run.sh
 ```
@@ -180,7 +180,7 @@ This is useful for contexts that need more complex logic than a single shell com
 
 ### Placement in the prompt
 
-By default, all context output is appended to the end of the prompt. To control where it appears, use placeholders in your `PROMPT.md`:
+By default, all context output is appended to the end of the prompt. To control where it appears, use placeholders in your `RALPH.md`:
 
 ```markdown
 # Prompt
@@ -198,7 +198,7 @@ Work on the next task from the plan.
 
 ## Instructions
 
-Instructions inject **static text** into the prompt. Use them for reusable rules, style guides, or constraints that you want to add or remove without editing the prompt file.
+Instructions inject **static text** into the prompt. Use them for reusable rules, style guides, or constraints that you want to add or remove without editing the ralph file.
 
 ### Creating an instruction
 
@@ -206,7 +206,7 @@ Instructions inject **static text** into the prompt. Use them for reusable rules
 ralph new instruction code-style
 ```
 
-This creates `.ralph/instructions/code-style/INSTRUCTION.md`:
+This creates `.ralphify/instructions/code-style/INSTRUCTION.md`:
 
 ```markdown
 ---
@@ -242,32 +242,32 @@ Same rules as contexts:
 - `{{ instructions }}` — places all remaining instructions
 - If no placeholders are found, all instructions are appended to the end
 
-## Prompts
+## Ralphs
 
-Prompts are **reusable, named prompt files** that let you switch between different tasks without editing your root `PROMPT.md`. Instead of maintaining one prompt and rewriting it each time you change focus, you create named prompts and select the one you want at run time.
+Ralphs are **reusable, named ralph files** that let you switch between different tasks without editing your root `RALPH.md`. Instead of maintaining one ralph and rewriting it each time you change focus, you create named ralphs and select the one you want at run time.
 
-### When to use named prompts
+### When to use named ralphs
 
-Named prompts are useful when you have multiple recurring tasks for the same project:
+Named ralphs are useful when you have multiple recurring tasks for the same project:
 
-- A `docs` prompt for documentation improvements
-- A `refactor` prompt for cleaning up code
-- A `add-tests` prompt for increasing test coverage
-- A `bug-fix` prompt for systematic bug fixing
+- A `docs` ralph for documentation improvements
+- A `refactor` ralph for cleaning up code
+- A `add-tests` ralph for increasing test coverage
+- A `bug-fix` ralph for systematic bug fixing
 
-Each prompt can have its own placeholders, constraints, and workflow — tailored to that specific job.
+Each ralph can have its own placeholders, constraints, and workflow — tailored to that specific job.
 
-### Creating a prompt
+### Creating a ralph
 
 ```bash
-ralph new prompt docs
+ralph new ralph docs
 ```
 
-This creates `.ralph/prompts/docs/PROMPT.md`:
+This creates `.ralphify/ralphs/docs/RALPH.md`:
 
 ```markdown
 ---
-description: Describe what this prompt does
+description: Describe what this ralph does
 enabled: true
 ---
 
@@ -282,7 +282,7 @@ description: Improve project documentation
 enabled: true
 ---
 
-# Prompt
+# Ralph
 
 You are a documentation agent. Each iteration starts fresh.
 
@@ -303,101 +303,101 @@ one page per iteration.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `description` | string | `""` | Short description shown in `ralph prompts list` |
+| `description` | string | `""` | Short description shown in `ralph ralphs list` |
 | `enabled` | bool | `true` | Set to `false` to hide without deleting |
 
-### Running a named prompt
+### Running a named ralph
 
-Pass the prompt name as the first argument to `ralph run`:
+Pass the ralph name as the first argument to `ralph run`:
 
 ```bash
-ralph run docs           # Use the "docs" prompt
+ralph run docs           # Use the "docs" ralph
 ralph run refactor -n 5  # Use "refactor" for 5 iterations
 ```
 
-You can also set a default prompt in `ralph.toml`:
+You can also set a default ralph in `ralph.toml`:
 
 ```toml
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "docs"   # Name of a prompt in .ralph/prompts/
+ralph = "docs"   # Name of a ralph in .ralphify/ralphs/
 ```
 
-When `prompt` is set to a name (no `/` or `.` in the value), ralphify looks for `.ralph/prompts/<name>/PROMPT.md` first, then falls back to treating it as a file path.
+When `ralph` is set to a name (no `/` or `.` in the value), ralphify looks for `.ralphify/ralphs/<name>/RALPH.md` first, then falls back to treating it as a file path.
 
-### Listing prompts
+### Listing ralphs
 
 ```bash
-ralph prompts list
+ralph ralphs list
 ```
 
-This shows the root `PROMPT.md` (if it exists) plus all named prompts with their enabled status and descriptions.
+This shows the root `RALPH.md` (if it exists) plus all named ralphs with their enabled status and descriptions.
 
 ### Priority chain
 
 When you run `ralph run`, the prompt is resolved in this order (first match wins):
 
 1. **`-p` flag** — inline ad-hoc prompt text
-2. **Positional argument** — `ralph run <name>` looks up `.ralph/prompts/<name>/PROMPT.md`
+2. **Positional argument** — `ralph run <name>` looks up `.ralphify/ralphs/<name>/RALPH.md`
 3. **`--prompt-file` / `-f` flag** — explicit path to a prompt file
-4. **`ralph.toml` `prompt` field** — can be a name or a file path
-5. **Fallback** — `PROMPT.md` in the project root
+4. **`ralph.toml` `ralph` field** — can be a name or a file path
+5. **Fallback** — `RALPH.md` in the project root
 
-Named prompts support all the same features as the root `PROMPT.md`: context and instruction placeholders resolve as normal, and check failures are appended after each iteration.
+Named ralphs support all the same features as the root `RALPH.md`: context and instruction placeholders resolve as normal, and check failures are appended after each iteration.
 
-Named prompts also support [prompt-scoped primitives](#prompt-scoped-primitives) — checks, contexts, and instructions that only apply when running that specific prompt.
+Named ralphs also support [ralph-scoped primitives](#ralph-scoped-primitives) — checks, contexts, and instructions that only apply when running that specific ralph.
 
-## Prompt-scoped primitives
+## Ralph-scoped primitives
 
-When you use [named prompts](#prompts), you can attach checks, contexts, and instructions **to a specific prompt**. These prompt-scoped primitives live inside the prompt's directory and are merged with your global primitives when that prompt runs.
+When you use [named ralphs](#ralphs), you can attach checks, contexts, and instructions **to a specific ralph**. These ralph-scoped primitives live inside the ralph's directory and are merged with your global primitives when that ralph runs.
 
 ### Why use them
 
-Different tasks need different validation. A documentation prompt might need a `mkdocs build` check but not a `cargo test` check. A refactoring prompt might need stricter lint rules. Prompt-scoped primitives let you customize the loop per task without cluttering the global `.ralph/` directory.
+Different tasks need different validation. A documentation ralph might need a `mkdocs build` check but not a `cargo test` check. A refactoring ralph might need stricter lint rules. Ralph-scoped primitives let you customize the loop per task without cluttering the global `.ralphify/` directory.
 
-### Creating prompt-scoped primitives
+### Creating ralph-scoped primitives
 
-Use the `--prompt` flag with `ralph new` to scaffold a primitive inside a named prompt's directory:
+Use the `--ralph` flag with `ralph new` to scaffold a primitive inside a named ralph's directory:
 
 ```bash
-ralph new check docs-build --prompt docs
-ralph new context doc-coverage --prompt docs
-ralph new instruction writing-style --prompt docs
+ralph new check docs-build --ralph docs
+ralph new context doc-coverage --ralph docs
+ralph new instruction writing-style --ralph docs
 ```
 
-This creates the primitive inside `.ralph/prompts/docs/` instead of the global `.ralph/` directory.
+This creates the primitive inside `.ralphify/ralphs/docs/` instead of the global `.ralphify/` directory.
 
 ### Directory structure
 
-Place primitive directories inside the named prompt's directory, using the same `checks/`, `contexts/`, `instructions/` layout:
+Place primitive directories inside the named ralph's directory, using the same `checks/`, `contexts/`, `instructions/` layout:
 
 ```
-.ralph/prompts/docs/
-├── PROMPT.md
+.ralphify/ralphs/docs/
+├── RALPH.md
 ├── checks/
 │   └── docs-build/
-│       └── CHECK.md          ← only runs with the "docs" prompt
+│       └── CHECK.md          ← only runs with the "docs" ralph
 ├── contexts/
 │   └── doc-coverage/
-│       └── CONTEXT.md        ← only injected with the "docs" prompt
+│       └── CONTEXT.md        ← only injected with the "docs" ralph
 └── instructions/
     └── writing-style/
-        └── INSTRUCTION.md    ← only included with the "docs" prompt
+        └── INSTRUCTION.md    ← only included with the "docs" ralph
 ```
 
 ### How merging works
 
-When you run `ralph run docs`, ralphify discovers both global and prompt-scoped primitives, then merges them:
+When you run `ralph run docs`, ralphify discovers both global and ralph-scoped primitives, then merges them:
 
-1. **Global primitives** from `.ralph/checks/`, `.ralph/contexts/`, `.ralph/instructions/` are loaded first
-2. **Prompt-scoped primitives** from `.ralph/prompts/docs/checks/`, etc. are loaded next
+1. **Global primitives** from `.ralphify/checks/`, `.ralphify/contexts/`, `.ralphify/instructions/` are loaded first
+2. **Ralph-scoped primitives** from `.ralphify/ralphs/docs/checks/`, etc. are loaded next
 3. If a local primitive has the **same name** as a global one, the **local version wins**
 4. Enabled filtering happens **after** the merge — a disabled local primitive can suppress a global one
 
 This means you can:
 
-- **Add** prompt-specific primitives that only run for that prompt
+- **Add** ralph-specific primitives that only run for that ralph
 - **Override** a global primitive by creating a local one with the same name
 - **Suppress** a global primitive by creating a disabled local one with the same name
 
@@ -406,13 +406,13 @@ This means you can:
 Say you have a global test check:
 
 ```
-.ralph/checks/tests/CHECK.md     ← command: pytest
+.ralphify/checks/tests/CHECK.md     ← command: pytest
 ```
 
-For your `docs` prompt, you want to skip full tests and only validate the docs build. Create a local override:
+For your `docs` ralph, you want to skip full tests and only validate the docs build. Create a local override:
 
 ```
-.ralph/prompts/docs/checks/tests/CHECK.md
+.ralphify/ralphs/docs/checks/tests/CHECK.md
 ```
 
 ```markdown
@@ -421,12 +421,12 @@ enabled: false
 ---
 ```
 
-This disables the global `tests` check when running the `docs` prompt, because the local primitive with the same name (`tests`) takes precedence.
+This disables the global `tests` check when running the `docs` ralph, because the local primitive with the same name (`tests`) takes precedence.
 
-Then add a prompt-specific check:
+Then add a ralph-specific check:
 
 ```
-.ralph/prompts/docs/checks/docs-build/CHECK.md
+.ralphify/ralphs/docs/checks/docs-build/CHECK.md
 ```
 
 ```markdown
@@ -441,7 +441,7 @@ Now `ralph run docs` runs only the `docs-build` check (plus any other global che
 
 ### With ad-hoc prompts
 
-Prompt-scoped primitives only apply when running a named prompt. Ad-hoc prompts (`ralph run -p "..."`) use global primitives only, since there is no prompt directory to scan.
+Ralph-scoped primitives only apply when running a named ralph. Ad-hoc prompts (`ralph run -p "..."`) use global primitives only, since there is no ralph directory to scan.
 
 ## Behavior notes
 
@@ -454,7 +454,7 @@ Primitives are discovered and executed in **alphabetical order by directory name
 If execution order matters — for example, you want a fast lint check to run before a slow test suite — use number prefixes:
 
 ```
-.ralph/checks/
+.ralphify/checks/
 ├── 01-lint/          ← runs first (fast feedback)
 │   └── CHECK.md
 ├── 02-typecheck/     ← runs second
@@ -467,12 +467,12 @@ All checks run regardless of whether earlier checks pass or fail — there is no
 
 ### Naming
 
-A primitive's name is its **directory name**, not a field in frontmatter. The name `tests` comes from the directory `.ralph/checks/tests/`, not from anything inside `CHECK.md`. This name is used in:
+A primitive's name is its **directory name**, not a field in frontmatter. The name `tests` comes from the directory `.ralphify/checks/tests/`, not from anything inside `CHECK.md`. This name is used in:
 
 - `ralph status` output
 - Check failure headings in the prompt
 - Placeholder references like `{{ contexts.git-log }}`
-- `ralph prompts list` output
+- `ralph ralphs list` output
 
 ### Frontmatter format
 
@@ -506,8 +506,8 @@ Setting `enabled: false` in frontmatter skips the primitive during execution but
 ## Directory structure
 
 ```
-.ralph/
-├── checks/                          ← global checks (all prompts)
+.ralphify/
+├── checks/                          ← global checks (all ralphs)
 │   ├── lint/
 │   │   └── CHECK.md
 │   └── tests/
@@ -519,17 +519,17 @@ Setting `enabled: false` in frontmatter skips the primitive during execution but
 ├── instructions/                    ← global instructions
 │   └── code-style/
 │       └── INSTRUCTION.md
-└── prompts/
+└── ralphs/
     ├── docs/
-    │   ├── PROMPT.md
-    │   ├── checks/                  ← prompt-scoped (docs only)
+    │   ├── RALPH.md
+    │   ├── checks/                  ← ralph-scoped (docs only)
     │   │   └── docs-build/
     │   │       └── CHECK.md
     │   └── instructions/
     │       └── writing-style/
     │           └── INSTRUCTION.md
     └── refactor/
-        └── PROMPT.md
+        └── RALPH.md
 ```
 
 ## Viewing your primitives

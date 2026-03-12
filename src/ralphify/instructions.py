@@ -1,6 +1,6 @@
 """Discover and resolve static instruction text injected into each prompt.
 
-Instructions are reusable rules in ``.ralph/instructions/<name>/`` that get
+Instructions are reusable rules in ``.ralphify/instructions/<name>/`` that get
 injected into the prompt every iteration — for example coding standards or
 git conventions.  Unlike contexts, they have no command; their content is
 the body text of the INSTRUCTION.md file.
@@ -16,7 +16,7 @@ from ralphify.resolver import resolve_placeholders
 
 @dataclass
 class Instruction:
-    """A static instruction discovered from ``.ralph/instructions/<name>/INSTRUCTION.md``.
+    """A static instruction discovered from ``.ralphify/instructions/<name>/INSTRUCTION.md``.
 
     The *content* is the body text below the frontmatter.  Instructions with
     empty content are silently excluded from prompt injection even if enabled.
@@ -39,7 +39,7 @@ def _instruction_from_entry(prim) -> Instruction:
 
 
 def discover_instructions(root: Path = Path(".")) -> list[Instruction]:
-    """Scan ``.ralph/instructions/`` for subdirectories containing ``INSTRUCTION.md``.
+    """Scan ``.ralphify/instructions/`` for subdirectories containing ``INSTRUCTION.md``.
 
     Unlike checks and contexts, instructions have no command or script —
     just static content.  Default: ``enabled=True``.
@@ -51,7 +51,7 @@ def discover_instructions_local(prompt_dir: Path) -> list[Instruction]:
     """Scan ``prompt_dir/instructions/`` for prompt-scoped instructions.
 
     Same construction logic as :func:`discover_instructions` but reads from
-    a prompt directory instead of the global ``.ralph/instructions/``.
+    a prompt directory instead of the global ``.ralphify/instructions/``.
     """
     return [_instruction_from_entry(prim) for prim in discover_local_primitives(prompt_dir, "instructions", INSTRUCTION_MARKER)]
 

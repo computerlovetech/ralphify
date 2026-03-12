@@ -1,4 +1,4 @@
-"""Discover primitive directories under ``.ralph/<kind>/``.
+"""Discover primitive directories under ``.ralphify/<kind>/``.
 
 Scans the conventional directory structure for primitive marker files
 (``CHECK.md``, ``CONTEXT.md``, etc.), parses their frontmatter, and
@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import NamedTuple
 
-from ralphify._frontmatter import parse_frontmatter
+from ralphify._frontmatter import PRIMITIVES_DIR, parse_frontmatter
 
 
 class PrimitiveEntry(NamedTuple):
@@ -41,11 +41,11 @@ def discover_primitives(
 ) -> Iterator[PrimitiveEntry]:
     """Yield a :class:`PrimitiveEntry` for each primitive found.
 
-    Scans ``root/.ralph/{kind}/`` for subdirectories containing a
+    Scans ``root/.ralphify/{kind}/`` for subdirectories containing a
     *marker* file (e.g. ``CHECK.md``), parses its frontmatter, and
     yields results in alphabetical order.
     """
-    primitives_dir = root / ".ralph" / kind
+    primitives_dir = root / PRIMITIVES_DIR / kind
     if not primitives_dir.is_dir():
         return
 
@@ -65,11 +65,11 @@ def discover_primitives(
 def discover_local_primitives(
     base_dir: Path, kind: str, marker: str
 ) -> Iterator[PrimitiveEntry]:
-    """Yield prompt-scoped primitives from ``base_dir/{kind}/``.
+    """Yield ralph-scoped primitives from ``base_dir/{kind}/``.
 
-    Like :func:`discover_primitives` but scans a prompt directory
-    directly (e.g. ``.ralph/prompts/ui/checks/``) instead of the
-    global ``.ralph/{kind}/`` path.  Results are in alphabetical order.
+    Like :func:`discover_primitives` but scans a ralph directory
+    directly (e.g. ``.ralphify/ralphs/ui/checks/``) instead of the
+    global ``.ralphify/{kind}/`` path.  Results are in alphabetical order.
     """
     primitives_dir = base_dir / kind
     if not primitives_dir.is_dir():
