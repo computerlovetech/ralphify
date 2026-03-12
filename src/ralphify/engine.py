@@ -66,6 +66,18 @@ def _resolve_prompt_dir(config: RunConfig) -> Path | None:
     return None
 
 
+def _discover_and_filter_enabled(root, prompt_dir, discover, discover_local):
+    """Discover primitives, merge local overrides (if any), and return only enabled ones.
+
+    Encapsulates the three-step pattern shared by all primitive types:
+    discover globals → merge with prompt-scoped locals → filter to enabled.
+    """
+    items = discover(root)
+    if prompt_dir is not None:
+        items = merge_by_name(items, discover_local(prompt_dir))
+    return [item for item in items if item.enabled]
+
+
 def _discover_enabled_primitives(
     root: Path, prompt_dir: Path | None = None,
 ) -> EnabledPrimitives:
@@ -81,19 +93,10 @@ def _discover_enabled_primitives(
     ``run_all_contexts``, ``run_all_checks``) trust that they receive
     only enabled primitives and do not re-filter.
     """
-    checks = discover_checks(root)
-    contexts = discover_contexts(root)
-    instructions = discover_instructions(root)
-
-    if prompt_dir is not None:
-        checks = merge_by_name(checks, discover_checks_local(prompt_dir))
-        contexts = merge_by_name(contexts, discover_contexts_local(prompt_dir))
-        instructions = merge_by_name(instructions, discover_instructions_local(prompt_dir))
-
     return EnabledPrimitives(
-        checks=[c for c in checks if c.enabled],
-        contexts=[c for c in contexts if c.enabled],
-        instructions=[i for i in instructions if i.enabled],
+        checks=_discover_and_filter_enabled(root, prompt_dir, discover_checks, discover_checks_local),
+        contexts=_discover_and_filter_enabled(root, prompt_dir, discover_contexts, discover_contexts_local),
+        instructions=_discover_and_filter_enabled(root, prompt_dir, discover_instructions, discover_instructions_local),
     )
 
 
