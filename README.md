@@ -14,7 +14,7 @@ Put your AI coding agent in a `while True` loop and let it ship.
 Ralphify is a minimal harness for running autonomous AI coding loops, inspired by the [Ralph Wiggum technique](https://ghuntley.com/ralph/). The idea is simple: pipe a prompt to an AI coding agent, let it do one thing, commit, and repeat. Forever. Until you hit Ctrl+C.
 
 ```
-while :; do cat PROMPT.md | claude -p ; done
+while :; do cat RALPH.md | claude -p ; done
 ```
 
 Ralphify wraps this pattern into a proper tool with config, iteration tracking, and clean shutdown.
@@ -38,7 +38,7 @@ Any of these gives you the `ralph` command.
 
 ```bash
 # In your project directory
-ralph init      # Creates ralph.toml + PROMPT.md
+ralph init      # Creates ralph.toml + RALPH.md
 ralph run       # Starts the loop (Ctrl+C to stop)
 ```
 
@@ -58,10 +58,10 @@ ralph run -n 1 -p "Add type hints to all public functions in src/"
 [agent]
 command = "claude"
 args = ["-p", "--dangerously-skip-permissions"]
-prompt = "PROMPT.md"
+ralph = "RALPH.md"
 ```
 
-**`PROMPT.md`** — a starter prompt template. This file IS the prompt. It gets piped directly to your agent each iteration. Edit it to fit your project.
+**`RALPH.md`** — a starter prompt template. This file IS the prompt. It gets piped directly to your agent each iteration. Edit it to fit your project.
 
 ### What `ralph run` does
 
@@ -70,7 +70,7 @@ Reads the prompt, pipes it to the agent, waits for it to finish, then does it ag
 ```bash
 ralph run          # Run forever
 ralph run -n 10    # Run 10 iterations then stop
-ralph run -p "Fix the login bug"   # Ad-hoc prompt, no PROMPT.md needed
+ralph run -p "Fix the login bug"   # Ad-hoc prompt, no RALPH.md needed
 ```
 
 ### What it looks like
@@ -114,7 +114,7 @@ Read the full writeup: [Ralph Wiggum as a "software engineer"](https://ghuntley.
 
 ## Beyond the basic loop
 
-The simple loop works, but ralphify's real power comes from four primitives that live in the `.ralph/` directory.
+The simple loop works, but ralphify's real power comes from four primitives that live in the `.ralphify/` directory.
 
 ### Checks — the self-healing loop
 
@@ -124,7 +124,7 @@ Checks validate the agent's work after each iteration. When one fails, its outpu
 ralph new check tests
 ```
 
-Edit `.ralph/checks/tests/CHECK.md`:
+Edit `.ralphify/checks/tests/CHECK.md`:
 
 ```markdown
 ---
@@ -152,7 +152,7 @@ Contexts inject fresh data into the prompt each iteration — git history, test 
 ralph new context git-log
 ```
 
-Edit `.ralph/contexts/git-log/CONTEXT.md`:
+Edit `.ralphify/contexts/git-log/CONTEXT.md`:
 
 ```markdown
 ---
@@ -161,7 +161,7 @@ command: git log --oneline -10
 ## Recent commits
 ```
 
-The command runs before each iteration. Use `{{ contexts.git-log }}` in your `PROMPT.md` to control where the output appears.
+The command runs before each iteration. Use `{{ contexts.git-log }}` in your `RALPH.md` to control where the output appears.
 
 ### Instructions — reusable rules
 
@@ -171,46 +171,33 @@ Instructions are static text blocks (coding standards, commit conventions) you c
 ralph new instruction code-style
 ```
 
-Drop `{{ instructions }}` into `PROMPT.md` to inject all enabled instructions.
+Drop `{{ instructions }}` into `RALPH.md` to inject all enabled instructions.
 
-### Prompts — named task switcher
+### Ralphs — named task switcher
 
-Keep multiple prompts for different jobs and switch between them at run time:
+Keep multiple ralphs for different jobs and switch between them at run time:
 
 ```bash
-ralph new prompt docs
-ralph new prompt refactor
+ralph new ralph docs
+ralph new ralph refactor
 ```
 
-Edit `.ralph/prompts/docs/PROMPT.md` with your documentation-focused prompt, then:
+Edit `.ralphify/ralphs/docs/RALPH.md` with your documentation-focused prompt, then:
 
 ```bash
-ralph run docs           # Use the "docs" prompt
+ralph run docs           # Use the "docs" ralph
 ralph run refactor -n 5  # Use "refactor" for 5 iterations
 ```
 
-List available prompts with `ralph prompts list`.
+## Customizing your ralph
 
-## Web dashboard
-
-Manage runs from your browser with `ralph ui`:
-
-```bash
-uv tool install "ralphify[ui]"   # one-time: add dashboard dependencies
-ralph ui                          # opens http://127.0.0.1:8765
-```
-
-The dashboard lets you start and stop runs, browse named prompts, watch iterations stream in live, and edit checks/contexts/instructions — all without touching the terminal. See the [dashboard docs](https://computerlovetech.github.io/ralphify/dashboard/) for the full walkthrough.
-
-## Customizing your prompt
-
-The generated `PROMPT.md` is a starting point. A good prompt for autonomous loops typically includes:
+The generated `RALPH.md` is a starting point. A good prompt for autonomous loops typically includes:
 
 - What to work on (specs, plan file, TODO list)
 - Constraints — what NOT to do (no placeholders, no skipping tests)
 - Process — how to validate and commit
 
-The agent reads this prompt fresh every iteration, so you can edit it while the loop is running. When the agent does something dumb, add a sign to the prompt — the next iteration follows the new rules.
+The agent reads this ralph fresh every iteration, so you can edit it while the loop is running. When the agent does something dumb, add a sign to the prompt — the next iteration follows the new rules.
 
 ## Documentation
 

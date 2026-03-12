@@ -314,48 +314,6 @@ Press `Ctrl+C` to stop at any time. You'll see a summary:
 Done: 12 iteration(s) — 10 succeeded, 2 failed
 ```
 
-## Step 12: Try the web dashboard
-
-Ralphify includes a browser-based dashboard for managing runs, watching iterations stream in live, and editing primitives — all without touching the terminal.
-
-Install the dashboard dependencies:
-
-=== "uv tool (recommended)"
-
-    ```bash
-    uv tool install "ralphify[ui]"
-    ```
-
-=== "pipx"
-
-    ```bash
-    pipx install "ralphify[ui]"
-    ```
-
-=== "pip"
-
-    ```bash
-    pip install "ralphify[ui]"
-    ```
-
-Launch the dashboard:
-
-```bash
-ralph ui
-```
-
-Open [http://127.0.0.1:8765](http://127.0.0.1:8765) in your browser. From there you can:
-
-- **Start, pause, and stop runs** with a click from the Runs tab
-- **Watch iterations complete in real time** — check results stream in over WebSocket
-- **Browse and edit all primitives** (ralphs, checks, contexts, instructions) on the Configure tab
-- **Review past runs** on the History tab
-
-The dashboard uses the same `run_loop()` engine as the CLI, so everything works exactly the same — it's just a different interface.
-
-!!! tip "Dashboard is optional"
-    The CLI is the primary interface. The dashboard is a convenience for when you want a visual overview or need to manage multiple runs at once. You can always fall back to `ralph run` in the terminal.
-
 ## Your project structure
 
 After setup, your project should look something like this:
@@ -388,5 +346,4 @@ your-project/
 - [Best Practices](best-practices.md) — habits and patterns for getting the most out of your loops
 - [Cookbook](cookbook.md) — complete example setups for Python, TypeScript, bug fixing, and docs
 - [Primitives](primitives.md) — full reference for checks, contexts, instructions, and named ralphs
-- [Web Dashboard](dashboard.md) — manage runs, watch iterations live, and edit primitives from your browser
 - [Configuration & CLI](cli.md) — `ralph.toml` format, all commands, and options

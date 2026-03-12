@@ -90,7 +90,6 @@ nav:
     - Writing Your Ralph: ralphs.md
     - Best Practices: best-practices.md
     - Using with Different Agents: agents.md
-    - Web Dashboard: dashboard.md
     - Cookbook: cookbook.md
   - Reference:
     - Quick Reference: quick-reference.md

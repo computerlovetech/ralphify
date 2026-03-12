@@ -96,7 +96,6 @@ docs/
 ├── quick-reference.md    # Single-page lookup of all commands and syntax
 ├── primitives.md         # Checks, contexts, instructions reference
 ├── cli.md                # Configuration and CLI reference
-├── dashboard.md          # Web dashboard guide
 ├── faq.md                # Common questions
 ├── troubleshooting.md    # Debugging guide
 ├── contributing/         # Contributor docs (this section)

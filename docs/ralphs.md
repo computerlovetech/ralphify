@@ -223,7 +223,7 @@ ralph run docs           # Use the docs ralph
 ralph run refactor -n 5  # Use refactor for 5 iterations
 ```
 
-Named ralphs live in `.ralphify/ralphs/<name>/RALPH.md`. Add a `description` to the frontmatter so `ralph ralphs list` shows what each one does:
+Named ralphs live in `.ralphify/ralphs/<name>/RALPH.md`. Add a `description` to the frontmatter so `ralph status` shows what each one does:
 
 ```markdown
 ---

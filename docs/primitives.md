@@ -303,7 +303,7 @@ one page per iteration.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `description` | string | `""` | Short description shown in `ralph ralphs list` |
+| `description` | string | `""` | Short description shown in `ralph status` |
 | `enabled` | bool | `true` | Set to `false` to hide without deleting |
 
 ### Running a named ralph
@@ -328,11 +328,7 @@ When `ralph` is set to a name (no `/` or `.` in the value), ralphify looks for `
 
 ### Listing ralphs
 
-```bash
-ralph ralphs list
-```
-
-This shows the root `RALPH.md` (if it exists) plus all named ralphs with their enabled status and descriptions.
+Use `ralph status` to see all discovered ralphs with their enabled status and descriptions.
 
 ### Priority chain
 
@@ -472,7 +468,7 @@ A primitive's name is its **directory name**, not a field in frontmatter. The na
 - `ralph status` output
 - Check failure headings in the prompt
 - Placeholder references like `{{ contexts.git-log }}`
-- `ralph ralphs list` output
+- `ralph status` output
 
 ### Frontmatter format
 

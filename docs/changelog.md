@@ -12,7 +12,7 @@ Named ralphs, ralph-scoped primitives, live agent activity streaming, and a rede
 
 ### Added
 
-- **Named ralphs** — save reusable, task-focused ralphs in `.ralphify/ralphs/<name>/RALPH.md` and switch between them with `ralph run <name>`. Create with `ralph new ralph <name>`, list with `ralph ralphs list`. The `ralph` field in `ralph.toml` also accepts a ralph name.
+- **Named ralphs** — save reusable, task-focused ralphs in `.ralphify/ralphs/<name>/RALPH.md` and switch between them with `ralph run <name>`. Create with `ralph new ralph <name>`. The `ralph` field in `ralph.toml` also accepts a ralph name.
 - **`--ralph` flag on `ralph new`** — scope checks, contexts, and instructions to a named ralph with `ralph new check <name> --ralph <ralph>`. Creates the primitive inside `.ralphify/ralphs/<ralph>/` so it only applies when running that ralph.
 - **`--prompt-file` / `-f` flag** — point `ralph run` at any prompt file by path, overriding `ralph.toml`.
 - **Ralphs in Configure** — browse, create, edit, and delete named ralphs alongside other primitives in the Configure tab. Each ralph shows as an interactive card with description, content preview, and edit button.

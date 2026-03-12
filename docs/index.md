@@ -177,52 +177,6 @@ You define what "valid" means. Ralphify feeds failures back into the prompt auto
 
 ---
 
-## Web dashboard
-
-Prefer a visual interface? Ralphify includes a browser-based dashboard for managing runs, watching iterations stream in live, and editing primitives — all without touching the terminal.
-
-```bash
-uv tool install "ralphify[ui]"   # one-time: add dashboard dependencies
-ralph ui                          # opens http://127.0.0.1:8765
-```
-
-<figure markdown="span">
-  ![Ralphify dashboard — Runs tab](assets/dashboard/runs-tab.png){ loading=lazy }
-  <figcaption>Start runs, watch iterations complete in real time, and see check results — all from your browser.</figcaption>
-</figure>
-
-<div class="grid cards" markdown>
-
--   :material-play-circle-outline:{ .lg .middle } **Start, pause, and stop runs**
-
-    ---
-
-    Launch runs from named ralphs or ad-hoc text, pause mid-loop, and resume when ready.
-
--   :material-lightning-bolt-outline:{ .lg .middle } **Live agent activity**
-
-    ---
-
-    Watch tool calls, text output, and cost stats stream in real time as the agent works (Claude Code).
-
--   :material-pencil-outline:{ .lg .middle } **Edit primitives in-browser**
-
-    ---
-
-    Create, edit, and delete checks, contexts, instructions, and ralphs from the Configure tab.
-
--   :material-history:{ .lg .middle } **Persistent run history**
-
-    ---
-
-    Review past runs with pass rates and status badges. Drill into any run to see per-iteration check results.
-
-</div>
-
-[:octicons-arrow-right-24: Dashboard docs](dashboard.md)
-
----
-
 ## Requirements
 
 - Python 3.11+
@@ -263,11 +217,5 @@ ralph ui                          # opens http://127.0.0.1:8765
     ---
 
     Habits and patterns that separate productive loops from noisy ones.
-
--   **[Web Dashboard](dashboard.md)**
-
-    ---
-
-    Manage runs, watch iterations live, and edit primitives from your browser.
 
 </div>

@@ -30,15 +30,11 @@ See [Configuration & CLI](cli.md#ralphtoml) for details.
 | `ralph run` | Start the loop (Ctrl+C to stop) |
 | `ralph run <ralph-name>` | Start the loop with a [named ralph](primitives.md#ralphs) |
 | `ralph status` | Validate setup and list primitives |
-| `ralph ralphs list` | List all available ralphs |
 | `ralph new check <name>` | Scaffold a new check |
 | `ralph new context <name>` | Scaffold a new context |
 | `ralph new instruction <name>` | Scaffold a new instruction |
 | `ralph new ralph <name>` | Scaffold a new named ralph |
 | `ralph new check <name> --ralph <ralph>` | Scaffold a [ralph-scoped](primitives.md#ralph-scoped-primitives) check |
-| `ralph ui` | Launch the [web dashboard](dashboard.md) |
-| `ralph ui --port 9000` | Dashboard on a custom port |
-| `ralph ui --host 0.0.0.0` | Expose dashboard on network |
 | `ralph --install-completion` | Install [shell tab completion](cli.md#shell-completion) |
 
 ### `ralph run` options
@@ -163,7 +159,7 @@ Reusable task-focused ralphs. Switch between tasks without editing root `RALPH.m
 
 ```markdown
 ---
-description: Improve project documentation   # Shown in `ralph ralphs list`
+description: Improve project documentation   # Shown in `ralph status`
 enabled: true                                 # Set false to hide (default: true)
 ---
 Your full prompt content here, with {{ contexts }} and {{ instructions }} as usual.
@@ -171,7 +167,6 @@ Your full prompt content here, with {{ contexts }} and {{ instructions }} as usu
 
 ```bash
 ralph run docs        # Run with the "docs" ralph
-ralph ralphs list     # See all available ralphs
 ```
 
 ### Script alternative
@@ -241,18 +236,6 @@ Frontmatter `command` values are split with `shlex` and run **directly** (no she
 | Context/instruction config | Startup only | No — restart required |
 | Check config | Startup only | No — restart required |
 | New/removed primitives | Startup only | No — restart required |
-
----
-
-## Dashboard keyboard shortcuts
-
-| Shortcut | Where | Action |
-|---|---|---|
-| <kbd>Cmd+S</kbd> / <kbd>Ctrl+S</kbd> | Primitive editor | Save changes |
-| <kbd>Cmd+S</kbd> / <kbd>Ctrl+S</kbd> | Create primitive form | Create the primitive |
-| <kbd>Escape</kbd> | New Run modal | Close the modal |
-
-See [Web Dashboard](dashboard.md#keyboard-shortcuts) for details.
 
 ---
 
