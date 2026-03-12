@@ -6,6 +6,44 @@ description: Ralphify release history — new features, bug fixes, and breaking 
 
 All notable changes to ralphify are documented here.
 
+## 0.1.7 — Unreleased
+
+Renamed "prompt" to "ralph" everywhere, simplified the CLI, and added a spinner during iterations.
+
+### Breaking changes
+
+- **Renamed `.ralph/` directory to `.ralphify/`** — if you have an existing `.ralph/` directory, rename it to `.ralphify/`. All primitive discovery, `ralph new`, and `ralph status` now use the new path.
+- **Renamed "prompt" primitive to "ralph"** — `PROMPT.md` marker files are now `RALPH.md`. The `--prompt` flag on `ralph new` is now `--ralph`. Named prompts in `.ralph/prompts/` are now named ralphs in `.ralphify/ralphs/`.
+- **Removed `ralph ralphs` and `ralph ui` subcommands** — `ralph new <name>` is now shorthand for `ralph new ralph <name>`. The `ui` subcommand was removed (the web dashboard is not yet available).
+
+### Added
+
+- **Spinner with elapsed time** — iterations now show a live spinner with elapsed seconds instead of a blank wait, so you can see the agent is still working.
+
+### Fixed
+
+- Agent result message is now displayed in CLI output after each iteration.
+- Raw Claude Code `stream-json` output no longer leaks to the terminal during iterations.
+- Web dashboard page now clearly marked as "Coming Soon" to prevent users from trying non-existent commands.
+
+### Improved
+
+- Extracted shared scanning logic in `_discovery.py` to reduce duplication across primitive types.
+- Added `PrimitiveEntry` type annotations for better code clarity.
+- Moved `merge_by_name` to `_discovery.py` and deduplicated checks discovery logic.
+- Updated codebase map and contributing docs to match the renamed source structure.
+
+### Migration guide
+
+If you're upgrading from 0.1.6:
+
+1. **Rename the directory**: `mv .ralph .ralphify`
+2. **Rename marker files**: If you had custom `PROMPT.md` files in named prompts, rename them to `RALPH.md`
+3. **Update `ralph.toml`**: The `ralph` field still works the same way — it can be a file path or a named ralph name
+4. **Update scripts**: If you had scripts referencing `ralph ralphs` or `ralph ui`, remove those calls
+
+---
+
 ## 0.1.6 — 2026-03-12
 
 Named ralphs, ralph-scoped primitives, live agent activity streaming, and a redesigned dashboard with persistent history.
