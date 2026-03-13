@@ -96,7 +96,7 @@ ralph run --log-dir ralph_logs     # Save output to log files
 | `[RALPH_NAME]` | | none | Name of a [named ralph](primitives.md#ralphs) in `.ralphify/ralphs/` |
 | `-n` | | unlimited | Max number of iterations |
 | `--prompt` | `-p` | none | Ad-hoc prompt text. Overrides the ralph file |
-| `--prompt-file` | `-f` | none | Path to a ralph file. Overrides `ralph.toml` |
+| `--ralph-file` | `-f` | none | Path to a ralph file. Overrides `ralph.toml` |
 | `--stop-on-error` | `-s` | off | Stop loop if agent exits non-zero or times out |
 | `--delay` | `-d` | `0` | Seconds to wait between iterations |
 | `--timeout` | `-t` | none | Max seconds per iteration |

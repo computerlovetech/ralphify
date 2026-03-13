@@ -54,7 +54,7 @@ ralph run
   │
   ├── cli.py:run() — parse options, print banner
   │   ├── Load config from ralph.toml
-  │   ├── Resolve prompt via ralphs.resolve_ralph_source() (--prompt > name > --prompt-file > toml > root)
+  │   ├── Resolve prompt via ralphs.resolve_ralph_source() (--prompt > name > --ralph-file > toml > root)
   │   └── Build RunConfig and call engine.run_loop()
   │
   └── engine.py:run_loop(config, state, emitter)

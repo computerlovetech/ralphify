@@ -47,9 +47,9 @@ class RunConfig:
 
     command: str
     args: list[str]
-    prompt_file: str
+    ralph_file: str
     prompt_text: str | None = None
-    prompt_name: str | None = None
+    ralph_name: str | None = None
     max_iterations: int | None = None
     delay: float = 0
     timeout: float | None = None

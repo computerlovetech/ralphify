@@ -48,7 +48,7 @@ class EventType(Enum):
 
     # ── Run lifecycle ───────────────────────────────────────────
     # Data: checks/contexts/instructions (int counts), max_iterations,
-    #       timeout, delay, prompt_name
+    #       timeout, delay, ralph_name
     RUN_STARTED = "run_started"
     # Data: reason ("completed" | "user_requested" | "error"),
     #       total, completed, failed, timed_out

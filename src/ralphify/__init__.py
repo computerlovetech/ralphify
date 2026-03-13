@@ -7,7 +7,7 @@ Quick start::
 
     from ralphify import run_loop, RunConfig, RunState, QueueEmitter
 
-    config = RunConfig(command="claude", args=["-p"], prompt_file="RALPH.md")
+    config = RunConfig(command="claude", args=["-p"], ralph_file="RALPH.md")
     state = RunState(run_id="my-run")
     emitter = QueueEmitter()
     run_loop(config, state, emitter)

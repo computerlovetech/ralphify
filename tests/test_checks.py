@@ -228,7 +228,7 @@ class TestDiscoverChecks:
 
 
 class TestDiscoverChecksLocal:
-    def test_finds_checks_in_prompt_dir(self, tmp_path):
+    def test_finds_checks_in_ralph_dir(self, tmp_path):
         check_dir = tmp_path / "checks" / "lint"
         check_dir.mkdir(parents=True)
         (check_dir / "CHECK.md").write_text("---\ncommand: ruff check .\n---\nFix lint.")
@@ -238,7 +238,7 @@ class TestDiscoverChecksLocal:
         assert result[0].name == "lint"
         assert result[0].command == "ruff check ."
 
-    def test_empty_prompt_dir(self, tmp_path):
+    def test_empty_ralph_dir(self, tmp_path):
         result = discover_checks_local(tmp_path)
         assert result == []
 

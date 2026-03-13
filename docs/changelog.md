@@ -44,7 +44,7 @@ Named ralphs, ralph-scoped primitives, and live agent activity streaming.
 
 - **Named ralphs** — save reusable, task-focused ralphs in `.ralphify/ralphs/<name>/RALPH.md` and switch between them with `ralph run <name>`. Create with `ralph new ralph <name>`. The `ralph` field in `ralph.toml` also accepts a ralph name.
 - **`--ralph` flag on `ralph new`** — scope checks, contexts, and instructions to a named ralph with `ralph new check <name> --ralph <ralph>`. Creates the primitive inside `.ralphify/ralphs/<ralph>/` so it only applies when running that ralph.
-- **`--prompt-file` / `-f` flag** — point `ralph run` at any prompt file by path, overriding `ralph.toml`.
+- **`--ralph-file` / `-f` flag** — point `ralph run` at any prompt file by path, overriding `ralph.toml`.
 - **Live agent activity streaming** — when the agent command is Claude Code, the engine auto-detects it and uses `--output-format stream-json` with `subprocess.Popen` for line-by-line streaming. Other agents continue to use the standard `subprocess.run()` path.
 - **Codebase migration cookbook recipe** — step-by-step guide for automating JavaScript-to-TypeScript migrations, with adaptation tips for Python 2→3, CommonJS→ESM, and more.
 - **Contributor docs** — new `docs/contributing/` section with a codebase map, replacing the old `agent_docs/` directory.

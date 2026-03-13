@@ -16,7 +16,7 @@ from ralphify import run_loop, RunConfig, RunState
 config = RunConfig(
     command="claude",
     args=["-p", "--dangerously-skip-permissions"],
-    prompt_file="RALPH.md",
+    ralph_file="RALPH.md",
     max_iterations=3,
 )
 state = RunState(run_id="my-run")
@@ -43,9 +43,9 @@ Fields match the CLI options:
 config = RunConfig(
     command="claude",
     args=["-p", "--dangerously-skip-permissions"],
-    prompt_file="RALPH.md",
-    prompt_text=None,       # Ad-hoc prompt (overrides prompt_file)
-    prompt_name=None,       # Named ralph from .ralphify/ralphs/
+    ralph_file="RALPH.md",
+    prompt_text=None,       # Ad-hoc prompt (overrides ralph_file)
+    ralph_name=None,        # Named ralph from .ralphify/ralphs/
     max_iterations=10,
     delay=2.0,
     timeout=300,
@@ -98,7 +98,7 @@ class MyEmitter:
             print(f"  Check '{event.data['name']}' failed")
 
 
-config = RunConfig(command="claude", args=["-p"], prompt_file="RALPH.md", max_iterations=3)
+config = RunConfig(command="claude", args=["-p"], ralph_file="RALPH.md", max_iterations=3)
 state = RunState(run_id="observed-run")
 run_loop(config, state, emitter=MyEmitter())
 ```

@@ -90,13 +90,13 @@ def is_ralph_name(value: str) -> bool:
 
 def resolve_ralph_source(
     *,
-    prompt_name: str | None,
-    prompt_file: str | None,
+    ralph_name: str | None,
+    ralph_file: str | None,
     toml_ralph: str,
 ) -> tuple[str, str | None]:
     """Resolve which prompt file to use, returning ``(file_path, ralph_name)``.
 
-    Priority chain: positional name > --prompt-file > ralph.toml.
+    Priority chain: positional name > --ralph-file > ralph.toml.
     The ``toml_ralph`` value from ``ralph.toml`` may be either a file path or
     a named ralph — names are tried first, falling back to a literal path.
 
@@ -105,12 +105,12 @@ def resolve_ralph_source(
 
     Raises ``ValueError`` if a named ralph lookup fails.
     """
-    if prompt_name:
-        found = resolve_ralph_name(prompt_name)
+    if ralph_name:
+        found = resolve_ralph_name(ralph_name)
         return str(found.path / RALPH_MARKER), found.name
 
-    if prompt_file:
-        return prompt_file, None
+    if ralph_file:
+        return ralph_file, None
 
     # Fall back to ralph.toml agent.ralph — could be a name or a path
     if is_ralph_name(toml_ralph):

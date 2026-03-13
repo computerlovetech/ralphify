@@ -47,22 +47,22 @@ def discover_instructions(root: Path = Path(".")) -> list[Instruction]:
     return [_instruction_from_entry(prim) for prim in discover_primitives(root, "instructions", INSTRUCTION_MARKER)]
 
 
-def discover_instructions_local(prompt_dir: Path) -> list[Instruction]:
-    """Scan ``prompt_dir/instructions/`` for prompt-scoped instructions.
+def discover_instructions_local(ralph_dir: Path) -> list[Instruction]:
+    """Scan ``ralph_dir/instructions/`` for ralph-scoped instructions.
 
     Same construction logic as :func:`discover_instructions` but reads from
-    a prompt directory instead of the global ``.ralphify/instructions/``.
+    a ralph directory instead of the global ``.ralphify/instructions/``.
     """
-    return [_instruction_from_entry(prim) for prim in discover_local_primitives(prompt_dir, "instructions", INSTRUCTION_MARKER)]
+    return [_instruction_from_entry(prim) for prim in discover_local_primitives(ralph_dir, "instructions", INSTRUCTION_MARKER)]
 
 
-def discover_enabled_instructions(root: Path, prompt_dir: Path | None = None) -> list[Instruction]:
+def discover_enabled_instructions(root: Path, ralph_dir: Path | None = None) -> list[Instruction]:
     """Discover instructions, merge local overrides, and return only enabled ones.
 
     Convenience wrapper over :func:`~ralphify._discovery.discover_enabled`
     so callers don't need to wire up the discover/discover_local callables.
     """
-    return discover_enabled(root, prompt_dir, discover_instructions, discover_instructions_local)
+    return discover_enabled(root, ralph_dir, discover_instructions, discover_instructions_local)
 
 
 def resolve_instructions(prompt: str, instructions: list[Instruction]) -> str:

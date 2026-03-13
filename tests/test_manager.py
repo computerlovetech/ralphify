@@ -21,7 +21,7 @@ def _make_config(tmp_path, **overrides):
     config = RunConfig(
         command="echo",
         args=[],
-        prompt_file=str(prompt_path),
+        ralph_file=str(prompt_path),
         max_iterations=1,
         project_root=tmp_path,
     )

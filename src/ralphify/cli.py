@@ -280,10 +280,10 @@ def status() -> None:
 
 @app.command()
 def run(
-    prompt_name: str | None = typer.Argument(None, help="Name of a ralph in .ralphify/ralphs/."),
+    ralph_name: str | None = typer.Argument(None, help="Name of a ralph in .ralphify/ralphs/."),
     n: int | None = typer.Option(None, "-n", help="Max number of iterations. Infinite if not set."),
     prompt_text: str | None = typer.Option(None, "-p", "--prompt", help="Ad-hoc prompt text. Overrides the prompt file."),
-    prompt_file: str | None = typer.Option(None, "--prompt-file", "-f", help="Path to prompt file. Overrides ralph.toml."),
+    ralph_file: str | None = typer.Option(None, "--ralph-file", "-f", help="Path to prompt file. Overrides ralph.toml."),
     stop_on_error: bool = typer.Option(False, "--stop-on-error", "-s", help="Stop if the agent exits with non-zero."),
     delay: float = typer.Option(0, "--delay", "-d", help="Seconds to wait between iterations."),
     log_dir: str | None = typer.Option(None, "--log-dir", "-l", help="Save iteration output to log files in this directory."),
@@ -304,25 +304,25 @@ def run(
 
     # Inline text (-p/--prompt) bypasses file resolution entirely.
     if prompt_text:
-        prompt_file_path = agent.get("ralph", "RALPH.md")
-        resolved_prompt_name: str | None = None
+        ralph_file_path = agent.get("ralph", "RALPH.md")
+        resolved_ralph_name: str | None = None
     else:
-        if prompt_name and prompt_file:
-            rprint("[red]Cannot use both a ralph name and --prompt-file.[/red]")
+        if ralph_name and ralph_file:
+            rprint("[red]Cannot use both a ralph name and --ralph-file.[/red]")
             raise typer.Exit(1)
 
         try:
-            prompt_file_path, resolved_prompt_name = resolve_ralph_source(
-                prompt_name=prompt_name,
-                prompt_file=prompt_file,
+            ralph_file_path, resolved_ralph_name = resolve_ralph_source(
+                ralph_name=ralph_name,
+                ralph_file=ralph_file,
                 toml_ralph=agent.get("ralph", "RALPH.md"),
             )
         except ValueError as e:
             rprint(f"[red]{e}[/red]")
             raise typer.Exit(1)
 
-        if not Path(prompt_file_path).exists():
-            rprint(f"[red]Prompt file '{prompt_file_path}' not found.[/red]")
+        if not Path(ralph_file_path).exists():
+            rprint(f"[red]Prompt file '{ralph_file_path}' not found.[/red]")
             raise typer.Exit(1)
 
     if log_dir:
@@ -331,9 +331,9 @@ def run(
     config = RunConfig(
         command=command,
         args=args,
-        prompt_file=prompt_file_path,
+        ralph_file=ralph_file_path,
         prompt_text=prompt_text,
-        prompt_name=resolved_prompt_name,
+        ralph_name=resolved_ralph_name,
         max_iterations=n,
         delay=delay,
         timeout=timeout,

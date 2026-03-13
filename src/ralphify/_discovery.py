@@ -118,19 +118,19 @@ def merge_by_name(global_list: list[_P], local_list: list[_P]) -> list[_P]:
 
 def discover_enabled(
     root: Path,
-    prompt_dir: Path | None,
+    ralph_dir: Path | None,
     discover: Callable[[Path], list[_P]],
     discover_local: Callable[[Path], list[_P]],
 ) -> list[_P]:
     """Discover primitives, merge local overrides (if any), and return only enabled ones.
 
     Encapsulates the three-step pattern shared by all primitive types:
-    discover globals → merge with prompt-scoped locals → filter to enabled.
+    discover globals → merge with ralph-scoped locals → filter to enabled.
 
     Used by the engine's ``_discover_enabled_primitives`` to build the
     full set of primitives for a run.
     """
     items = discover(root)
-    if prompt_dir is not None:
-        items = merge_by_name(items, discover_local(prompt_dir))
+    if ralph_dir is not None:
+        items = merge_by_name(items, discover_local(ralph_dir))
     return [item for item in items if item.enabled]

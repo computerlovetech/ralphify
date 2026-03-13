@@ -100,22 +100,22 @@ def discover_checks(root: Path = Path(".")) -> list[Check]:
     return _checks_from_entries(discover_primitives(root, "checks", CHECK_MARKER))
 
 
-def discover_checks_local(prompt_dir: Path) -> list[Check]:
-    """Scan ``prompt_dir/checks/`` for prompt-scoped checks.
+def discover_checks_local(ralph_dir: Path) -> list[Check]:
+    """Scan ``ralph_dir/checks/`` for ralph-scoped checks.
 
     Same construction logic as :func:`discover_checks` but reads from
-    a prompt directory instead of the global ``.ralphify/checks/``.
+    a ralph directory instead of the global ``.ralphify/checks/``.
     """
-    return _checks_from_entries(discover_local_primitives(prompt_dir, "checks", CHECK_MARKER))
+    return _checks_from_entries(discover_local_primitives(ralph_dir, "checks", CHECK_MARKER))
 
 
-def discover_enabled_checks(root: Path, prompt_dir: Path | None = None) -> list[Check]:
+def discover_enabled_checks(root: Path, ralph_dir: Path | None = None) -> list[Check]:
     """Discover checks, merge local overrides, and return only enabled ones.
 
     Convenience wrapper over :func:`~ralphify._discovery.discover_enabled`
     so callers don't need to wire up the discover/discover_local callables.
     """
-    return discover_enabled(root, prompt_dir, discover_checks, discover_checks_local)
+    return discover_enabled(root, ralph_dir, discover_checks, discover_checks_local)
 
 
 def run_check(check: Check, project_root: Path) -> CheckResult:

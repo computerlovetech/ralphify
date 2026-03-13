@@ -73,22 +73,22 @@ def discover_contexts(root: Path = Path(".")) -> list[Context]:
     return [_context_from_entry(prim) for prim in discover_primitives(root, "contexts", CONTEXT_MARKER)]
 
 
-def discover_contexts_local(prompt_dir: Path) -> list[Context]:
-    """Scan ``prompt_dir/contexts/`` for prompt-scoped contexts.
+def discover_contexts_local(ralph_dir: Path) -> list[Context]:
+    """Scan ``ralph_dir/contexts/`` for ralph-scoped contexts.
 
     Same construction logic as :func:`discover_contexts` but reads from
-    a prompt directory instead of the global ``.ralphify/contexts/``.
+    a ralph directory instead of the global ``.ralphify/contexts/``.
     """
-    return [_context_from_entry(prim) for prim in discover_local_primitives(prompt_dir, "contexts", CONTEXT_MARKER)]
+    return [_context_from_entry(prim) for prim in discover_local_primitives(ralph_dir, "contexts", CONTEXT_MARKER)]
 
 
-def discover_enabled_contexts(root: Path, prompt_dir: Path | None = None) -> list[Context]:
+def discover_enabled_contexts(root: Path, ralph_dir: Path | None = None) -> list[Context]:
     """Discover contexts, merge local overrides, and return only enabled ones.
 
     Convenience wrapper over :func:`~ralphify._discovery.discover_enabled`
     so callers don't need to wire up the discover/discover_local callables.
     """
-    return discover_enabled(root, prompt_dir, discover_contexts, discover_contexts_local)
+    return discover_enabled(root, ralph_dir, discover_contexts, discover_contexts_local)
 
 
 def run_context(context: Context, project_root: Path) -> ContextResult:

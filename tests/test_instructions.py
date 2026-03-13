@@ -89,7 +89,7 @@ class TestDiscoverInstructions:
 
 
 class TestDiscoverInstructionsLocal:
-    def test_finds_instructions_in_prompt_dir(self, tmp_path):
+    def test_finds_instructions_in_ralph_dir(self, tmp_path):
         inst_dir = tmp_path / "instructions" / "focus"
         inst_dir.mkdir(parents=True)
         (inst_dir / "INSTRUCTION.md").write_text("---\n---\nFocus on UI components.")
@@ -99,7 +99,7 @@ class TestDiscoverInstructionsLocal:
         assert result[0].name == "focus"
         assert result[0].content == "Focus on UI components."
 
-    def test_empty_prompt_dir(self, tmp_path):
+    def test_empty_ralph_dir(self, tmp_path):
         result = discover_instructions_local(tmp_path)
         assert result == []
 

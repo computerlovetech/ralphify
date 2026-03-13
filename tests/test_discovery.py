@@ -4,7 +4,7 @@ from ralphify._discovery import discover_local_primitives
 
 
 class TestDiscoverLocalPrimitivesBasic:
-    def test_finds_primitives_at_prompt_dir(self, tmp_path):
+    def test_finds_primitives_at_ralph_dir(self, tmp_path):
         checks_dir = tmp_path / "checks" / "lint"
         checks_dir.mkdir(parents=True)
         (checks_dir / "CHECK.md").write_text("---\ncommand: ruff check .\n---\nFix lint.")

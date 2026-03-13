@@ -281,7 +281,7 @@ class TestRunAdHocPrompt:
         assert mock_run.call_args.kwargs["input"] == "do something"
 
     @patch("ralphify._agent.subprocess.run", side_effect=_ok)
-    def test_skips_prompt_file_check(self, mock_run, tmp_path, monkeypatch):
+    def test_skips_ralph_file_check(self, mock_run, tmp_path, monkeypatch):
         """Works without RALPH.md when -p is provided."""
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
@@ -304,34 +304,34 @@ class TestRunAdHocPrompt:
         assert "{{ instructions }}" not in prompt_sent
 
 
-class TestRunPromptFile:
+class TestRunRalphFile:
     @patch("ralphify._agent.subprocess.run", side_effect=_ok)
-    def test_prompt_file_overrides_config(self, mock_run, tmp_path, monkeypatch):
+    def test_ralph_file_overrides_config(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
         (tmp_path / "RALPH.md").write_text("default prompt")
         (tmp_path / "alt.md").write_text("alternate prompt")
 
-        result = runner.invoke(app, ["run", "-n", "1", "--prompt-file", "alt.md"])
+        result = runner.invoke(app, ["run", "-n", "1", "--ralph-file", "alt.md"])
         assert result.exit_code == 0
         assert mock_run.call_args.kwargs["input"] == "alternate prompt"
 
-    def test_prompt_file_missing_exits(self, tmp_path, monkeypatch):
+    def test_ralph_file_missing_exits(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
         (tmp_path / "RALPH.md").write_text("default prompt")
 
-        result = runner.invoke(app, ["run", "-n", "1", "--prompt-file", "nonexistent.md"])
+        result = runner.invoke(app, ["run", "-n", "1", "--ralph-file", "nonexistent.md"])
         assert result.exit_code == 1
         assert "not found" in result.output
 
     @patch("ralphify._agent.subprocess.run", side_effect=_ok)
-    def test_prompt_text_overrides_prompt_file(self, mock_run, tmp_path, monkeypatch):
+    def test_prompt_text_overrides_ralph_file(self, mock_run, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
         (tmp_path / "alt.md").write_text("alternate prompt")
 
-        result = runner.invoke(app, ["run", "-n", "1", "-p", "inline text", "--prompt-file", "alt.md"])
+        result = runner.invoke(app, ["run", "-n", "1", "-p", "inline text", "--ralph-file", "alt.md"])
         assert result.exit_code == 0
         assert mock_run.call_args.kwargs["input"] == "inline text"
 
@@ -1131,13 +1131,13 @@ class TestRunRalphName:
         assert result.exit_code == 1
         assert "not found" in result.output
 
-    def test_run_with_name_and_prompt_file_conflicts(self, tmp_path, monkeypatch):
+    def test_run_with_name_and_ralph_file_conflicts(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         (tmp_path / CONFIG_FILENAME).write_text(RALPH_TOML_TEMPLATE)
         _setup_ralph(tmp_path, "improve-docs", content="Fix the docs.")
         (tmp_path / "alt.md").write_text("alt prompt")
 
-        result = runner.invoke(app, ["run", "improve-docs", "-n", "1", "--prompt-file", "alt.md"])
+        result = runner.invoke(app, ["run", "improve-docs", "-n", "1", "--ralph-file", "alt.md"])
         assert result.exit_code == 1
         assert "Cannot use both" in result.output
 

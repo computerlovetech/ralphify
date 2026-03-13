@@ -202,7 +202,7 @@ When resolving the prompt (first match wins):
 
 1. `-p` flag — inline ad-hoc prompt text
 2. Positional argument — `ralph run <name>` looks up `.ralphify/ralphs/<name>/RALPH.md`
-3. `--prompt-file` / `-f` flag — explicit path to a prompt file
+3. `--ralph-file` / `-f` flag — explicit path to a prompt file
 4. `ralph.toml` `ralph` field — can be a name or a file path
 5. Fallback — `RALPH.md` in the project root
 

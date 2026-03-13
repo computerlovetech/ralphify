@@ -139,7 +139,7 @@ class TestDiscoverContexts:
 
 
 class TestDiscoverContextsLocal:
-    def test_finds_contexts_in_prompt_dir(self, tmp_path):
+    def test_finds_contexts_in_ralph_dir(self, tmp_path):
         ctx_dir = tmp_path / "contexts" / "tasks"
         ctx_dir.mkdir(parents=True)
         (ctx_dir / "CONTEXT.md").write_text("---\ncommand: cat tasks.md\n---\nCurrent tasks:")
@@ -150,7 +150,7 @@ class TestDiscoverContextsLocal:
         assert result[0].command == "cat tasks.md"
         assert result[0].static_content == "Current tasks:"
 
-    def test_empty_prompt_dir(self, tmp_path):
+    def test_empty_ralph_dir(self, tmp_path):
         result = discover_contexts_local(tmp_path)
         assert result == []
 

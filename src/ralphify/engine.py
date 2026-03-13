@@ -42,23 +42,23 @@ class EnabledPrimitives(NamedTuple):
     instructions: list[Instruction]
 
 
-def _resolve_prompt_dir(config: RunConfig) -> Path | None:
-    """Return the prompt directory when running a named prompt.
+def _resolve_ralph_dir(config: RunConfig) -> Path | None:
+    """Return the ralph directory when running a named ralph.
 
     Returns ``None`` for ad-hoc prompt text (``-p``), which has no
     directory to scan for local primitives.
     """
-    if config.prompt_name and not config.prompt_text:
-        return Path(config.prompt_file).parent
+    if config.ralph_name and not config.prompt_text:
+        return Path(config.ralph_file).parent
     return None
 
 
 def _discover_enabled_primitives(
-    root: Path, prompt_dir: Path | None = None,
+    root: Path, ralph_dir: Path | None = None,
 ) -> EnabledPrimitives:
     """Discover all primitives and return only the enabled ones.
 
-    When *prompt_dir* is set, prompt-scoped primitives are merged with
+    When *ralph_dir* is set, ralph-scoped primitives are merged with
     globals (local wins on name collisions).  Enabled filtering happens
     **after** the merge so a disabled local primitive can suppress a
     global one with the same name.
@@ -69,9 +69,9 @@ def _discover_enabled_primitives(
     only enabled primitives and do not re-filter.
     """
     return EnabledPrimitives(
-        checks=discover_enabled_checks(root, prompt_dir),
-        contexts=discover_enabled_contexts(root, prompt_dir),
-        instructions=discover_enabled_instructions(root, prompt_dir),
+        checks=discover_enabled_checks(root, ralph_dir),
+        contexts=discover_enabled_contexts(root, ralph_dir),
+        instructions=discover_enabled_instructions(root, ralph_dir),
     )
 
 
@@ -116,7 +116,7 @@ def _handle_loop_transitions(
     config: RunConfig,
     primitives: EnabledPrimitives,
     emit: _BoundEmitter,
-    prompt_dir: Path | None = None,
+    ralph_dir: Path | None = None,
 ) -> tuple[bool, EnabledPrimitives]:
     """Handle stop, pause, and reload transitions at the top of each iteration.
 
@@ -133,7 +133,7 @@ def _handle_loop_transitions(
             return False, primitives
 
     if state.consume_reload_request():
-        primitives = _discover_enabled_primitives(config.project_root, prompt_dir)
+        primitives = _discover_enabled_primitives(config.project_root, ralph_dir)
         emit(EventType.PRIMITIVES_RELOADED, {
             "checks": len(primitives.checks),
             "contexts": len(primitives.contexts),
@@ -159,7 +159,7 @@ def _assemble_prompt(
     if config.prompt_text:
         prompt = config.prompt_text
     else:
-        raw = Path(config.prompt_file).read_text()
+        raw = Path(config.ralph_file).read_text()
         _, prompt = parse_frontmatter(raw)
     if context_results:
         prompt = resolve_contexts(prompt, context_results)
@@ -340,8 +340,8 @@ def run_loop(
         log_path_dir.mkdir(parents=True, exist_ok=True)
 
     check_failures_text = ""
-    prompt_dir = _resolve_prompt_dir(config)
-    primitives = _discover_enabled_primitives(config.project_root, prompt_dir)
+    ralph_dir = _resolve_ralph_dir(config)
+    primitives = _discover_enabled_primitives(config.project_root, ralph_dir)
 
     emit(EventType.RUN_STARTED, {
         "checks": len(primitives.checks),
@@ -350,13 +350,13 @@ def run_loop(
         "max_iterations": config.max_iterations,
         "timeout": config.timeout,
         "delay": config.delay,
-        "prompt_name": config.prompt_name,
+        "ralph_name": config.ralph_name,
     })
 
     try:
         while True:
             should_continue, primitives = _handle_loop_transitions(
-                state, config, primitives, emit, prompt_dir,
+                state, config, primitives, emit, ralph_dir,
             )
             if not should_continue:
                 break
