@@ -1,9 +1,0 @@
-Done. Committed `5dbde75` — added a **"Writing Your Prompt" guide** (`docs/prompts.md`) to the MkDocs site.
-
-**What was the gap:** The prompt is the single most important file in a ralphify project, yet the docs only had a few bullet points in the README about customizing it. A new user would install ralphify, see `PROMPT.md`, and have no idea how to write one that actually produces useful work.
-
-**What was added:**
-- New `docs/prompts.md` covering: how prompts work in the loop, anatomy of a good prompt (role/task/constraints/process), placeholder system, check feedback loop, three ready-to-use prompt patterns (feature dev, bug fixing, docs), and practical tips
-- Linked from the index page's "Next steps" section
-- Added to MkDocs nav between Home and Primitives
-- `mkdocs build --strict` passes with zero warnings

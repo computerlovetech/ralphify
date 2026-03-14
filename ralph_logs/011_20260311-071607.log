@@ -1,5 +1,0 @@
-Done. Two documentation accuracy fixes committed:
-
-1. **Fixed logging behavior description** (`docs/how-it-works.md`): Changed the incorrect claim that `--log-dir` output is "printed to the terminal in real time" — it's actually captured and replayed after the iteration completes. This now matches what the troubleshooting page already correctly stated.
-
-2. **Documented context script support** (`docs/primitives.md`): Added a "Using a script instead of a command" section under Contexts. The code in `contexts.py` calls `find_run_script()` for contexts (same as checks), but this was completely undocumented — users had no way to know contexts support `run.*` scripts.

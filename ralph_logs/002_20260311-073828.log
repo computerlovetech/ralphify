@@ -1,7 +1,0 @@
-Done. The README now showcases the three primitives with concrete examples:
-
-- **Checks** — shows the self-healing feedback loop with a visual diagram of how iterations self-correct
-- **Contexts** — shows dynamic data injection with a git-log example
-- **Instructions** — shows reusable rules with toggle-on/off
-
-This was the biggest gap: someone landing on the repo would previously think ralphify is just a `while True` wrapper. Now the killer feature (self-healing checks) is visible from the front door, answering "why use this instead of a bash loop?"

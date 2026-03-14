@@ -1,9 +1,0 @@
-Done. Created `.github/workflows/docs.yml` — a GitHub Actions workflow that:
-
-- **Triggers** on pushes to `main` that change `docs/` or `mkdocs.yml`, plus manual dispatch
-- **Builds** the MkDocs site with `--strict` (zero warnings required)
-- **Deploys** to GitHub Pages using the modern `actions/deploy-pages@v4` approach with OIDC permissions
-
-**One manual step required:** In the GitHub repo settings, go to **Settings > Pages** and set the source to **"GitHub Actions"** (not "Deploy from a branch"). This is a one-time setting that can't be automated via a workflow file.
-
-After pushing and enabling that setting, the docs will be live at `https://computerlovetech.github.io/ralphify/` and auto-update on every docs change to `main`.

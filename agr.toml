@@ -1,9 +1,0 @@
-default_source = "github"
-dependencies = [
-    {handle = "microsoft/playwright-cli/playwright-cli", type = "skill"},
-]
-
-[[source]]
-name = "github"
-type = "git"
-url = "https://github.com/{owner}/{repo}.git"

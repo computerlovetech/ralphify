@@ -1,6 +1,0 @@
-Done. Added docstrings to all 10 source modules and 5 dataclasses:
-
-- **Module docstrings**: Each module now explains its purpose, what it does, and key behaviors (e.g., `_runner.py` notes that commands run from the project root, `_frontmatter.py` documents HTML comment stripping)
-- **Dataclass docstrings**: `Check`, `CheckResult`, `Context`, `ContextResult`, and `Instruction` now document their fields, defaults, and non-obvious behaviors (e.g., exit code -1 for timeouts, empty instructions being silently excluded)
-
-All 197 tests pass, MkDocs builds clean.

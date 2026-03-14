@@ -1,8 +1,0 @@
-Done. Created `agent_docs/CODEBASE_MAP.md` — the biggest documentation gap was the complete absence of AI-agent-oriented docs. The file covers:
-
-- **Project overview** — what ralphify does in a few sentences
-- **Directory structure** — every source file with its purpose
-- **Architecture** — the prompt assembly pipeline and how primitives connect
-- **Key files** — where to look first
-- **Traps and gotchas** — "if you change X you must also update Y" warnings
-- **Testing and docs commands** — how to verify changes

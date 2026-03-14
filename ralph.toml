@@ -1,4 +1,0 @@
-[agent]
-command = "claude"
-args = ["-p", "--dangerously-skip-permissions"]
-ralph = "RALPH.md"
