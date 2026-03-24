@@ -120,8 +120,8 @@ def _run_commands(
     return results
 
 
-def _build_context(config: RunConfig, state: RunState) -> dict[str, str]:
-    """Build the context dict for ``{{ context.X }}`` placeholders."""
+def _build_ralph_context(config: RunConfig, state: RunState) -> dict[str, str]:
+    """Build the context dict for ``{{ ralph.X }}`` placeholders."""
     ctx: dict[str, str] = {
         "name": config.ralph_dir.name,
         "iteration": str(state.iteration),
@@ -143,8 +143,8 @@ def _assemble_prompt(
     """
     raw = config.ralph_file.read_text(encoding="utf-8")
     _, prompt = parse_frontmatter(raw)
-    context = _build_context(config, state)
-    prompt = resolve_all(prompt, command_outputs, config.args, context)
+    ralph_context = _build_ralph_context(config, state)
+    prompt = resolve_all(prompt, command_outputs, config.args, ralph_context)
     if config.credit:
         prompt += _CREDIT_INSTRUCTION
     return prompt

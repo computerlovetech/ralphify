@@ -891,10 +891,10 @@ class TestAssemblePrompt:
         assert "Filter: {{ commands.tests }}" in result
         assert "Tests: 5 passed" in result
 
-    def test_resolves_context_placeholders(self, tmp_path):
+    def test_resolves_ralph_placeholders(self, tmp_path):
         config = make_config(
             tmp_path,
-            "Name: {{ context.name }}, Iter: {{ context.iteration }}, Max: {{ context.max_iterations }}",
+            "Name: {{ ralph.name }}, Iter: {{ ralph.iteration }}, Max: {{ ralph.max_iterations }}",
             max_iterations=5,
             credit=False,
         )
@@ -905,10 +905,10 @@ class TestAssemblePrompt:
 
         assert result == "Name: my-ralph, Iter: 3, Max: 5"
 
-    def test_context_max_iterations_empty_when_unlimited(self, tmp_path):
+    def test_ralph_max_iterations_empty_when_unlimited(self, tmp_path):
         config = make_config(
             tmp_path,
-            "Max: {{ context.max_iterations }}",
+            "Max: {{ ralph.max_iterations }}",
             max_iterations=None,
             credit=False,
         )
@@ -919,10 +919,10 @@ class TestAssemblePrompt:
 
         assert result == "Max: "
 
-    def test_context_name_is_ralph_dir_name(self, tmp_path):
+    def test_ralph_name_is_ralph_dir_name(self, tmp_path):
         config = make_config(
             tmp_path,
-            "Name: {{ context.name }}",
+            "Name: {{ ralph.name }}",
             max_iterations=1,
             credit=False,
         )

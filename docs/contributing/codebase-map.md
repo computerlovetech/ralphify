@@ -22,7 +22,7 @@ src/ralphify/           # All source code
 ├── cli.py              # CLI commands (run, new, init) — delegates to engine for the loop
 ├── engine.py           # Core run loop orchestration with structured event emission
 ├── manager.py          # Multi-run orchestration (concurrent runs via threads)
-├── _resolver.py        # Template placeholder resolution ({{ commands.* }}, {{ args.* }}, {{ context.* }})
+├── _resolver.py        # Template placeholder resolution ({{ commands.* }}, {{ args.* }}, {{ ralph.* }})
 ├── _agent.py           # Run agent subprocesses (streaming + blocking modes, log writing)
 ├── _run_types.py       # RunConfig, RunState, RunStatus, Command — shared data types
 ├── _runner.py          # Execute shell commands with timeout and capture output

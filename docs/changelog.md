@@ -12,7 +12,7 @@ All notable changes to ralphify are documented here.
 
 ### Added
 
-- **Context placeholders** — ralphs can now access runtime metadata via `{{ context.name }}` (ralph directory name), `{{ context.iteration }}` (current iteration, 1-based), and `{{ context.max_iterations }}` (total iterations if `-n` was set, empty otherwise). No frontmatter configuration needed.
+- **Ralph placeholders** — ralphs can now access runtime metadata via `{{ ralph.name }}` (ralph directory name), `{{ ralph.iteration }}` (current iteration, 1-based), and `{{ ralph.max_iterations }}` (total iterations if `-n` was set, empty otherwise). No frontmatter configuration needed.
 
 ---
 

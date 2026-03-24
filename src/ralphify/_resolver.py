@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 
-from ralphify._frontmatter import CMD_NAME_RE, FIELD_ARGS, FIELD_COMMANDS, FIELD_CONTEXT
+from ralphify._frontmatter import CMD_NAME_RE, FIELD_ARGS, FIELD_COMMANDS, FIELD_RALPH
 
 
 # Pattern matching ``{{ args.<name> }}`` placeholders — used by resolve_args
@@ -37,7 +37,7 @@ def resolve_args(prompt: str, user_args: dict[str, str]) -> str:
 
 # Single pattern matching all placeholder kinds for single-pass resolution.
 _ALL_PATTERN = re.compile(
-    rf"\{{\{{\s*({FIELD_COMMANDS}|{FIELD_ARGS}|{FIELD_CONTEXT})\.({CMD_NAME_RE.pattern})\s*\}}\}}"
+    rf"\{{\{{\s*({FIELD_COMMANDS}|{FIELD_ARGS}|{FIELD_RALPH})\.({CMD_NAME_RE.pattern})\s*\}}\}}"
 )
 
 
@@ -45,18 +45,18 @@ def resolve_all(
     prompt: str,
     command_outputs: dict[str, str],
     user_args: dict[str, str],
-    context: dict[str, str] | None = None,
+    ralph_context: dict[str, str] | None = None,
 ) -> str:
     """Resolve all placeholders in a single pass to prevent cross-contamination.
 
     Resolves ``{{ commands.name }}``, ``{{ args.name }}``, and
-    ``{{ context.name }}`` in a single pass so values inserted by one
+    ``{{ ralph.name }}`` in a single pass so values inserted by one
     kind of placeholder are not re-processed as the other kind.
     """
     lookups: dict[str, dict[str, str]] = {
         FIELD_COMMANDS: command_outputs,
         FIELD_ARGS: user_args,
-        FIELD_CONTEXT: context or {},
+        FIELD_RALPH: ralph_context or {},
     }
 
     def _replace(match: re.Match) -> str:
