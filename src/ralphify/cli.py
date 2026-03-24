@@ -11,6 +11,7 @@ import math
 import os
 import shlex
 import shutil
+import signal
 import sys
 from pathlib import Path
 from typing import Any, NoReturn
@@ -465,4 +466,21 @@ def run(
     state = RunState(run_id=generate_run_id())
     emitter = ConsoleEmitter(_console)
 
-    run_loop(config, state, emitter)
+    ctrl_c_count = 0
+    original_handler = signal.getsignal(signal.SIGINT)
+
+    def _sigint_handler(signum: int, frame: Any) -> None:
+        nonlocal ctrl_c_count
+        ctrl_c_count += 1
+        if ctrl_c_count == 1:
+            state.request_stop()
+            _console.print("\n[yellow]Finishing current iteration… (Ctrl+C again to force stop)[/yellow]")
+        else:
+            signal.signal(signal.SIGINT, original_handler)
+            raise KeyboardInterrupt
+
+    signal.signal(signal.SIGINT, _sigint_handler)
+    try:
+        run_loop(config, state, emitter)
+    finally:
+        signal.signal(signal.SIGINT, original_handler)

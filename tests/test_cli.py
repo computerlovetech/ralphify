@@ -790,3 +790,88 @@ class TestCreditFrontmatter:
         assert result.exit_code == 1
         assert "credit" in result.output.lower()
         assert "true or false" in result.output.lower()
+
+
+class TestTwoStageCtrlC:
+    """Test the two-stage Ctrl+C signal handler installed by the run command."""
+
+    def test_first_sigint_calls_request_stop(self):
+        """First Ctrl+C should call state.request_stop() and not raise."""
+        import signal
+        from unittest.mock import MagicMock
+        from ralphify._run_types import RunState, generate_run_id
+
+        state = RunState(run_id=generate_run_id())
+        console = MagicMock()
+
+        ctrl_c_count = 0
+        original_handler = signal.getsignal(signal.SIGINT)
+
+        def _sigint_handler(signum, frame):
+            nonlocal ctrl_c_count
+            ctrl_c_count += 1
+            if ctrl_c_count == 1:
+                state.request_stop()
+                console.print("\n[yellow]Finishing current iteration… (Ctrl+C again to force stop)[/yellow]")
+            else:
+                signal.signal(signal.SIGINT, original_handler)
+                raise KeyboardInterrupt
+
+        signal.signal(signal.SIGINT, _sigint_handler)
+        try:
+            # Simulate first Ctrl+C
+            _sigint_handler(signal.SIGINT, None)
+            assert state.stop_requested is True
+            assert ctrl_c_count == 1
+            console.print.assert_called_once()
+            assert "Finishing current iteration" in console.print.call_args[0][0]
+        finally:
+            signal.signal(signal.SIGINT, original_handler)
+
+    def test_second_sigint_raises_keyboard_interrupt(self):
+        """Second Ctrl+C should raise KeyboardInterrupt."""
+        import signal
+        from unittest.mock import MagicMock
+        from ralphify._run_types import RunState, generate_run_id
+
+        state = RunState(run_id=generate_run_id())
+        console = MagicMock()
+
+        ctrl_c_count = 0
+        original_handler = signal.getsignal(signal.SIGINT)
+
+        def _sigint_handler(signum, frame):
+            nonlocal ctrl_c_count
+            ctrl_c_count += 1
+            if ctrl_c_count == 1:
+                state.request_stop()
+                console.print("\n[yellow]Finishing current iteration… (Ctrl+C again to force stop)[/yellow]")
+            else:
+                signal.signal(signal.SIGINT, original_handler)
+                raise KeyboardInterrupt
+
+        signal.signal(signal.SIGINT, _sigint_handler)
+        try:
+            # First Ctrl+C — graceful
+            _sigint_handler(signal.SIGINT, None)
+            assert ctrl_c_count == 1
+
+            # Second Ctrl+C — force
+            with pytest.raises(KeyboardInterrupt):
+                _sigint_handler(signal.SIGINT, None)
+            assert ctrl_c_count == 2
+        finally:
+            signal.signal(signal.SIGINT, original_handler)
+
+    @patch(MOCK_SUBPROCESS, side_effect=ok_proc)
+    @patch(MOCK_WHICH, return_value="/usr/bin/claude")
+    def test_run_command_restores_original_handler(self, mock_which, mock_run, tmp_path, monkeypatch):
+        """Signal handler should be restored after run_loop finishes."""
+        import signal
+
+        monkeypatch.chdir(tmp_path)
+        ralph_dir = make_ralph(tmp_path)
+        original = signal.getsignal(signal.SIGINT)
+        runner.invoke(app, ["run", str(ralph_dir), "-n", "1"])
+        restored = signal.getsignal(signal.SIGINT)
+        assert restored == original
