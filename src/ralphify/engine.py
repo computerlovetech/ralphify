@@ -10,6 +10,7 @@ The loop: run commands → assemble prompt → pipe to agent → repeat.
 from __future__ import annotations
 
 import shlex
+import shutil
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -178,6 +179,14 @@ def _run_agent_phase(
         raise ValueError(
             f"Invalid agent command syntax: {config.agent!r}. {_field_hint(FIELD_AGENT)}"
         ) from exc
+
+    # Resolve the executable via PATH so that bare names like "claude" work
+    # on Windows, where subprocess.Popen requires the full filename (e.g.
+    # "claude.exe") unless shell=True.
+    if cmd:
+        resolved = shutil.which(cmd[0])
+        if resolved is not None:
+            cmd[0] = resolved
 
     # Option C: recheck per-line so mid-iteration peek toggle takes effect.
     # When neither peek nor logging needs output, pass None so the blocking
