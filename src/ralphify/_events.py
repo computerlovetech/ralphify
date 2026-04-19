@@ -82,6 +82,11 @@ class EventType(Enum):
     # ── Agent activity (live streaming) ─────────────────────────
     AGENT_ACTIVITY = "agent_activity"
     AGENT_OUTPUT_LINE = "agent_output_line"
+    TOOL_USE = "tool_use"
+
+    # ── Turn-cap enforcement ────────────────────────────────────
+    ITERATION_TURN_APPROACHING_LIMIT = "iteration_turn_approaching_limit"
+    ITERATION_TURN_CAPPED = "iteration_turn_capped"
 
     # ── Other ───────────────────────────────────────────────────
     LOG_MESSAGE = "log_message"
@@ -153,6 +158,23 @@ class AgentOutputLineData(TypedDict):
     iteration: int
 
 
+class ToolUseData(TypedDict):
+    iteration: int
+    tool_name: str
+    count: int
+
+
+class TurnApproachingLimitData(TypedDict):
+    iteration: int
+    count: int
+    max_turns: int
+
+
+class TurnCappedData(TypedDict):
+    iteration: int
+    count: int
+
+
 class LogMessageData(TypedDict):
     message: str
     level: LogLevel
@@ -169,6 +191,9 @@ EventData = (
     | PromptAssembledData
     | AgentActivityData
     | AgentOutputLineData
+    | ToolUseData
+    | TurnApproachingLimitData
+    | TurnCappedData
     | LogMessageData
 )
 """Union of all typed event data payloads."""

@@ -26,6 +26,14 @@ FIELD_COMMANDS = "commands"
 FIELD_ARGS = "args"
 FIELD_CREDIT = "credit"
 FIELD_RALPH = "ralph"
+# Promise config keeps the legacy key names. ``completion_signal`` stores the
+# inner promise text, not the surrounding ``<promise>...</promise>`` markup.
+FIELD_COMPLETION_SIGNAL = "completion_signal"
+FIELD_STOP_ON_COMPLETION_SIGNAL = "stop_on_completion_signal"
+
+# Per-iteration turn-cap configuration — see docs/specs/cli-adapter-layer.md.
+FIELD_MAX_TURNS = "max_turns"
+FIELD_MAX_TURNS_GRACE = "max_turns_grace"
 
 # Sub-field names within each command mapping.
 CMD_FIELD_NAME = "name"

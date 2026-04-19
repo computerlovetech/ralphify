@@ -522,7 +522,7 @@ For programmatic control over concurrent runs, use the [Python API's `RunManager
 
 ### Can I edit RALPH.md while the loop runs?
 
-Yes. The prompt body (everything below the frontmatter) is re-read every iteration — edit the prompt text and changes take effect on the next cycle. Frontmatter fields (`agent`, `commands`, `args`) are parsed once at startup, so changing those requires restarting the loop.
+Yes. The prompt body (everything below the frontmatter) is re-read every iteration — edit the prompt text and changes take effect on the next cycle. Frontmatter settings are parsed once at startup, so changing them requires restarting the loop.
 
 ### How do I disable the co-author credit in commits?
 

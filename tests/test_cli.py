@@ -1,6 +1,7 @@
 """Tests for the CLI."""
 
 import importlib
+import re
 import signal
 from unittest.mock import patch, MagicMock
 
@@ -22,6 +23,31 @@ from ralphify._frontmatter import RALPH_MARKER
 from ralphify.cli import app, _parse_command_items, _parse_user_args
 
 runner = CliRunner()
+
+
+def _flatten_help(output: str) -> str:
+    no_ansi = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", output)
+    return re.sub(r"\s+", " ", no_ansi)
+
+
+class TestHelp:
+    def test_scaffold_help_mentions_promise_completion(self):
+        result = runner.invoke(app, ["scaffold", "--help"])
+
+        assert result.exit_code == 0
+        flat = _flatten_help(result.output)
+        assert "completion_signal" in flat
+        assert "stop_on_completion_signal" in flat
+        assert "<promise>...</promise>" in flat
+
+    def test_run_help_mentions_promise_completion(self):
+        result = runner.invoke(app, ["run", "--help"])
+
+        assert result.exit_code == 0
+        flat = _flatten_help(result.output)
+        assert "completion_signal" in flat
+        assert "stop_on_completion_signal" in flat
+        assert "<promise>...</promise>" in flat
 
 
 class TestVersion:
@@ -94,6 +120,103 @@ class TestRun:
         result = runner.invoke(app, ["run", str(ralph_dir), "-n", "1"])
         assert result.exit_code == 1
         assert "malformed" in result.output.lower()
+
+    def test_run_uses_default_completion_signal_config(
+        self, mock_which, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        ralph_dir = make_ralph(tmp_path)
+        with patch("ralphify.cli.run_loop") as mock_run_loop:
+            result = runner.invoke(app, ["run", str(ralph_dir), "-n", "3"])
+
+        assert result.exit_code == 0
+        mock_run_loop.assert_called_once()
+        config = mock_run_loop.call_args.args[0]
+        assert config.completion_signal == "RALPH_PROMISE_COMPLETE"
+        assert config.stop_on_completion_signal is False
+        assert config.max_iterations == 3
+
+    def test_run_passes_completion_signal_frontmatter_to_config(
+        self, mock_which, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        ralph_dir = tmp_path / "my-ralph"
+        ralph_dir.mkdir()
+        (ralph_dir / RALPH_MARKER).write_text(
+            "---\n"
+            "agent: claude -p --dangerously-skip-permissions\n"
+            "completion_signal: CUSTOM_DONE\n"
+            "stop_on_completion_signal: true\n"
+            "---\n"
+            "go"
+        )
+        with patch("ralphify.cli.run_loop") as mock_run_loop:
+            result = runner.invoke(app, ["run", str(ralph_dir), "-n", "2"])
+
+        assert result.exit_code == 0
+        mock_run_loop.assert_called_once()
+        config = mock_run_loop.call_args.args[0]
+        assert config.completion_signal == "CUSTOM_DONE"
+        assert config.stop_on_completion_signal is True
+
+    @pytest.mark.parametrize(
+        ("frontmatter_line", "expected_error"),
+        [
+            ("completion_signal: 0", "must be a non-empty string"),
+            (
+                'completion_signal: " CUSTOM_DONE "',
+                "must not include leading or trailing whitespace",
+            ),
+            (
+                'completion_signal: "<promise>CUSTOM_DONE</promise>"',
+                "must be the text inside <promise>...</promise>",
+            ),
+        ],
+        ids=["wrong-type", "surrounding-whitespace", "markup-instead-of-text"],
+    )
+    def test_run_rejects_invalid_completion_signal_frontmatter(
+        self, mock_which, tmp_path, monkeypatch, frontmatter_line, expected_error
+    ):
+        monkeypatch.chdir(tmp_path)
+        ralph_dir = tmp_path / "my-ralph"
+        ralph_dir.mkdir()
+        (ralph_dir / RALPH_MARKER).write_text(
+            "---\n"
+            "agent: claude -p --dangerously-skip-permissions\n"
+            f"{frontmatter_line}\n"
+            "---\n"
+            "go"
+        )
+
+        with patch("ralphify.cli.run_loop") as mock_run_loop:
+            result = runner.invoke(app, ["run", str(ralph_dir), "-n", "1"])
+
+        assert result.exit_code == 1
+        assert "completion_signal" in result.output.lower()
+        assert expected_error in result.output.lower()
+        mock_run_loop.assert_not_called()
+
+    def test_run_rejects_non_boolean_stop_on_completion_signal(
+        self, mock_which, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        ralph_dir = tmp_path / "my-ralph"
+        ralph_dir.mkdir()
+        (ralph_dir / RALPH_MARKER).write_text(
+            "---\n"
+            "agent: claude -p --dangerously-skip-permissions\n"
+            'stop_on_completion_signal: "maybe"\n'
+            "---\n"
+            "go"
+        )
+
+        with patch("ralphify.cli.run_loop") as mock_run_loop:
+            result = runner.invoke(app, ["run", str(ralph_dir), "-n", "1"])
+
+        assert result.exit_code == 1
+        assert "stop_on_completion_signal" in result.output.lower()
+        assert "must be true or false" in result.output.lower()
+        mock_run_loop.assert_not_called()
 
     @pytest.mark.parametrize(
         "frontmatter, expected_error",
@@ -517,6 +640,16 @@ class TestScaffold:
         assert ralph_file.exists()
         assert "Created" in result.output
 
+    def test_scaffold_output_mentions_promise_completion(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["scaffold", "my-task"])
+
+        assert result.exit_code == 0
+        assert "completion_signal" in result.output
+        assert "stop_on_completion_signal" in result.output
+        assert "<promise>COMPLETE</promise>" in result.output
+
     def test_creates_ralph_in_cwd(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["scaffold"])
@@ -555,6 +688,16 @@ class TestScaffold:
         assert isinstance(fm["args"], list)
         assert "{{ commands.git-log }}" in body
         assert "{{ args.focus }}" in body
+
+    def test_template_mentions_promise_completion_path(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+
+        runner.invoke(app, ["scaffold", "my-task"])
+        content = (tmp_path / "my-task" / RALPH_MARKER).read_text()
+
+        assert "# completion_signal: COMPLETE" in content
+        assert "# stop_on_completion_signal: true" in content
+        assert "<promise>COMPLETE</promise>" in content
 
 
 class TestParseUserArgs:

@@ -37,6 +37,7 @@ from ralphify._output import (
     collect_output,
     warn,
 )
+from ralphify.adapters import CLIAdapter, select_adapter
 
 # ── Callback type aliases ──────────────────────────────────────────────
 # Used across the streaming and blocking execution paths for callbacks
@@ -52,15 +53,6 @@ OutputLineCallback = Callable[[str, OutputStream], None]
 # that only "stdout" / "stderr" ever reach ``on_output_line``.
 _STDOUT: OutputStream = "stdout"
 _STDERR: OutputStream = "stderr"
-
-# Agent binary name that supports --output-format stream-json.
-# Public because _console_emitter also needs this for display logic.
-CLAUDE_BINARY = "claude"
-
-# CLI flags appended when streaming mode is used.
-_OUTPUT_FORMAT_FLAG = "--output-format"
-_STREAM_FORMAT = "stream-json"
-_VERBOSE_FLAG = "--verbose"
 
 # JSON stream event types and fields for result extraction.
 _RESULT_EVENT_TYPE = "result"
@@ -80,6 +72,34 @@ _THREAD_JOIN_TIMEOUT = 5.0
 
 # Seconds to wait for the agent process to exit after a kill signal.
 _PROCESS_WAIT_TIMEOUT = 5.0
+
+
+def _extract_result_text_from_lines(lines: list[str] | None) -> str | None:
+    """Return the last string payload from any JSON ``result`` event in *lines*."""
+    if lines is None:
+        return None
+
+    result_text = None
+    for line in lines:
+        extracted = _extract_result_text_from_line(line)
+        if extracted is not None:
+            result_text = extracted
+    return result_text
+
+
+def _extract_result_text_from_line(line: str) -> str | None:
+    """Return the string payload from a single JSON ``result`` event line."""
+    try:
+        parsed = json.loads(line.strip())
+    except json.JSONDecodeError:
+        return None
+    if (
+        isinstance(parsed, dict)
+        and parsed.get("type") == _RESULT_EVENT_TYPE
+        and isinstance(parsed.get(_RESULT_FIELD), str)
+    ):
+        return parsed[_RESULT_FIELD]
+    return None
 
 
 def _try_graceful_group_kill(proc: subprocess.Popen[Any]) -> bool:
@@ -237,7 +257,7 @@ class AgentResult(ProcessResult):
 class _StreamResult:
     """Accumulated output from reading the agent's JSON stream."""
 
-    stdout_lines: tuple[str, ...]
+    stdout_lines: tuple[str, ...] | None
     result_text: str | None
     timed_out: bool
 
@@ -258,19 +278,6 @@ def _write_log(
     log_file = log_dir / f"{iteration:0{_LOG_ITERATION_PAD_WIDTH}d}_{timestamp}.log"
     log_file.write_text(collect_output(stdout, stderr), encoding="utf-8")
     return log_file
-
-
-def _supports_stream_json(cmd: list[str]) -> bool:
-    """Return True if the agent command supports ``--output-format stream-json``.
-
-    Currently only Claude Code supports this protocol.  To add streaming
-    support for another agent, extend the check here — no other changes
-    needed since :func:`_run_agent_streaming` handles the protocol generically.
-    """
-    if not cmd:
-        return False
-    binary = Path(cmd[0]).stem
-    return binary == CLAUDE_BINARY
 
 
 def _readline_pump(
@@ -298,6 +305,8 @@ def _read_agent_stream(
     deadline: float | None,
     on_activity: ActivityCallback | None,
     on_output_line: OutputLineCallback | None = None,
+    *,
+    capture_stdout: bool = True,
 ) -> _StreamResult:
     """Read the agent's JSON stream line-by-line until EOF or timeout.
 
@@ -322,8 +331,12 @@ def _read_agent_stream(
 
     Returns early with ``timed_out=True`` when the deadline is exceeded,
     leaving the caller responsible for killing the subprocess.
+
+    When *capture_stdout* is ``False``, stdout is still drained and parsed but
+    not retained in memory.  This keeps the streaming path lightweight when no
+    later completion-signal parsing or log writing needs the raw bytes.
     """
-    stdout_lines: list[str] = []
+    stdout_lines: list[str] | None = [] if capture_stdout else None
     result_text: str | None = None
 
     line_q: queue.Queue[str | None] = queue.Queue()
@@ -347,19 +360,20 @@ def _read_agent_stream(
         except queue.Empty:
             # Deadline expired while waiting for a line.
             return _StreamResult(
-                stdout_lines=tuple(stdout_lines),
+                stdout_lines=tuple(stdout_lines) if stdout_lines is not None else None,
                 result_text=result_text,
                 timed_out=True,
             )
 
         if line is None:  # EOF sentinel from reader thread
             return _StreamResult(
-                stdout_lines=tuple(stdout_lines),
+                stdout_lines=tuple(stdout_lines) if stdout_lines is not None else None,
                 result_text=result_text,
                 timed_out=False,
             )
 
-        stdout_lines.append(line)
+        if stdout_lines is not None:
+            stdout_lines.append(line)
         if on_output_line is not None:
             try:
                 on_output_line(line.rstrip("\r\n"), _STDOUT)
@@ -390,7 +404,7 @@ def _read_agent_stream(
         # past the deadline.
         if deadline is not None and time.monotonic() > deadline:
             return _StreamResult(
-                stdout_lines=tuple(stdout_lines),
+                stdout_lines=tuple(stdout_lines) if stdout_lines is not None else None,
                 result_text=result_text,
                 timed_out=True,
             )
@@ -404,46 +418,58 @@ def _run_agent_streaming(
     iteration: int,
     on_activity: ActivityCallback | None = None,
     on_output_line: OutputLineCallback | None = None,
+    capture_result_text: bool = False,
+    capture_stdout: bool = False,
 ) -> AgentResult:
     """Run the agent subprocess with line-by-line streaming of JSON output.
 
-    Used for agents that support ``--output-format stream-json`` (e.g. Claude
-    Code).  Stream processing is delegated to :func:`_read_agent_stream`;
-    this function owns the subprocess lifecycle (spawn, stdin delivery,
-    timeout kill, and cleanup via ``try/finally``).
+    Used for adapters whose ``supports_streaming`` flag is True (e.g. Claude
+    Code's ``--output-format stream-json``, Codex's ``--json``).  The command
+    list *must already include* any adapter-required flags —
+    :func:`execute_agent` calls ``adapter.build_command`` before dispatching.
+
+    Stream processing is delegated to :func:`_read_agent_stream`; this
+    function owns the subprocess lifecycle (spawn, stdin delivery, timeout
+    kill, and cleanup via ``try/finally``).
 
     stderr is drained concurrently on a background reader thread so large
     stderr volume can't deadlock the child on a full OS pipe buffer while
     the main thread is reading stdout.
     """
-    stream_cmd = cmd + [_OUTPUT_FORMAT_FLAG, _STREAM_FORMAT, _VERBOSE_FLAG]
     start = time.monotonic()
     deadline = (start + timeout) if timeout is not None else None
 
+    capture_stdout_text = log_dir is not None or capture_stdout
+    pipe_stderr = log_dir is not None or on_output_line is not None
+    capture_stderr_text = log_dir is not None
+
     writer_thread: threading.Thread | None = None
-    stderr_lines: list[str] = []
+    stderr_lines: list[str] | None = [] if capture_stderr_text else None
     stderr_thread: threading.Thread | None = None
 
     proc = subprocess.Popen(
-        stream_cmd,
+        cmd,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.PIPE if pipe_stderr else None,
         **SUBPROCESS_TEXT_KWARGS,
         **SESSION_KWARGS,
     )
     try:
         # Popen with PIPE guarantees non-None streams; guard explicitly
         # so the type checker narrows and -O mode cannot skip the check.
-        if proc.stdin is None or proc.stdout is None or proc.stderr is None:
+        if proc.stdin is None or proc.stdout is None:
             raise RuntimeError("subprocess.Popen failed to create PIPE streams")
+        if pipe_stderr and proc.stderr is None:
+            raise RuntimeError("subprocess.Popen failed to create PIPE stderr")
 
         # Start the stderr pump BEFORE writing stdin so large prompts can't
         # deadlock against an agent that writes substantial diagnostics to
         # stderr while still reading its stdin.
-        stderr_thread = _start_pump_thread(
-            proc.stderr, stderr_lines, _STDERR, on_output_line
-        )
+        if proc.stderr is not None:
+            stderr_thread = _start_pump_thread(
+                proc.stderr, stderr_lines, _STDERR, on_output_line
+            )
 
         # Deliver the prompt on a background thread so that a blocked write
         # (child not reading stdin, pipe buffer full) cannot prevent
@@ -452,7 +478,13 @@ def _run_agent_streaming(
         # _deliver_prompt already swallows.
         writer_thread = _start_writer_thread(proc, prompt)
 
-        stream = _read_agent_stream(proc.stdout, deadline, on_activity, on_output_line)
+        stream = _read_agent_stream(
+            proc.stdout,
+            deadline,
+            on_activity,
+            on_output_line,
+            capture_stdout=capture_stdout_text,
+        )
 
         if stream.timed_out:
             _kill_process_group(proc)
@@ -460,8 +492,8 @@ def _run_agent_streaming(
     finally:
         _cleanup_agent(proc, stderr_thread, writer_thread)
 
-    stdout = "".join(stream.stdout_lines)
-    stderr = "".join(stderr_lines)
+    stdout = "".join(stream.stdout_lines) if stream.stdout_lines is not None else None
+    stderr = "".join(stderr_lines) if stderr_lines is not None else None
 
     log_file = _write_log(log_dir, iteration, stdout, stderr)
 
@@ -471,8 +503,8 @@ def _run_agent_streaming(
         log_file=log_file,
         result_text=stream.result_text,
         timed_out=stream.timed_out,
-        captured_stdout=stdout if log_dir is not None else None,
-        captured_stderr=stderr if log_dir is not None else None,
+        captured_stdout=stdout if capture_stdout_text else None,
+        captured_stderr=stderr if capture_stderr_text else None,
     )
 
 
@@ -601,6 +633,8 @@ def _run_agent_blocking(
     log_dir: Path | None,
     iteration: int,
     on_output_line: OutputLineCallback | None = None,
+    capture_result_text: bool = False,
+    capture_stdout: bool = False,
 ) -> AgentResult:
     """Run the agent subprocess and return the result.
 
@@ -613,9 +647,9 @@ def _run_agent_blocking(
     - **Callback only** (``on_output_line`` set, no log dir) — reader
       threads forward lines to the callback without accumulating them,
       avoiding unbounded memory growth.
-    - **Log capture** (``log_dir`` set) — reader threads accumulate
-      lines into lists for log writing; lines are also forwarded to the
-      callback if provided.
+    - **Buffered capture** (``log_dir`` or ``capture_stdout`` set) —
+       reader threads accumulate lines for log writing or later completion
+       parsing; lines are also forwarded to the callback if provided.
 
     The subprocess is started in its own process group so that on
     ``KeyboardInterrupt`` or timeout the entire child tree can be killed
@@ -625,7 +659,12 @@ def _run_agent_blocking(
     Raises ``FileNotFoundError`` if the command binary does not exist.
     """
     start = time.monotonic()
-    capture = log_dir is not None or on_output_line is not None
+    capture_stdout_text = log_dir is not None or capture_stdout
+    capture_stderr_text = log_dir is not None
+    pipe_stdout = (
+        capture_stdout_text or on_output_line is not None or capture_result_text
+    )
+    pipe_stderr = capture_stderr_text or on_output_line is not None
 
     # When no subscriber needs the bytes, stdout/stderr are left
     # un-piped so the child writes directly to the terminal.  When
@@ -638,29 +677,41 @@ def _run_agent_blocking(
     writer_thread: threading.Thread | None = None
     stdout_thread: threading.Thread | None = None
     stderr_thread: threading.Thread | None = None
-    stdout_lines: list[str] | None = [] if log_dir is not None else None
-    stderr_lines: list[str] | None = [] if log_dir is not None else None
+    stdout_lines: list[str] | None = [] if capture_stdout_text else None
+    stderr_lines: list[str] | None = [] if capture_stderr_text else None
+    result_text: str | None = None
 
-    pipe = subprocess.PIPE if capture else None
+    def _on_output_line(line: str, stream_name: OutputStream) -> None:
+        nonlocal result_text
+        if capture_result_text and stream_name == _STDOUT:
+            extracted = _extract_result_text_from_line(line)
+            if extracted is not None:
+                result_text = extracted
+        if on_output_line is not None:
+            on_output_line(line, stream_name)
+
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
-        stdout=pipe,
-        stderr=pipe,
+        stdout=subprocess.PIPE if pipe_stdout else None,
+        stderr=subprocess.PIPE if pipe_stderr else None,
         **SUBPROCESS_TEXT_KWARGS,
         **SESSION_KWARGS,
     )
     try:
         if proc.stdin is None:
             raise RuntimeError("subprocess.Popen failed to create PIPE stdin")
-        if capture:
-            if proc.stdout is None or proc.stderr is None:
-                raise RuntimeError("subprocess.Popen failed to create PIPE streams")
+        if pipe_stdout:
+            if proc.stdout is None:
+                raise RuntimeError("subprocess.Popen failed to create PIPE stdout")
             stdout_thread = _start_pump_thread(
-                proc.stdout, stdout_lines, _STDOUT, on_output_line
+                proc.stdout, stdout_lines, _STDOUT, _on_output_line
             )
+        if pipe_stderr:
+            if proc.stderr is None:
+                raise RuntimeError("subprocess.Popen failed to create PIPE stderr")
             stderr_thread = _start_pump_thread(
-                proc.stderr, stderr_lines, _STDERR, on_output_line
+                proc.stderr, stderr_lines, _STDERR, _on_output_line
             )
 
         writer_thread = _start_writer_thread(proc, prompt)
@@ -681,9 +732,10 @@ def _run_agent_blocking(
         returncode=None if timed_out else returncode,
         elapsed=time.monotonic() - start,
         log_file=log_file,
+        result_text=result_text or _extract_result_text_from_lines(stdout_lines),
         timed_out=timed_out,
-        captured_stdout=stdout,
-        captured_stderr=stderr,
+        captured_stdout=stdout if capture_stdout_text else None,
+        captured_stderr=stderr if capture_stderr_text else None,
     )
 
 
@@ -694,21 +746,35 @@ def execute_agent(
     timeout: float | None,
     log_dir: Path | None,
     iteration: int,
+    adapter: CLIAdapter | None = None,
     on_activity: ActivityCallback | None = None,
     on_output_line: OutputLineCallback | None = None,
+    capture_result_text: bool = False,
+    capture_stdout: bool | None = None,
 ) -> AgentResult:
     """Run the agent subprocess, auto-selecting streaming or blocking mode.
 
-    Uses streaming mode for agents that support ``--output-format stream-json``
-    (e.g. Claude Code); all other agents use the blocking path that drains
-    stdout and stderr via reader threads.  The *on_activity* callback is
-    only invoked in streaming mode; *on_output_line* fires for both modes
-    as raw lines arrive.
+    The *adapter* argument (or :func:`select_adapter` when omitted) decides
+    which execution path runs: adapters whose ``supports_streaming`` flag is
+    True take the line-streaming path that drives ``on_activity`` callbacks;
+    all others take the blocking path with concurrent stdout/stderr drain.
+    ``adapter.build_command(cmd)`` is applied before spawning, so the CLI
+    receives any flags the adapter requires (e.g. Claude's
+    ``--output-format stream-json --verbose`` or Codex's ``--json``).
 
     This is the single entry point the engine should use — callers don't need
     to know which execution mode is selected.
     """
-    if _supports_stream_json(cmd):
+    if adapter is None:
+        adapter = select_adapter(cmd)
+    cmd = adapter.build_command(cmd)
+    supports_streaming = adapter.supports_streaming
+    if capture_stdout is None:
+        capture_stdout = log_dir is not None or (
+            not supports_streaming and on_output_line is None and capture_result_text
+        )
+
+    if supports_streaming:
         return _run_agent_streaming(
             cmd,
             prompt,
@@ -717,6 +783,8 @@ def execute_agent(
             iteration,
             on_activity=on_activity,
             on_output_line=on_output_line,
+            capture_result_text=capture_result_text,
+            capture_stdout=capture_stdout,
         )
     return _run_agent_blocking(
         cmd,
@@ -725,4 +793,6 @@ def execute_agent(
         log_dir,
         iteration,
         on_output_line=on_output_line,
+        capture_result_text=capture_result_text,
+        capture_stdout=capture_stdout,
     )

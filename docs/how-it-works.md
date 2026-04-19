@@ -19,7 +19,7 @@ Every iteration follows the same sequence. Here's what happens at each step.
 
 The prompt body (everything below the frontmatter) is read from disk **every iteration**. This means you can edit the prompt text — add rules, change the task, adjust constraints — while the loop is running. Changes take effect on the next cycle.
 
-Frontmatter fields (`agent`, `commands`, `args`) are parsed once at startup. To change those, restart the loop.
+Frontmatter settings are parsed once at startup. To change them, restart the loop.
 
 ### 2. Run commands and capture output
 
@@ -70,6 +70,8 @@ echo "<assembled prompt>" | claude -p --dangerously-skip-permissions
 
 The agent reads the prompt, does work in the current directory (edits files, runs commands, makes commits), and exits. Ralphify waits for the agent process to finish.
 
+Exit codes still mean process success or failure. Promise completion is separate: `completion_signal` is the inner promise text (default: `RALPH_PROMISE_COMPLETE`), so ralphify only stops early when `stop_on_completion_signal` is `true` and the agent emits the matching `<promise>...</promise>` tag in output or captured result text. This aligns the promise format with Ralph-Wiggum, but ralphify still uses its own command/prompt loop architecture.
+
 When the agent command starts with `claude`, ralphify automatically adds `--output-format stream-json --verbose` to enable structured streaming. This lets ralphify track agent activity in real time — you don't need to configure this yourself.
 
 ### 6. Loop back with fresh context
@@ -82,7 +84,7 @@ The loop starts the next iteration from step 1. The RALPH.md is re-read, command
 |---|---|---|
 | Prompt body | Every iteration | Edit the prompt while the loop runs — the next iteration follows your new instructions |
 | Command output | Every iteration | The agent always sees fresh data (latest git log, current test status, etc.) |
-| Frontmatter (`agent`, `commands`, `args`) | Once at startup | Parsed when the loop starts. Restart to pick up changes. |
+| Frontmatter settings | Once at startup | Parsed when the loop starts. Restart to pick up changes. |
 | User arguments | Once at startup | Passed via CLI flags, constant for the run |
 
 ## How broken code gets fixed automatically
@@ -179,6 +181,7 @@ The loop continues until one of these happens:
 | `Ctrl+C` (first) | Gracefully finishes the current iteration, then stops the loop. The agent completes its work and the iteration result is recorded. |
 | `Ctrl+C` (second) | Force-stops immediately — kills the agent process and exits. Use when you don't want to wait for the current iteration to finish. |
 | `-n` limit reached | Loop stops after completing the specified number of iterations |
+| `stop_on_completion_signal: true` and matching `<promise>...</promise>` tag detected | Loop stops after the current iteration |
 | `--stop-on-error` and agent exits non-zero or times out | Loop stops after the current iteration |
 | `--timeout` exceeded | Agent process is killed, iteration is marked as timed out, loop continues (unless `--stop-on-error`) |
 

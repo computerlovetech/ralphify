@@ -113,6 +113,7 @@ The loop also stops automatically when:
 
 - All `-n` iterations have completed
 - `--stop-on-error` is set and the agent exits non-zero or times out
+- `stop_on_completion_signal: true` is set in frontmatter and the matching `<promise>...</promise>` tag is detected in agent output or captured result text
 
 ### Peeking at live agent output
 
@@ -152,7 +153,7 @@ ralph scaffold              # Creates RALPH.md in the current directory
 |---|---|---|
 | `[NAME]` | none | Directory name. If omitted, creates RALPH.md in the current directory |
 
-The generated template includes an example command (`git-log`), an example arg (`focus`), and a prompt body with placeholders for both. Edit it, then run [`ralph run`](#ralph-run). See [Getting Started](getting-started.md) for a full walkthrough.
+The generated template includes an example command (`git-log`), an example arg (`focus`), a prompt body with placeholders for both, and commented `completion_signal` / `stop_on_completion_signal` lines showing the promise-completion path. Uncomment them if you want the agent to stop early by emitting a matching `<promise>...</promise>` tag. Then run [`ralph run`](#ralph-run). See [Getting Started](getting-started.md) for a full walkthrough.
 
 Errors if `RALPH.md` already exists at the target location.
 
@@ -190,6 +191,10 @@ Your instructions here. Reference args with {{ args.dir }}.
 | `commands` | list | no | Commands to run each iteration (each has `name` and `run`) |
 | `args` | list of strings | no | Declared argument names for user arguments. Letters, digits, hyphens, and underscores only. |
 | `credit` | bool | no | Append co-author trailer instruction to prompt (default: `true`) |
+| `completion_signal` | string | no | Inner text for the completion promise tag. `COMPLETE` means the agent must emit `<promise>COMPLETE</promise>` (default inner text: `RALPH_PROMISE_COMPLETE`) |
+| `stop_on_completion_signal` | bool | no | Stop the loop early when the matching `<promise>...</promise>` tag is detected (default: `false`) |
+
+Exit code `0` still only means the agent process succeeded. Ralphify keeps its own loop architecture; only the promise tag format and matching align with Ralph-Wiggum.
 
 ### Commands
 

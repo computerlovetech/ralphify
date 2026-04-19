@@ -1,13 +1,13 @@
 ---
 title: Ralph Loop Recipes
-description: Copy-pasteable ralph loop setups for autonomous ML research, test coverage, code migration, security scanning, deep research, documentation, bug fixing, and codebase improvement.
-keywords: ralphify cookbook, autonomous coding recipes, RALPH.md examples, documentation loop, bug fixing loop, codebase improvement, deep research agent, code migration loop, security scanning agent, test coverage automation, autoresearch, autonomous ML research
+description: Copy-pasteable ralph loop setups for autonomous ML research, promise-based early exit, test coverage, code migration, security scanning, deep research, documentation, bug fixing, and codebase improvement.
+keywords: ralphify cookbook, autonomous coding recipes, RALPH.md examples, promise completion, early exit agent loop, documentation loop, bug fixing loop, codebase improvement, deep research agent, code migration loop, security scanning agent, test coverage automation, autoresearch, autonomous ML research
 ---
 
 # Cookbook
 
 !!! tldr "TL;DR"
-    8 copy-pasteable ralph loops: [autoresearch](#autoresearch), [codebase improvement](#codebase-improvement), [documentation](#documentation-loop), [bug hunting](#bug-hunter), [deep research](#deep-research), [code migration](#code-migration), [security scanning](#security-scan), and [test coverage](#test-coverage). Each is a real, runnable example from the `examples/` directory.
+    9 copy-pasteable ralph loops: [autoresearch](#autoresearch), [codebase improvement](#codebase-improvement), [documentation](#documentation-loop), [bug hunting](#bug-hunter), [deep research](#deep-research), [code migration](#code-migration), [security scanning](#security-scan), [test coverage](#test-coverage), and [promise completion](#promise-completion). Each is a real, runnable example from the `examples/` directory.
 
 Copy-pasteable setups for common autonomous workflows. Each recipe is a real, runnable ralph from the [`examples/`](https://github.com/computerlovetech/ralphify/tree/main/examples) directory.
 
@@ -266,6 +266,40 @@ ralph run test-coverage -n 5 --target "focus on error handling paths" --log-dir 
 ```
 
 The coverage report gives the agent a clear metric to improve and shows exactly which lines are missing, so it always knows where to focus.
+
+---
+
+## Stop the loop when the task is complete {: #promise-completion }
+
+A loop that uses ralphify's promise-completion path to stop before the iteration budget. The agent keeps working until the requested target is done, then emits `<promise>COMPLETE</promise>` so the run ends immediately instead of burning the remaining iterations.
+
+**`promise-completion/RALPH.md`**
+
+```markdown
+--8<-- "examples/promise-completion/RALPH.md"
+```
+
+```bash
+ralph run promise-completion -n 10 --target "stabilize the failing auth tests"
+```
+
+```text
+▶ Running: promise-completion
+  3 commands · max 10 iterations
+
+── Iteration 1 ──
+  Commands: 3 ran
+✓ Iteration 1 completed (51.4s)
+
+── Iteration 2 ──
+  Commands: 3 ran
+✓ Iteration 2 completed via promise tag <promise>COMPLETE</promise> (43.2s)
+
+──────────────────────
+Done: 2 iterations — 2 succeeded
+```
+
+Set `completion_signal` to the inner promise text and `stop_on_completion_signal: true` to enable early exit. The agent must emit the matching `<promise>...</promise>` tag — bare text does not count.
 
 ---
 

@@ -15,9 +15,9 @@ from ralphify._console_emitter import (
     _IterationPanel,
     _IterationSpinner,
     _SinglePanelNavigator,
+    _agent_renders_structured_peek,
     _format_run_info,
     _format_summary,
-    _is_claude_command,
     _scrollbar_metrics,
     _shorten_path,
 )
@@ -332,7 +332,11 @@ class TestPeekToggle:
         output = console.export_text()
         assert "press p to hide" in output
 
-    def test_startup_hint_structured_for_claude(self):
+    def test_startup_hint_structured_for_claude(self, monkeypatch):
+        from ralphify.adapters import select_adapter
+
+        claude_adapter = select_adapter(["claude"])
+        monkeypatch.setattr(claude_adapter, "renders_structured_peek", True)
         emitter, console = _capture_emitter()
         emitter._peek_enabled = True
         emitter.emit(
@@ -1499,24 +1503,33 @@ class TestIterationSpinnerScrollLines:
         assert "live output on" in output
 
 
-class TestIsClaudeCommand:
-    def test_claude_binary(self):
-        assert _is_claude_command("claude") is True
+class TestAgentRendersStructuredPeek:
+    """Verify the emitter routes through :func:`select_adapter`."""
 
-    def test_claude_with_flags(self):
-        assert _is_claude_command("claude --dangerously-skip-permissions") is True
+    def test_claude_adapter_reports_structured_peek(self, monkeypatch):
+        from ralphify.adapters import select_adapter
+        from ralphify.adapters.claude import ClaudeAdapter
 
-    def test_claude_full_path(self):
-        assert _is_claude_command("/usr/local/bin/claude -p") is True
+        adapter = select_adapter(["claude"])
+        assert isinstance(adapter, ClaudeAdapter)
+        monkeypatch.setattr(adapter, "renders_structured_peek", True)
+        assert _agent_renders_structured_peek("claude") is True
+        assert (
+            _agent_renders_structured_peek("claude --dangerously-skip-permissions")
+            is True
+        )
+        assert _agent_renders_structured_peek("/usr/local/bin/claude -p") is True
 
-    def test_not_claude(self):
-        assert _is_claude_command("aider --yes") is False
+    def test_unknown_agent_falls_back_to_generic(self):
+        # conftest forces every adapter's renders_structured_peek to False;
+        # the GenericAdapter fallback also reports False.
+        assert _agent_renders_structured_peek("aider --yes") is False
 
-    def test_empty(self):
-        assert _is_claude_command("") is False
+    def test_empty_string_is_not_structured(self):
+        assert _agent_renders_structured_peek("") is False
 
-    def test_invalid_shlex(self):
-        assert _is_claude_command("claude 'unterminated") is False
+    def test_invalid_shlex_is_not_structured(self):
+        assert _agent_renders_structured_peek("claude 'unterminated") is False
 
 
 def _populate_buffer(spinner, count: int, prefix: str = "line") -> None:

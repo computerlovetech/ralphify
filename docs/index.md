@@ -16,7 +16,7 @@ hide:
 
 A **ralph** is a directory with a `RALPH.md` file — a skill-like format that bundles a prompt, the commands to run between iterations, and any files the agent needs. **Ralphify** is the CLI runtime that executes them.
 
-See [The Ralph Format](blog/posts/the-ralph-format.md) for the full spec.
+See [The Ralph Format](blog/posts/the-ralph-standard.md) for the full spec.
 
 ```
 grow-coverage/
@@ -52,7 +52,7 @@ One directory. One command. Each iteration starts with fresh context and current
 *Works with any agent CLI. Swap `claude -p` for Codex, Aider, or your own — just change the `agent` field.*
 
 [Get Started](getting-started.md){ .md-button .md-button--primary }
-[Read the Format Spec](blog/posts/the-ralph-format.md){ .md-button }
+[Read the Format Spec](blog/posts/the-ralph-standard.md){ .md-button }
 
 ---
 
@@ -149,7 +149,7 @@ Ralphs are to the outer loop what [skills](https://agentskills.io/) are to the i
 
 ## Next steps
 
-- **[The Ralph Format](blog/posts/the-ralph-format.md)** — the full spec
+- **[The Ralph Format](blog/posts/the-ralph-standard.md)** — the full spec
 - **[Getting Started](getting-started.md)** — from install to a running loop in 10 minutes
 - **[How it Works](how-it-works.md)** — what happens inside each iteration
 - **[Cookbook](cookbook.md)** — copy-pasteable ralphs for coding, docs, research, and more

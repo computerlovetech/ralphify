@@ -2,8 +2,17 @@
 
 import pytest
 
+from ralphify.adapters import ADAPTERS
+
 
 @pytest.fixture(autouse=True)
 def _disable_streaming(monkeypatch):
-    """Disable the Popen-based streaming path in all tests."""
-    monkeypatch.setattr("ralphify._agent._supports_stream_json", lambda cmd: False)
+    """Force the blocking path and raw peek on every registered adapter.
+
+    Tests that explicitly need the Popen streaming path or structured
+    peek rendering re-enable the relevant flag on the specific adapter
+    they exercise.
+    """
+    for adapter in ADAPTERS:
+        monkeypatch.setattr(adapter, "supports_streaming", False)
+        monkeypatch.setattr(adapter, "renders_structured_peek", False)

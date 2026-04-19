@@ -42,8 +42,8 @@ from ralphify._events import (
     RunStoppedData,
 )
 from ralphify import _brand
-from ralphify._agent import CLAUDE_BINARY
 from ralphify._output import format_count, format_duration
+from ralphify.adapters import select_adapter
 
 _ICON_SUCCESS = "✓"
 _ICON_FAILURE = "✗"
@@ -106,18 +106,22 @@ _PEEK_OFF_MSG = (
     f"shift+{PEEK_TOGGLE_KEY} for full view[/]"
 )
 
-# ── Claude binary detection ───────────────────────────────────────────
+# ── Adapter-driven structured-output detection ────────────────────────
 
 
-def _is_claude_command(agent: str) -> bool:
-    """Return True if *agent* is a Claude Code command."""
+def _agent_renders_structured_peek(agent: str) -> bool:
+    """Return True if *agent*'s adapter feeds the structured peek panel.
+
+    Drives the ``ConsoleEmitter`` choice between :class:`_IterationPanel`
+    (structured) and :class:`_IterationSpinner` (raw).  Delegates to
+    :func:`select_adapter` so adding a new CLI with peek-panel support
+    requires no edits here.
+    """
     try:
-        parts = shlex.split(agent)
+        cmd = shlex.split(agent)
     except ValueError:
         return False
-    if not parts:
-        return False
-    return Path(parts[0]).stem == CLAUDE_BINARY
+    return select_adapter(cmd).renders_structured_peek
 
 
 # ── Tool argument abbreviation ────────────────────────────────────────
@@ -1248,7 +1252,7 @@ class ConsoleEmitter:
     def _on_run_started(self, data: RunStartedData) -> None:
         ralph_name = data["ralph_name"]
         agent = data["agent"]
-        self._structured_agent = _is_claude_command(agent)
+        self._structured_agent = _agent_renders_structured_peek(agent)
         with self._console_lock:
             self._console.print(
                 f"\n[bold {_brand.PURPLE}]{_ICON_PLAY} Running:[/] [bold]{escape_markup(ralph_name)}[/]"

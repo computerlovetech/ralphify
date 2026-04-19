@@ -36,9 +36,34 @@ Your agent must:
 
 1. **Read a prompt from stdin** — the full assembled prompt is piped in
 2. **Do work in the current directory** — edit files, run commands, make commits
-3. **Exit when done** — exit code 0 means success, non-zero means failure
+3. **Exit cleanly** — exit code `0` means the agent process succeeded; non-zero means failure
+4. **Optionally emit a completion signal** — set `completion_signal` in frontmatter (default inner text: `RALPH_PROMISE_COMPLETE`) if you want the agent to print an explicit `<promise>...</promise>` marker
 
-That's it. No special protocol, no API — just stdin in, work done, process exits.
+Normal exit codes still indicate process success or failure. They do **not** trigger promise completion by themselves.
+
+Ralphify only stops early on promise completion when both of these are true:
+
+- `stop_on_completion_signal: true`
+- the matching `<promise>...</promise>` tag is detected in agent output or captured result text
+
+`completion_signal` is the inner promise text. For example, `completion_signal: COMPLETE` means the agent must output `<promise>COMPLETE</promise>`.
+
+Ralphify still keeps its own command/prompt loop architecture. Only the promise tag format and matching align with Ralph-Wiggum.
+
+Minimal example:
+
+```markdown
+---
+agent: claude -p --dangerously-skip-permissions
+completion_signal: COMPLETE
+stop_on_completion_signal: true
+---
+
+Implement the next todo. When the work is fully complete, print
+<promise>COMPLETE</promise> and exit.
+```
+
+That's it. No API required — just stdin in, output out, process exits.
 
 ## Claude Code
 

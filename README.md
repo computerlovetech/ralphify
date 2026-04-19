@@ -63,6 +63,7 @@ Ralph loops give you:
 | **grow-coverage** | Write tests for untested modules, one per iteration, until coverage hits the target |
 | **security-audit** | Hunt for vulnerabilities — scan, find, fix, verify, repeat |
 | **clear-backlog** | Work through a TODO list or issue tracker, one task per loop |
+| **promise-completion** | Work until a target is done, then emit a promise tag so the loop stops early |
 | **write-docs** | Generate documentation for undocumented modules, one at a time |
 | **improve-codebase** | Find and fix code smells, refactor patterns, modernize APIs |
 | **migrate** | Incrementally migrate files from one framework or pattern to another |
@@ -95,11 +96,17 @@ Scaffold a ralph and start experimenting:
 ralph scaffold my-ralph
 ```
 
+The scaffolded `RALPH.md` includes the normal command/arg template plus a commented promise-completion path you can enable if the agent should stop early by emitting a matching `<promise>...</promise>` tag.
+
+For a committed example, see [`examples/promise-completion/RALPH.md`](examples/promise-completion/RALPH.md) — it shows a loop that exits early once the requested target is complete.
+
 Edit `my-ralph/RALPH.md`, then run it:
 
 ```bash
 ralph run my-ralph           # loops until Ctrl+C
 ralph run my-ralph -n 5      # run 5 iterations then stop
+# from a repo checkout:
+ralph run examples/promise-completion -n 10 --target "stabilize the failing auth tests"
 ```
 
 ### What `ralph run` does

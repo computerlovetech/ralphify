@@ -20,6 +20,9 @@ from ralphify._events import STOP_COMPLETED, STOP_ERROR, STOP_USER_REQUESTED, St
 DEFAULT_COMMAND_TIMEOUT: float = 60
 """Default timeout in seconds for commands defined in RALPH.md frontmatter."""
 
+DEFAULT_COMPLETION_SIGNAL = "RALPH_PROMISE_COMPLETE"
+"""Default inner ``<promise>...</promise>`` text that marks promise completion."""
+
 RUN_ID_LENGTH: int = 12
 """Number of hex characters used for generated run IDs."""
 
@@ -97,6 +100,14 @@ class RunConfig:
     log_dir: Path | None = None
     project_root: Path = field(default=Path("."))
     credit: bool = True
+    # Inner text expected inside ``<promise>...</promise>``.
+    completion_signal: str = DEFAULT_COMPLETION_SIGNAL
+    # Stop the run when the configured promise payload is observed.
+    stop_on_completion_signal: bool = False
+    # Per-iteration tool-use cap; None disables the cap.
+    max_turns: int | None = None
+    # Soft wind-down fires at ``max_turns - max_turns_grace``.
+    max_turns_grace: int = 2
 
 
 @dataclass(slots=True)
@@ -120,6 +131,7 @@ class RunState:
     failed: int = 0
     timed_out_count: int = 0
     started_at: datetime | None = None
+    promise_completed: bool = False
 
     _stop_event: threading.Event = field(
         default_factory=threading.Event, init=False, repr=False, compare=False
@@ -134,27 +146,22 @@ class RunState:
         return self.completed + self.failed
 
     def __post_init__(self) -> None:
-        # Set initially: the run starts in an unpaused (resumed) state.
         self._resume_event.set()
 
     def request_stop(self) -> None:
-        """Signal the loop to stop after the current iteration."""
         self._stop_event.set()
         self._resume_event.set()
 
     def request_pause(self) -> None:
-        """Pause the loop between iterations until resumed."""
         self.status = RunStatus.PAUSED
         self._resume_event.clear()
 
     def request_resume(self) -> None:
-        """Resume a paused loop."""
         self.status = RunStatus.RUNNING
         self._resume_event.set()
 
     @property
     def stop_requested(self) -> bool:
-        """Whether a stop has been requested."""
         return self._stop_event.is_set()
 
     def wait_for_stop(self, timeout: float | None = None) -> bool:
@@ -163,7 +170,6 @@ class RunState:
 
     @property
     def paused(self) -> bool:
-        """Whether the run is currently paused."""
         return not self._resume_event.is_set()
 
     def wait_for_unpause(self, timeout: float | None = None) -> bool:
@@ -171,11 +177,9 @@ class RunState:
         return self._resume_event.wait(timeout=timeout)
 
     def mark_completed(self) -> None:
-        """Record a successful iteration."""
         self.completed += 1
 
     def mark_failed(self) -> None:
-        """Record a failed iteration."""
         self.failed += 1
 
     def mark_timed_out(self) -> None:
