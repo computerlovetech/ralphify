@@ -369,11 +369,10 @@ def run_loop(
     if state.status == RunStatus.RUNNING:
         state.status = RunStatus.COMPLETED
 
-    reason = state.status.reason
     emit(
         EventType.RUN_STOPPED,
         RunStoppedData(
-            reason=reason,
+            reason=state.status.reason,
             total=state.total,
             completed=state.completed,
             failed=state.failed,
