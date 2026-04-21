@@ -550,9 +550,8 @@ class _IterationPanel(_LivePanelBase):
     def _format_tokens(self) -> str:
         """Format token counts as compact ctx/out string."""
         parts: list[str] = []
-        total_in = self._input_tokens
-        if total_in > 0:
-            parts.append(f"ctx {format_count(total_in)}")
+        if self._input_tokens > 0:
+            parts.append(f"ctx {format_count(self._input_tokens)}")
         if self._output_tokens > 0:
             parts.append(f"out {format_count(self._output_tokens)}")
         return " · ".join(parts)
