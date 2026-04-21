@@ -1,9 +1,17 @@
 # `_console_emitter.py` coverage
 
-Valid at: ad7523e
+Valid at: ef176bf
 
 ## Recent changes
 
+- ef176bf — dropped the `line_count = len(self._scroll_lines)` alias in
+  `_IterationSpinner._build_footer`.  The local served dual duty as a
+  predicate (`if line_count > 0`) and as the `_plural` arg, but both
+  uses were on the same truthy branch.  Replaced the predicate with
+  `if self._scroll_lines:` (idiomatic list truthiness) and moved the
+  `len()` call inside the branch that needs it.  This matches the
+  sibling `_IterationPanel._build_footer` which uses `if self._tool_count > 0:`
+  inline with no local alias.  Same Phase 4 shape as 134078d.
 - ad7523e — moved the `if self._structured_agent: return` short-circuit
   in `_on_agent_output_line` from inside `_console_lock` to before
   acquisition.  The flag is write-once (set in `_on_run_started` before
