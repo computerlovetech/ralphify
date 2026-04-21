@@ -1,9 +1,20 @@
 # `_agent.py` coverage
 
-Valid at: b24accf
+Valid at: 66d6c60
 
 ## Recent changes
 
+- 66d6c60 — inlined the `remaining = deadline - time.monotonic()` local
+  in `_read_agent_stream`'s per-iteration timeout calc.  The alias was
+  read exactly once on the next line as `max(remaining, 0)`; collapsing
+  to `max(deadline - time.monotonic(), 0)` matches the inline-alias
+  style from e1ad87a / 497c028 / 52e0272 / ce487d3.  The adjacent
+  comment was updated ("max(remaining, 0)" → "clamp to 0") since the
+  name no longer exists.  Behavior preserved — the clamped timeout
+  still reaches `line_q.get(timeout=...)`, so the non-blocking drain
+  on an already-expired deadline still fires and deadline enforcement
+  is unchanged.  Pinned by the streaming-path agent tests.  No other
+  `remaining` locals remain in the module (grep confirmed).
 - b24accf — inlined the `reader` thread handle in `_read_agent_stream`.
   The local served only to call `.start()`; the thread is never joined
   explicitly (termination is signalled through the queue's `None`
