@@ -35,11 +35,10 @@ _ARGS_RE = re.compile(
 def resolve_args(prompt: str, user_args: dict[str, str]) -> str:
     """Replace ``{{ args.name }}`` placeholders with user-supplied values.
 
-    When *user_args* is empty, clears any remaining ``{{ args.* }}``
-    placeholders so they don't leak into the assembled prompt.
+    Unknown names (and all placeholders when *user_args* is empty) resolve
+    to the empty string, so stray ``{{ args.* }}`` never leak into the
+    assembled prompt.
     """
-    if not user_args:
-        return _ARGS_RE.sub("", prompt)
 
     def _replace(match: re.Match) -> str:
         return user_args.get(match.group(1), "")
