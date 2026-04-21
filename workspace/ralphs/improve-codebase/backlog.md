@@ -30,6 +30,11 @@ only when they land in a commit.
 - Look for repeated `console.print(...)` formatting patterns in
   `_console_emitter.py`.
 - Look for repeated dict/TypedDict key access patterns in the event handlers.
+- The fullscreen-Live teardown (`self._fullscreen_live.stop(); = None`)
+  appears in `_stop_live_unlocked` and `_teardown_fullscreen_unlocked` —
+  only two call sites and each is adjacent to other state mutations, so
+  extracting right now would just add indirection. Revisit if a third
+  caller appears.
 
 ## Phase 3 — magic values
 

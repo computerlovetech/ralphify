@@ -1,9 +1,12 @@
 # `_console_emitter.py` coverage
 
-Valid at: 4ccfa9a
+Valid at: 3e9627b
 
 ## Recent changes
 
+- 3e9627b — extracted `_stop_compact_live_unlocked` helper to dedupe the
+  `if self._live is not None: self._live.stop(); self._live = None` pattern
+  across `_stop_live_unlocked`, `enter_fullscreen`, and `_on_iteration_ended`.
 - 4ccfa9a — dropped `if parts else ""` branch in `_format_params`.
   `" · ".join([])` returns `""`, so the guard was dead.
 
