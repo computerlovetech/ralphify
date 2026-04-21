@@ -1,9 +1,15 @@
 # `_console_emitter.py` coverage
 
-Valid at: 3e9627b
+Valid at: 0900aad
 
 ## Recent changes
 
+- 0900aad — dropped `_iteration_order` list; `_iteration_history` dict
+  preserves insertion order by itself.  Archive now pops-then-inserts to
+  move existing entries to the end; eviction iterates the dict
+  (oldest-first); `enter_fullscreen` uses `next(reversed(...))` for the
+  most recent finished iteration.  Updated the single direct-field
+  reference in `tests/test_console_emitter.py`.
 - 3e9627b — extracted `_stop_compact_live_unlocked` helper to dedupe the
   `if self._live is not None: self._live.stop(); self._live = None` pattern
   across `_stop_live_unlocked`, `enter_fullscreen`, and `_on_iteration_ended`.
