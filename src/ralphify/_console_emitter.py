@@ -763,9 +763,8 @@ class _FullscreenPeek:
 
     def scroll_down(self, lines: int = 1) -> None:
         """Scroll toward newer lines (offset shrinks)."""
-        new_offset = max(0, self._offset - lines)
-        self._offset = new_offset
-        if new_offset == 0:
+        self._offset = max(0, self._offset - lines)
+        if self._offset == 0:
             self._auto_scroll = True
 
     def scroll_to_top(self) -> None:
