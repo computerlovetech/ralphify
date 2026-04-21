@@ -48,6 +48,22 @@ ActivityCallback = Callable[[dict[str, Any]], None]
 OutputLineCallback = Callable[[str, OutputStream], None]
 """Receives raw output lines with their stream name ("stdout"/"stderr")."""
 
+
+def _call_safely(callback: Callable[..., Any] | None, *args: Any) -> None:
+    """Invoke an observer *callback* with *args*, swallowing any exception.
+
+    Used for best-effort observer callbacks during output draining: a
+    raising callback must never stop the drain loop or leave the reader
+    thread hung.
+    """
+    if callback is None:
+        return
+    try:
+        callback(*args)
+    except Exception:
+        pass
+
+
 # Typed constants for the OutputStream literal so the type checker enforces
 # that only "stdout" / "stderr" ever reach ``on_output_line``.
 _STDOUT: OutputStream = "stdout"
@@ -360,12 +376,7 @@ def _read_agent_stream(
             )
 
         stdout_lines.append(line)
-        if on_output_line is not None:
-            try:
-                on_output_line(line.rstrip("\r\n"), _STDOUT)
-            except Exception:
-                # Callback is best-effort; draining must not stop.
-                pass
+        _call_safely(on_output_line, line.rstrip("\r\n"), _STDOUT)
 
         stripped = line.strip()
         if stripped:
@@ -378,12 +389,7 @@ def _read_agent_stream(
                     parsed.get(_RESULT_FIELD), str
                 ):
                     result_text = parsed[_RESULT_FIELD]
-                if on_activity is not None:
-                    try:
-                        on_activity(parsed)
-                    except Exception:
-                        # Callback is best-effort; draining must not stop.
-                        pass
+                _call_safely(on_activity, parsed)
 
         # Also check deadline after processing — if the reader thread
         # already queued many lines, this prevents unbounded processing
@@ -502,12 +508,7 @@ def _pump_stream(
         for line in iter(stream.readline, ""):
             if buffer is not None:
                 buffer.append(line)
-            if on_output_line is not None:
-                try:
-                    on_output_line(line.rstrip("\r\n"), stream_name)
-                except Exception:
-                    # Callback is best-effort; draining must not stop.
-                    pass
+            _call_safely(on_output_line, line.rstrip("\r\n"), stream_name)
     except (ValueError, OSError):
         # Pipe closed concurrently — exit cleanly so join() returns.
         pass
