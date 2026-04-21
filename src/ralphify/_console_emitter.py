@@ -1441,12 +1441,11 @@ class ConsoleEmitter:
             if view is None:
                 return  # raced with exit
             if key not in ("q", FULLSCREEN_PEEK_KEY):
-                page = self._fullscreen_page_size()
                 actions: dict[str, Callable[[], object]] = {
                     "j": lambda: view.scroll_down(1),
                     "k": lambda: view.scroll_up(1),
-                    " ": lambda: view.scroll_down(page),
-                    "b": lambda: view.scroll_up(page),
+                    " ": lambda: view.scroll_down(self._fullscreen_page_size()),
+                    "b": lambda: view.scroll_up(self._fullscreen_page_size()),
                     "g": view.scroll_to_top,
                     "G": view.scroll_to_bottom,
                     PREV_ITERATION_KEY: view.prev_iteration,
