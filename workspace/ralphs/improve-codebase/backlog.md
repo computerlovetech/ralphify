@@ -12,6 +12,18 @@ only when they land in a commit.
 - Check `cli.py` validators for unreachable error branches after recent
   TypedDict refactors.
 - Confirm every `from typing import ...` import in `src/ralphify/` is used.
+  (Checked 4ccfa9a — all six modules import only what they use.)
+- vulture 60% flags that were verified as live: `clear_scroll`,
+  `_SinglePanelNavigator`, `_stop_live`, `serialize_frontmatter`,
+  `to_dict`, `_atexit_hook`, RunManager public methods — all used in tests,
+  docs, or scripts/.  TypedDict field "unused" warnings are spurious.
+- Consider inlining `_validate_name` into `_check_unique_name` in `cli.py`
+  (the former has exactly one caller).  Tradeoff: the split doc-strings
+  document the two concerns (format vs uniqueness) cleanly.
+- `_is_claude_command` (`_console_emitter.py`) and `_supports_stream_json`
+  (`_agent.py`) both check `Path(parts[0]).stem == CLAUDE_BINARY` but on
+  different inputs (string vs list).  Consolidating would cross module
+  boundaries for modest payoff — revisit only if a third caller appears.
 
 ## Phase 2 — duplication
 
