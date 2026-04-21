@@ -1296,6 +1296,15 @@ class ConsoleEmitter:
         )
         self._live.start()
 
+    def _stop_compact_live_unlocked(self) -> None:
+        """Stop the compact Live region if active.  No-op otherwise.
+
+        Caller must hold ``_console_lock``.
+        """
+        if self._live is not None:
+            self._live.stop()
+            self._live = None
+
     def _stop_live_unlocked(self) -> None:
         """Tear down all Live regions and forget the active iteration.
 
@@ -1309,9 +1318,7 @@ class ConsoleEmitter:
             self._fullscreen_live.stop()
             self._fullscreen_live = None
         self._fullscreen_view = None
-        if self._live is not None:
-            self._live.stop()
-            self._live = None
+        self._stop_compact_live_unlocked()
         self._active_renderable = None
         self._current_iteration = None
 
@@ -1345,9 +1352,7 @@ class ConsoleEmitter:
             self._fullscreen_view = view
             # Stop the compact Live before taking over the terminal so
             # the two Rich renderers don't fight for the same console.
-            if self._live is not None:
-                self._live.stop()
-                self._live = None
+            self._stop_compact_live_unlocked()
             self._fullscreen_live = Live(
                 view,
                 console=self._console,
@@ -1524,9 +1529,7 @@ class ConsoleEmitter:
             # underlying panel is preserved in history for fullscreen
             # browsing.  When fullscreen is active there is no compact
             # Live to stop; the panel was buffering events directly.
-            if self._live is not None:
-                self._live.stop()
-                self._live = None
+            self._stop_compact_live_unlocked()
             self._archive_current_iteration_unlocked(outcome)
 
             def do_print() -> None:
