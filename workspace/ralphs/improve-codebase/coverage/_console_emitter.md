@@ -1,9 +1,16 @@
 # `_console_emitter.py` coverage
 
-Valid at: 134078d
+Valid at: bcadee1
 
 ## Recent changes
 
+- bcadee1 — dropped the `if self._active_renderable is not None:` guard
+  wrapping `_archive_current_iteration_unlocked("interrupted")` in
+  `_on_iteration_started`.  The archive helper already no-ops when
+  nothing is active (docstring: "No-op when no iteration is active"),
+  so the outer guard was mechanically redundant.  Updated the
+  surrounding comment to note the no-op behavior so the call's intent
+  still reads as defensive.  Same shape as 5337d88 / 4ccfa9a / 8cb0d47.
 - 134078d — narrowed `name_col` scope in `_IterationPanel._apply_assistant`'s
   tool_use branch.  The padded name column was computed unconditionally
   but only rendered when `arg` was truthy (the `else` branch uses raw
