@@ -108,8 +108,7 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
 
     Returns ``(frontmatter_dict, body_text)``.
     """
-    if text.startswith(_UTF8_BOM):
-        text = text.removeprefix(_UTF8_BOM)
+    text = text.removeprefix(_UTF8_BOM)
     fm_raw, body = _extract_frontmatter_block(text)
     if fm_raw:
         try:
