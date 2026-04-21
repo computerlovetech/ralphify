@@ -782,40 +782,37 @@ class _FullscreenPeek:
         self._offset = 0
         self._auto_scroll = True
 
-    def prev_iteration(self) -> bool:
-        """Move to the iteration before the current one.  Returns ``True``
-        if the view changed; ``False`` when there is no older iteration."""
+    def _step_iteration(self, direction: int) -> bool:
+        """Move *direction* iterations (-1 = prev, +1 = next).
+
+        Returns ``True`` when the view changed; ``False`` when already at
+        the boundary in the requested direction.  When the current
+        iteration was evicted from the navigator, snaps to the oldest
+        (prev) or newest (next) entry instead of failing.
+        """
         ids = self._navigator.iteration_ids()
         if not ids:
             return False
         if self._iteration_id not in ids:
-            # Current iteration was evicted — snap to oldest available.
-            self._iteration_id = ids[0]
+            self._iteration_id = ids[0] if direction < 0 else ids[-1]
             self._reset_view()
             return True
-        idx = ids.index(self._iteration_id)
-        if idx == 0:
+        new_idx = ids.index(self._iteration_id) + direction
+        if not 0 <= new_idx < len(ids):
             return False
-        self._iteration_id = ids[idx - 1]
+        self._iteration_id = ids[new_idx]
         self._reset_view()
         return True
+
+    def prev_iteration(self) -> bool:
+        """Move to the iteration before the current one.  Returns ``True``
+        if the view changed; ``False`` when there is no older iteration."""
+        return self._step_iteration(-1)
 
     def next_iteration(self) -> bool:
         """Move to the iteration after the current one.  Returns ``True``
         if the view changed; ``False`` when already on the newest."""
-        ids = self._navigator.iteration_ids()
-        if not ids:
-            return False
-        if self._iteration_id not in ids:
-            self._iteration_id = ids[-1]
-            self._reset_view()
-            return True
-        idx = ids.index(self._iteration_id)
-        if idx >= len(ids) - 1:
-            return False
-        self._iteration_id = ids[idx + 1]
-        self._reset_view()
-        return True
+        return self._step_iteration(+1)
 
     # ── Rendering ────────────────────────────────────────────────────
 
