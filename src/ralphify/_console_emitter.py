@@ -1240,8 +1240,7 @@ class ConsoleEmitter:
 
     def _on_run_started(self, data: RunStartedData) -> None:
         ralph_name = data["ralph_name"]
-        agent = data["agent"]
-        self._structured_agent = _is_claude_command(agent)
+        self._structured_agent = _is_claude_command(data["agent"])
         with self._console_lock:
             self._console.print(
                 f"\n[bold {_brand.PURPLE}]{_ICON_PLAY} Running:[/] [bold]{escape_markup(ralph_name)}[/]"
