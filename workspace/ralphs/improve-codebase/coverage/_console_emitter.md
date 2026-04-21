@@ -1,9 +1,14 @@
 # `_console_emitter.py` coverage
 
-Valid at: 0900aad
+Valid at: 8cb0d47
 
 ## Recent changes
 
+- 8cb0d47 — dropped the `max(total - visible, 1)` guard in
+  `_scrollbar_metrics`.  The early return `if total <= visible` already
+  guarantees `total - visible ≥ 1`, so the `max(..., 1)` floor was dead
+  defensive code.  Inlined the subtraction directly into the `frac`
+  calculation and added a comment noting the invariant.
 - 0900aad — dropped `_iteration_order` list; `_iteration_history` dict
   preserves insertion order by itself.  Archive now pops-then-inserts to
   move existing entries to the end; eviction iterates the dict
