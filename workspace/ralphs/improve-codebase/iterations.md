@@ -2,6 +2,7 @@
 
 One line per iteration: `<sha> <summary>`.
 
+6227863 refactor: drop redundant empty-user_args branch in `resolve_args` — callable path already yields "" for every match when dict is empty
 d34e957 refactor: drop redundant f-string wrap around `_plural(total, 'line')` in fullscreen header
 fc5e1cb refactor: inline `total_in` alias in `_format_tokens` — direct read of `self._input_tokens` clarifies intent
 3838006 refactor: defer `panel_for` guard to `is_live` to dedupe identical condition
