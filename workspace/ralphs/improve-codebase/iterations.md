@@ -2,6 +2,7 @@
 
 One line per iteration: `<sha> <summary>`.
 
+d8d5592 refactor: gate `"".join(stdout/stderr_lines)` in `_run_agent_streaming` on `log_dir is not None` — the joined strings were only consumed by `_write_log` and the `captured_*` AgentResult fields, both of which discarded the result when log_dir was None.  Mirrors the already-lazy idiom in `_run_agent_blocking` and drops the duplicated `... if log_dir is not None else None` ternary on each AgentResult field.
 ad7523e refactor: move `_structured_agent` short-circuit out of `_console_lock` in `_on_agent_output_line` — flag is write-once (set in `_on_run_started`), matches `_on_agent_activity`'s pattern, avoids lock acquisition per stdout line under Claude
 bcadee1 refactor: drop redundant `_active_renderable` guard in `_on_iteration_started` — archive call already no-ops when nothing is active
 134078d refactor: narrow `name_col` scope into `if arg:` in `_apply_assistant` — padded variant was computed but unused when arg falsy

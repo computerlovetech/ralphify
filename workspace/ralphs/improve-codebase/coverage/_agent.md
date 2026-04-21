@@ -1,9 +1,21 @@
 # `_agent.py` coverage
 
-Valid at: cb61477
+Valid at: d8d5592
 
 ## Recent changes
 
+- d8d5592 — gated the `"".join(...)` of `stream.stdout_lines` and
+  `stderr_lines` at the tail of `_run_agent_streaming` on
+  `log_dir is not None`.  The joined strings were only consumed by
+  `_write_log` (which short-circuits when log_dir is None) and by the
+  `captured_stdout` / `captured_stderr` AgentResult fields, both of
+  which previously discarded the joined string with
+  `... if log_dir is not None else None`.  Now matches the
+  already-lazy `"".join(x) if x is not None else None` idiom in
+  `_run_agent_blocking`'s tail, and the duplicated ternary on each
+  AgentResult field collapses to a bare `stdout` / `stderr`.  Same
+  observable behavior — pinned by `test_captured_output_set_when_logging`
+  and `test_no_log_when_dir_not_set` in tests/test_agent.py.
 - cb61477 — added `_call_safely(callback, *args)` helper next to the
   callback type aliases.  Replaces three copies of the
   `if cb is not None: try: cb(...); except Exception: pass` pattern
@@ -43,11 +55,16 @@ Valid at: cb61477
 ## Potential future wins (not yet taken)
 
 - `_run_agent_streaming` and `_run_agent_blocking` both finish with the
-  same "`stdout = "".join(...); stderr = "".join(...); log_file =
-  _write_log(...); return AgentResult(...)`" tail, but the shape of the
-  intermediate state differs (tuple vs list|None), so extracting would
-  mostly move arguments around.  Revisit only if a third execution path
-  appears.
+  same "`stdout = "".join(...) if … else None; stderr = "".join(...)
+  if … else None; log_file = _write_log(...); return AgentResult(...)`"
+  tail.  After d8d5592 the conditional-join idiom is now identical
+  across both paths (gated on `log_dir is not None` for streaming,
+  on `stdout_lines is not None` for blocking — but `stdout_lines` is
+  itself `[] if log_dir is not None else None`, so the conditions are
+  equivalent).  The intermediate state still differs (`stream.stdout_lines`
+  tuple vs `stdout_lines` list|None), so extracting a shared helper
+  would mostly move arguments around.  Revisit only if a third
+  execution path appears.
 - The two `if proc.stdin/stdout/stderr is None: raise RuntimeError(...)`
   guards just after `Popen` could use a single helper, but `subprocess`
   guarantees these are non-None when `PIPE` is passed — the guards exist
