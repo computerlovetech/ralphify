@@ -1111,7 +1111,7 @@ class ConsoleEmitter:
         # Eviction: drop oldest until at or below the cap, but skip the
         # iteration the user is currently viewing in fullscreen.
         viewing = (
-            self._fullscreen_view._iteration_id
+            self._fullscreen_view.iteration_id
             if self._fullscreen_view is not None
             else None
         )
