@@ -412,8 +412,7 @@ class _LivePanelBase:
         """Body group: scroll lines (or peek message) + spacer + footer."""
         rows: list[Any] = []
         if self._peek_visible:
-            visible = self._scroll_lines[-_MAX_VISIBLE_SCROLL:]
-            for line in visible:
+            for line in self._scroll_lines[-_MAX_VISIBLE_SCROLL:]:
                 line.no_wrap = True
                 line.overflow = "ellipsis"
                 rows.append(line)
