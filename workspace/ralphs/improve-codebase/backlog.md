@@ -40,6 +40,15 @@ only when they land in a commit.
   only two call sites and each is adjacent to other state mutations, so
   extracting right now would just add indirection. Revisit if a third
   caller appears.
+- The `try: fn(); except Exception: pass` pattern appears in
+  `_print_or_defer_unlocked`, `_flush_deferred_unlocked` (loop body),
+  and around `handle_key`'s body.  Could extract a tiny `_safe_call`
+  but each site is one line; not worth the indirection unless a fourth
+  appears.
+- `_IterationPanel._build_footer` and `_IterationSpinner._build_footer`
+  both create `summary = Text(no_wrap=True, overflow="ellipsis")` then
+  branch on count > 0 vs "waiting…".  Two subclasses only — already
+  noted in coverage as not-worth-extracting.
 
 ## Phase 3 — magic values
 

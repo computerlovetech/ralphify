@@ -1,9 +1,15 @@
 # `_console_emitter.py` coverage
 
-Valid at: 5337d88
+Valid at: c4469a1
 
 ## Recent changes
 
+- c4469a1 — extracted `_FullscreenPeek._step_iteration(direction)` from
+  `prev_iteration` / `next_iteration`.  The two methods were 12-line
+  mirror images differing only in step direction (-1 vs +1) and
+  eviction-fallback (`ids[0]` vs `ids[-1]`).  Combined boundary check
+  uses `0 <= new_idx < len(ids)` which collapses both `idx == 0` (prev)
+  and `idx >= len(ids) - 1` (next) into one expression.
 - 5337d88 — dropped `if not self._tool_categories: return ""` early
   return in `_IterationPanel._format_categories`.  Empty dict yields an
   empty list comprehension which `" · ".join` turns into `""`, so the
