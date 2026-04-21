@@ -1,9 +1,20 @@
 # `_console_emitter.py` coverage
 
-Valid at: d0060b3
+Valid at: 3823019
 
 ## Recent changes
 
+- 3823019 — narrowed `line = escape_markup(data["line"])` scope in
+  `_on_agent_output_line` past the
+  `if not isinstance(target, _IterationSpinner): return` guard.  The
+  escape_markup call was wasted work on the early-return path (target
+  None or wrong-type panel); moving the binding after the guard keeps
+  the _IterationSpinner branch behavior identical and drops the wasted
+  work on the other branch.  Same shape as 134078d's `name_col`
+  narrowing — unconditional compute that only one branch consumes.
+  Note: the `_structured_agent` short-circuit earlier in the method
+  already skips this path for Claude runs (ad7523e), so this narrowing
+  only affects the raw-stdout path.
 - d0060b3 — added a public `outcome` property on `_LivePanelBase` and
   replaced `source._outcome` in `_FullscreenPeek._build_header` with
   `source.outcome`.  Mirrors ef9a178's `iteration_id` cleanup — both
