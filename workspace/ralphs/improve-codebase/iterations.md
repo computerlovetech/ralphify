@@ -2,6 +2,8 @@
 
 One line per iteration: `<sha> <summary>`.
 
+497c028 refactor: inline `agent` alias in `_on_run_started` — the local served a single use as the arg to `_is_claude_command(...)`.  Reading `data["agent"]` directly matches the sibling style from fc5e1cb (`total_in` inline).  Preserved `ralph_name` — it's used inside an f-string on line 1247 where the alias still helps readability.
+
 ef176bf refactor: drop `line_count` alias in `_IterationSpinner._build_footer` — local was computed unconditionally but only used on the truthy branch (both as predicate `> 0` and as `_plural` arg).  Inlined the truthy check on `self._scroll_lines` and moved the `len()` call inside the branch that uses it.  Matches the style of sibling `_IterationPanel._build_footer` which uses `if self._tool_count > 0:` with no local alias.  Same Phase 4 shape as 134078d's `name_col` narrowing.
 
 d8d5592 refactor: gate `"".join(stdout/stderr_lines)` in `_run_agent_streaming` on `log_dir is not None` — the joined strings were only consumed by `_write_log` and the `captured_*` AgentResult fields, both of which discarded the result when log_dir was None.  Mirrors the already-lazy idiom in `_run_agent_blocking` and drops the duplicated `... if log_dir is not None else None` ternary on each AgentResult field.

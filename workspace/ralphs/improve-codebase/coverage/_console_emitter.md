@@ -1,9 +1,15 @@
 # `_console_emitter.py` coverage
 
-Valid at: ef176bf
+Valid at: 497c028
 
 ## Recent changes
 
+- 497c028 — inlined the `agent = data["agent"]` local in `_on_run_started`.
+  The alias was read exactly once, immediately below, as the arg to
+  `_is_claude_command(agent)`.  Reading `data["agent"]` directly matches
+  the style established by fc5e1cb (inlined `total_in`).  `ralph_name`
+  was preserved — it's used inside an f-string where `data['ralph_name']`
+  would be awkward.  Same Phase 4 shape as fc5e1cb.
 - ef176bf — dropped the `line_count = len(self._scroll_lines)` alias in
   `_IterationSpinner._build_footer`.  The local served dual duty as a
   predicate (`if line_count > 0`) and as the `_plural` arg, but both
