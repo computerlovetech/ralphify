@@ -383,13 +383,14 @@ def _read_agent_stream(
             try:
                 parsed = json.loads(stripped)
             except json.JSONDecodeError:
-                parsed = None
-            if isinstance(parsed, dict):
-                if parsed.get("type") == _RESULT_EVENT_TYPE and isinstance(
-                    parsed.get(_RESULT_FIELD), str
-                ):
-                    result_text = parsed[_RESULT_FIELD]
-                _call_safely(on_activity, parsed)
+                pass
+            else:
+                if isinstance(parsed, dict):
+                    if parsed.get("type") == _RESULT_EVENT_TYPE and isinstance(
+                        parsed.get(_RESULT_FIELD), str
+                    ):
+                        result_text = parsed[_RESULT_FIELD]
+                    _call_safely(on_activity, parsed)
 
         # Also check deadline after processing — if the reader thread
         # already queued many lines, this prevents unbounded processing
