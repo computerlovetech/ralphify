@@ -608,11 +608,10 @@ class _IterationSpinner(_LivePanelBase):
     """
 
     def _build_footer(self) -> Table:
-        line_count = len(self._scroll_lines)
         summary = Text(no_wrap=True, overflow="ellipsis")
-        if line_count > 0:
+        if self._scroll_lines:
             summary.append(
-                _plural(line_count, "line"),
+                _plural(len(self._scroll_lines), "line"),
                 style=f"bold {_brand.PURPLE}",
             )
             summary.append(" of agent output", style="dim")
