@@ -1467,9 +1467,9 @@ class ConsoleEmitter:
         with self._console_lock:
             self._peek_broken = False
             # Defensive: if a previous iteration didn't archive (engine
-            # error), evict it now so we don't leak panel state.
-            if self._active_renderable is not None:
-                self._archive_current_iteration_unlocked("interrupted")
+            # error), evict it now so we don't leak panel state.  The
+            # archive call no-ops when nothing is active.
+            self._archive_current_iteration_unlocked("interrupted")
             self._current_iteration = iteration
             renderable = self._create_panel_unlocked()
 
