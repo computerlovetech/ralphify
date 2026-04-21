@@ -1,9 +1,25 @@
 # `_agent.py` coverage
 
-Valid at: e1ad87a
+Valid at: b24accf
 
 ## Recent changes
 
+- b24accf — inlined the `reader` thread handle in `_read_agent_stream`.
+  The local served only to call `.start()`; the thread is never joined
+  explicitly (termination is signalled through the queue's `None`
+  sentinel produced by `_readline_pump`'s `finally` and through the
+  daemon flag).  Collapsing into the fluent
+  `threading.Thread(target=_readline_pump, args=(stdout, line_q),
+  daemon=True).start()` drops an unused binding and matches the
+  fire-and-forget intent.  Python keeps live threads reachable via
+  `threading._active`, so no GC risk.  Side effects preserved: the
+  reader still closes cleanly on `_close_pipes` (OSError in
+  `readline`), and the main loop still relies on `line_q.get` for
+  deadline enforcement.  Pinned by the full `tests/test_agent.py`
+  suite (streaming-path coverage).  This is the same alias/handle-drop
+  shape as e1ad87a / 497c028 / b19625e, specialised to a Thread —
+  thread-return values aren't special, they're just another handle
+  whose only use was `.start()`.
 - e1ad87a — inlined the `binary = Path(cmd[0]).stem` local in
   `_supports_stream_json`.  The alias was read exactly once on the
   following line as `binary == CLAUDE_BINARY`.  Collapsing to
