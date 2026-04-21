@@ -1,9 +1,21 @@
 # `_agent.py` coverage
 
-Valid at: d8d5592
+Valid at: cf72fd9
 
 ## Recent changes
 
+- cf72fd9 — replaced the `parsed = None` sentinel in `_read_agent_stream`
+  with a `try/except/else` block.  The old code set `parsed = None` in
+  the JSON-decode-except branch solely so the next line's
+  `if isinstance(parsed, dict):` would fall through; restructuring with
+  `try: ... except: pass; else: if isinstance(...):` makes the "only
+  forward when parsing succeeded" intent structural instead of encoded
+  through a sentinel value.  The error path now skips the isinstance
+  check entirely (dead work before), and the success path is unchanged.
+  `parsed` is no longer bound when the except clause runs, which matches
+  Python convention — the value was always meant to be ignored there.
+  Pinned by `tests/test_agent.py::test_ignores_non_json_lines` and the
+  broader stream-JSON coverage in that file.
 - d8d5592 — gated the `"".join(...)` of `stream.stdout_lines` and
   `stderr_lines` at the tail of `_run_agent_streaming` on
   `log_dir is not None`.  The joined strings were only consumed by
