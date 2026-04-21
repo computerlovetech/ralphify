@@ -285,8 +285,7 @@ def _supports_stream_json(cmd: list[str]) -> bool:
     """
     if not cmd:
         return False
-    binary = Path(cmd[0]).stem
-    return binary == CLAUDE_BINARY
+    return Path(cmd[0]).stem == CLAUDE_BINARY
 
 
 def _readline_pump(
