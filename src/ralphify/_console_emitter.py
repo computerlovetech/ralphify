@@ -1202,10 +1202,10 @@ class ConsoleEmitter:
         if self._structured_agent:
             return
         with self._console_lock:
-            line = escape_markup(data["line"])
             target = self._panel_for_event(data["iteration"])
             if not isinstance(target, _IterationSpinner):
                 return
+            line = escape_markup(data["line"])
             target.add_scroll_line(f"[white]{line}[/]")
             self._refresh_live_unlocked(target)
 
