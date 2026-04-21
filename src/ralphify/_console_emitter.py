@@ -772,15 +772,11 @@ class _FullscreenPeek:
         self._auto_scroll = False
 
     def scroll_to_bottom(self) -> None:
+        """Snap to the newest line and re-enable follow mode."""
         self._offset = 0
         self._auto_scroll = True
 
     # ── Iteration navigation ─────────────────────────────────────────
-
-    def _reset_view(self) -> None:
-        """Snap to bottom + follow when switching iterations."""
-        self._offset = 0
-        self._auto_scroll = True
 
     def _step_iteration(self, direction: int) -> bool:
         """Move *direction* iterations (-1 = prev, +1 = next).
@@ -795,13 +791,13 @@ class _FullscreenPeek:
             return False
         if self._iteration_id not in ids:
             self._iteration_id = ids[0] if direction < 0 else ids[-1]
-            self._reset_view()
+            self.scroll_to_bottom()
             return True
         new_idx = ids.index(self._iteration_id) + direction
         if not 0 <= new_idx < len(ids):
             return False
         self._iteration_id = ids[new_idx]
-        self._reset_view()
+        self.scroll_to_bottom()
         return True
 
     def prev_iteration(self) -> bool:
