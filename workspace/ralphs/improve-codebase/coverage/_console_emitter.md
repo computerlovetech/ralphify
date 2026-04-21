@@ -1,9 +1,15 @@
 # `_console_emitter.py` coverage
 
-Valid at: 1d7251f
+Valid at: 134078d
 
 ## Recent changes
 
+- 134078d — narrowed `name_col` scope in `_IterationPanel._apply_assistant`'s
+  tool_use branch.  The padded name column was computed unconditionally
+  but only rendered when `arg` was truthy (the `else` branch uses raw
+  `name` without padding).  Moved the pad-to-column if/else inside
+  `if arg:` so the helper variable lives only where it's used.  Same
+  output in both branches — only the dead formatting work is gone.
 - 1d7251f — promoted the `40` fallback-terminal-height literal to a named
   module constant `_DEFAULT_CONSOLE_HEIGHT` near the other fullscreen
   constants (`_FULLSCREEN_CHROME_ROWS`, `_FULLSCREEN_MIN_VISIBLE`).  Two

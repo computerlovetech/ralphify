@@ -56,6 +56,11 @@ only when they land in a commit.
 
 ## Phase 3 — magic values
 
+Essentially drained.  Latest full scan (at 134078d): every bare integer
+≥ 10 across `src/ralphify/` already resolves to a named constant, and
+the handful of remaining single-site `2`s are flagged below with
+"only if a second site appears".
+
 - Scan each module's numeric literals (especially timeouts, widths, retry
   counts) and promote to module constants when reused.  (1d7251f —
   promoted `40` → `_DEFAULT_CONSOLE_HEIGHT` for the two fallback-height
@@ -67,6 +72,22 @@ only when they land in a commit.
 - `_keypress.py` has `_POLL_INTERVAL`, `_WIN_POLL_INTERVAL`,
   `_THREAD_JOIN_TIMEOUT` already at module top.  No obvious leftover
   literals worth promoting.
+
+## Phase 4 — complex conditionals & long functions
+
+- (134078d — narrowed `name_col` scope in `_IterationPanel._apply_assistant`
+  so the padded name column is only computed on the branch that renders
+  it.)
+- `_IterationPanel._apply_assistant` still juggles three block types
+  (`thinking` / `text` / `tool_use`) in one ~50-line method.  Splitting
+  into `_render_thinking_block` / `_render_text_block` / `_render_tool_use_block`
+  would shorten the outer loop but each helper is short enough that the
+  indirection may not pay off — revisit only if a fourth block type lands.
+- `cli.py:_parse_user_args` is 55 lines of token-by-token iteration with
+  two nested branches and a while-loop that skips already-filled declared
+  names.  Could be split into `_consume_flag` / `_consume_positional`
+  helpers without changing any error message.  Medium payoff, medium
+  churn — land only once behavior is fully pinned by tests (which it is).
 
 ## Notes / ideas to triage
 

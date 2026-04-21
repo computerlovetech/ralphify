@@ -25,13 +25,15 @@ behavior (even by one log line), skip it and leave a note in backlog.md.
 
 ## Current phase
 
-**Phase 3 — magic values & local constants.** Phase 1 looks exhausted: all
-vulture flags (60% and above) were verified live, typing imports were all
-checked used, and the cli.py / _console_emitter.py / _agent.py audits turned
-up no remaining unused helpers. Move on to numeric/stringly literals that
-repeat inside a single module; lift to a named constant near the top.
-Phase 2 (duplication) is kept open for any near-duplicate block spotted in
-passing — see backlog.
+**Phase 4 — complex conditionals & long functions.** Phase 3 (magic values)
+is now essentially drained: every module-level scan for numeric literals
+≥ 10 across `src/ralphify/` turns up only named constants.  Phase 1 (dead
+code) and Phase 2 (duplication) stay open for anything spotted in passing.
+Move on to simplifying local control flow where a variable is computed
+unconditionally but only used on one branch, or where a helper can tighten
+a nested conditional without losing clarity.  The 134078d `name_col`
+scope narrowing is a representative Phase 4 move: same output, dead work
+gone, clearer scope.
 
 ## Priorities (tailored to this repo)
 

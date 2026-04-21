@@ -2,6 +2,7 @@
 
 One line per iteration: `<sha> <summary>`.
 
+134078d refactor: narrow `name_col` scope into `if arg:` in `_apply_assistant` — padded variant was computed but unused when arg falsy
 1d7251f refactor: promote 40-line fallback height to `_DEFAULT_CONSOLE_HEIGHT` — two sites used the literal 40 for "default terminal height when unknown"
 6227863 refactor: drop redundant empty-user_args branch in `resolve_args` — callable path already yields "" for every match when dict is empty
 d34e957 refactor: drop redundant f-string wrap around `_plural(total, 'line')` in fullscreen header
