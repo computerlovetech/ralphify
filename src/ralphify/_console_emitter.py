@@ -353,6 +353,11 @@ class _LivePanelBase:
             self._end = time.monotonic()
         self._outcome = outcome
 
+    @property
+    def outcome(self) -> str | None:
+        """The frozen-iteration outcome label, or ``None`` while live."""
+        return self._outcome
+
     # ── Scroll buffer management ─────────────────────────────────────
 
     def add_scroll_line(self, markup: str) -> None:
@@ -830,7 +835,7 @@ class _FullscreenPeek:
                 header.append("live", style=f"italic {_brand.GREEN}")
             else:
                 source = self._source
-                outcome = source._outcome if source is not None else None
+                outcome = source.outcome if source is not None else None
                 if outcome:
                     header.append("  ·  ", style="dim")
                     header.append(outcome, style=f"italic {_brand.LAVENDER}")
