@@ -1,9 +1,14 @@
 # `_console_emitter.py` coverage
 
-Valid at: fc5e1cb
+Valid at: d34e957
 
 ## Recent changes
 
+- d34e957 — dropped redundant `f"{_plural(total, 'line')}"` wrap in
+  `_FullscreenPeek._build_header`.  `_plural` already returns a str
+  so the f-string just format-identity-copied it.  Same shape as the
+  surrounding `header.append(literal, style=...)` calls.  No other
+  `f"{_plural(...)}"` wraps remain in the module (checked with grep).
 - fc5e1cb — inlined `total_in = self._input_tokens` alias in
   `_IterationPanel._format_tokens`.  The rename hinted at a "total
   input" aggregate that no longer exists (cache-read tokens are

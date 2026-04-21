@@ -2,6 +2,7 @@
 
 One line per iteration: `<sha> <summary>`.
 
+d34e957 refactor: drop redundant f-string wrap around `_plural(total, 'line')` in fullscreen header
 fc5e1cb refactor: inline `total_in` alias in `_format_tokens` — direct read of `self._input_tokens` clarifies intent
 3838006 refactor: defer `panel_for` guard to `is_live` to dedupe identical condition
 01f2f1c refactor: drop `_reset_view` in `_FullscreenPeek` — identical body to `scroll_to_bottom`
