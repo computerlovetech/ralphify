@@ -347,12 +347,10 @@ def _read_agent_stream(
     while True:
         # Compute how long we can wait for the next line.
         if deadline is not None:
-            remaining = deadline - time.monotonic()
-            # Use max(remaining, 0) so that an already-expired deadline
-            # still does a non-blocking drain of queued lines before
-            # returning — lines the reader thread already buffered are
-            # not silently lost.
-            get_timeout: float | None = max(remaining, 0)
+            # Clamp to 0 so that an already-expired deadline still does a
+            # non-blocking drain of queued lines before returning — lines
+            # the reader thread already buffered are not silently lost.
+            get_timeout: float | None = max(deadline - time.monotonic(), 0)
         else:
             get_timeout = None
 
