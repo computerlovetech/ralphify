@@ -483,10 +483,8 @@ class _IterationPanel(_LivePanelBase):
             )
 
     def _apply_assistant(self, raw: dict[str, Any]) -> None:
-        msg = raw.get("message", {})
-
         # Update token counts from usage
-        usage = msg.get("usage")
+        usage = raw.get("message", {}).get("usage")
         if isinstance(usage, dict):
             self._input_tokens = usage.get("input_tokens", self._input_tokens)
             self._output_tokens = usage.get("output_tokens", self._output_tokens)
