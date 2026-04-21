@@ -1,9 +1,14 @@
 # `_output.py` coverage
 
-Valid at: 7730dd4
+Valid at: ce487d3
 
 ## Recent changes
 
+- ce487d3 — inlined `text = ensure_str(stream)` in `collect_output`.
+  The local was assigned then read exactly once on the next line as
+  `parts.append(text)`.  The `ensure_str` helper name already
+  documents the decode step, so the intermediate binding was pure
+  noise.  Same alias-inline shape as fc5e1cb / 497c028 / 52e0272.
 - 7730dd4 — narrowed `secs = total % _SECONDS_PER_MINUTE` scope in
   `format_duration`.  The local was computed unconditionally between
   the `total = int(seconds + 0.5)` / `minutes = total // 60` setup and
@@ -34,12 +39,6 @@ Valid at: 7730dd4
   Could lift to a `_format_millions(n)` helper, but each site is one
   line and the duplication is intentional (the rounding guard explains
   the second site).  Skip unless a third user appears.
-- `collect_output`'s `text = ensure_str(stream)` local is read once on
-  the next line (`parts.append(text)`).  Could inline as
-  `parts.append(ensure_str(stream))` for the same alias-inline pattern
-  as fc5e1cb / 497c028 / 52e0272.  Tradeoff: the local documents the
-  decoded form, but `ensure_str` already names the operation.  Worth
-  a Phase 4 iteration if we want symmetry with the other inlines.
 - The two `format_*` functions both have a "rounded value crossed into
   next unit" guard (59.95s → "1m 0s"; 999_950 → "1.0M") with parallel
   comments referencing each other.  Already kept in lockstep — no
