@@ -1,9 +1,21 @@
 # `_agent.py` coverage
 
-Valid at: cf72fd9
+Valid at: e1ad87a
 
 ## Recent changes
 
+- e1ad87a — inlined the `binary = Path(cmd[0]).stem` local in
+  `_supports_stream_json`.  The alias was read exactly once on the
+  following line as `binary == CLAUDE_BINARY`.  Collapsing to
+  `return Path(cmd[0]).stem == CLAUDE_BINARY` matches the already-inline
+  sibling check in `_console_emitter.py:_is_claude_command`
+  (`return Path(parts[0]).stem == CLAUDE_BINARY`).  Same Phase 4
+  inline-alias shape as ce487d3 / 52e0272 / 497c028 / fc5e1cb.  Empty-cmd
+  short-circuit (`if not cmd: return False`) preserved so
+  `Path(cmd[0])` never gets indexed into an empty list.  Backlog note
+  about consolidating `_is_claude_command` and `_supports_stream_json`
+  across modules is unchanged — still deferred until a third caller
+  appears.
 - cf72fd9 — replaced the `parsed = None` sentinel in `_read_agent_stream`
   with a `try/except/else` block.  The old code set `parsed = None` in
   the JSON-decode-except branch solely so the next line's
