@@ -466,8 +466,8 @@ def _run_agent_streaming(
     finally:
         _cleanup_agent(proc, stderr_thread, writer_thread)
 
-    stdout = "".join(stream.stdout_lines)
-    stderr = "".join(stderr_lines)
+    stdout = "".join(stream.stdout_lines) if log_dir is not None else None
+    stderr = "".join(stderr_lines) if log_dir is not None else None
 
     log_file = _write_log(log_dir, iteration, stdout, stderr)
 
@@ -477,8 +477,8 @@ def _run_agent_streaming(
         log_file=log_file,
         result_text=stream.result_text,
         timed_out=stream.timed_out,
-        captured_stdout=stdout if log_dir is not None else None,
-        captured_stderr=stderr if log_dir is not None else None,
+        captured_stdout=stdout,
+        captured_stderr=stderr,
     )
 
 
