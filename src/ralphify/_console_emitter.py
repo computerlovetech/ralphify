@@ -522,14 +522,14 @@ class _IterationPanel(_LivePanelBase):
                 color, cat, arg = _tool_display(name, tool_input)
                 self._tool_categories[cat] = self._tool_categories.get(cat, 0) + 1
 
-                # Pad short names to a fixed column so arguments line up;
-                # longer names get a guaranteed two-space gap so the arg
-                # never collides with the tool label.
-                if len(name) < _TOOL_NAME_COL:
-                    name_col = f"{name:<{_TOOL_NAME_COL}}"
-                else:
-                    name_col = f"{name}  "
                 if arg:
+                    # Pad short names to a fixed column so arguments line up;
+                    # longer names get a guaranteed two-space gap so the arg
+                    # never collides with the tool label.
+                    if len(name) < _TOOL_NAME_COL:
+                        name_col = f"{name:<{_TOOL_NAME_COL}}"
+                    else:
+                        name_col = f"{name}  "
                     self.add_scroll_line(
                         f"[bold {color}]{escape_markup(name_col)}[/]"
                         f"[dim]{escape_markup(arg)}[/]"
