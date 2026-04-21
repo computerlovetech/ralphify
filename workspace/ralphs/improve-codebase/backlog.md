@@ -8,7 +8,12 @@ only when they land in a commit.
 - Audit `_console_emitter.py` for unused private helpers / constants (grep
   each `_foo` name for other references inside the module and tests).
 - Audit `_agent.py` for parallel streaming/blocking helpers that reference
-  the same constants but define their own copies.
+  the same constants but define their own copies.  (cb61477 — extracted
+  `_call_safely` for the 3× best-effort observer-callback pattern; no
+  remaining obvious dup after that pass.  Streaming's `_readline_pump` and
+  blocking's `_pump_stream` look similar but do genuinely different work:
+  the queue-based pump feeds a main-thread loop that parses JSON, while
+  the list-based pump does its callback work inline on its own thread.)
 - Check `cli.py` validators for unreachable error branches after recent
   TypedDict refactors.
 - Confirm every `from typing import ...` import in `src/ralphify/` is used.
