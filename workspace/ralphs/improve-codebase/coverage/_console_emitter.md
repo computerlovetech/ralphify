@@ -1,9 +1,21 @@
 # `_console_emitter.py` coverage
 
-Valid at: 3823019
+Valid at: 2fda4f0
 
 ## Recent changes
 
+- 2fda4f0 — inlined the `visible = self._scroll_lines[-_MAX_VISIBLE_SCROLL:]`
+  local in `_LivePanelBase._build_body`.  The alias was read exactly
+  once, as the iterable of the very next `for line in visible:` loop.
+  Collapsing to `for line in self._scroll_lines[-_MAX_VISIBLE_SCROLL:]:`
+  matches the inline-alias pattern from 497c028 (`agent`), fc5e1cb
+  (`total_in`), 52e0272 (`msg`), ce487d3 (`text`), and e1ad87a
+  (`binary`).  Behavior unchanged — each iteration still mutates the
+  Text in place (`no_wrap` / `overflow`) before appending to `rows`,
+  and the slice still materializes the last `_MAX_VISIBLE_SCROLL`
+  items.  No other `visible` locals remain in the class; the name is
+  reused elsewhere in the module (fullscreen viewport height, scrollbar
+  geometry) but all in unrelated scopes.
 - 3823019 — narrowed `line = escape_markup(data["line"])` scope in
   `_on_agent_output_line` past the
   `if not isinstance(target, _IterationSpinner): return` guard.  The
