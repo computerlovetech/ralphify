@@ -2,6 +2,8 @@
 
 One line per iteration: `<sha> <summary>`.
 
+3a8908d refactor: use `next(reversed(...), None)` in `enter_fullscreen` history fallback — the compound `if initial_id is None and self._iteration_history:` guard mixed two concerns (only fall back when nothing is live, *and* avoid `next(reversed({}))` raising StopIteration).  Switching to the `next(it, default)` sentinel idiom lets the standard default handle empty-dict case so the outer `if` only encodes the "fall back when nothing live" intent.  Behavior preserved — the existing `if initial_id is None or panel_for(...) is None:` next branch still prints "no iterations yet" and returns False, covered by `test_enter_without_iteration_prints_hint`.
+
 59b0e34 refactor: inline `_fullscreen_page_size()` into the space/b lambdas in `_handle_fullscreen_key` — the `page` local was computed unconditionally in the non-exit branch but only consumed by the page-down (" ") and page-up ("b") action lambdas.  j/k/g/G/[/] now skip the call entirely; space/b still compute it exactly once per keypress, now at action-invocation time under the same lock.  Same Phase 4 "narrow the scope of a one-branch local" shape as 134078d / ef176bf / b19625e.
 
 52e0272 refactor: inline `msg` alias in `_apply_assistant` — the `msg = raw.get("message", {})` local was read exactly once on the next line as `msg.get("usage")`.  Collapsing into `raw.get("message", {}).get("usage")` matches the chained-get style already used by `_iter_content_blocks` (which independently does `raw.get("message", {}).get("content", [])`) and the inline-alias pattern from 497c028 / fc5e1cb.

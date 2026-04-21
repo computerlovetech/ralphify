@@ -1,9 +1,19 @@
 # `_console_emitter.py` coverage
 
-Valid at: 59b0e34
+Valid at: 3a8908d
 
 ## Recent changes
 
+- 3a8908d — replaced the `if initial_id is None and self._iteration_history:`
+  guard in `enter_fullscreen` with `next(reversed(self._iteration_history), None)`.
+  The compound condition was doing two jobs at once: pick the fallback only
+  when nothing is live, *and* sidestep `next(reversed({}))` raising
+  StopIteration on the empty dict.  The `next(it, default)` form moves the
+  empty-handling into the standard library idiom so the outer `if` reads
+  as a single concern.  Same observable behavior — the immediately-following
+  `if initial_id is None or self.panel_for(initial_id) is None:` branch
+  still prints "Full peek: no iterations yet" and returns False when the
+  fallback yielded nothing.  Pinned by `test_enter_without_iteration_prints_hint`.
 - 59b0e34 — inlined `self._fullscreen_page_size()` into the space/b
   action lambdas in `_handle_fullscreen_key`.  The `page` local was
   computed unconditionally in the non-exit branch but only consumed by
