@@ -1,9 +1,22 @@
 # `_agent.py` coverage
 
-Valid at: 66d6c60
+Valid at: 7402f04
 
 ## Recent changes
 
+- 7402f04 — inlined the `stream_cmd = cmd + [_OUTPUT_FORMAT_FLAG,
+  _STREAM_FORMAT, _VERBOSE_FLAG]` local in `_run_agent_streaming`.
+  The binding was consumed exactly once on the very next statement
+  (the first positional arg to `subprocess.Popen(...)`); no other
+  references exist in src/ or tests/ (grep confirmed).  The three
+  appended tokens are already named constants
+  (`_OUTPUT_FORMAT_FLAG`, `_STREAM_FORMAT`, `_VERBOSE_FLAG`) so the
+  "extended command for streaming mode" intent reads cleanly at the
+  call site without the intermediate name.  Same Phase 4 inline-alias
+  shape as 66d6c60 (`remaining`), b24accf (`reader`), 2fda4f0
+  (`visible`), and e1ad87a (`binary`).  Behavior preserved —
+  subprocess.Popen still receives the same list; pinned by the
+  streaming-path test coverage in `tests/test_agent.py`.
 - 66d6c60 — inlined the `remaining = deadline - time.monotonic()` local
   in `_read_agent_stream`'s per-iteration timeout calc.  The alias was
   read exactly once on the next line as `max(remaining, 0)`; collapsing
