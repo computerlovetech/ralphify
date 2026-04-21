@@ -1193,10 +1193,14 @@ class ConsoleEmitter:
         return self._active_renderable
 
     def _on_agent_output_line(self, data: AgentOutputLineData) -> None:
+        # When we have structured rendering, raw lines are redundant noise.
+        # ``_structured_agent`` is write-once (set in ``_on_run_started``
+        # before any iteration events flow), so the check is lock-free —
+        # same pattern as ``_on_agent_activity``.  Skipping the lock also
+        # avoids contention on every stdout line when running Claude.
+        if self._structured_agent:
+            return
         with self._console_lock:
-            # When we have structured rendering, raw lines are redundant noise.
-            if self._structured_agent:
-                return
             line = escape_markup(data["line"])
             target = self._panel_for_event(data["iteration"])
             if not isinstance(target, _IterationSpinner):
