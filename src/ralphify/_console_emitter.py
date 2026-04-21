@@ -1332,8 +1332,8 @@ class ConsoleEmitter:
             if self._fullscreen_view is not None:
                 return True  # already active — no-op
             initial_id: int | None = self._current_iteration
-            if initial_id is None and self._iteration_history:
-                initial_id = next(reversed(self._iteration_history))
+            if initial_id is None:
+                initial_id = next(reversed(self._iteration_history), None)
             if initial_id is None or self.panel_for(initial_id) is None:
                 self._console.print("[dim]Full peek: no iterations yet[/]")
                 return False
