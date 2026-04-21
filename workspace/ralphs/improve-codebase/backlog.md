@@ -49,6 +49,10 @@ only when they land in a commit.
   both create `summary = Text(no_wrap=True, overflow="ellipsis")` then
   branch on count > 0 vs "waiting…".  Two subclasses only — already
   noted in coverage as not-worth-extracting.
+- (01f2f1c — dropped `_FullscreenPeek._reset_view` which had the same body
+  as `scroll_to_bottom`.)  No other near-duplicate scroll helpers spotted
+  in that class; `scroll_up` / `scroll_down` / `scroll_to_top` each touch
+  `_auto_scroll` under different conditions.
 
 ## Phase 3 — magic values
 

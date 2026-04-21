@@ -1,9 +1,15 @@
 # `_console_emitter.py` coverage
 
-Valid at: ef9a178
+Valid at: 01f2f1c
 
 ## Recent changes
 
+- 01f2f1c — dropped `_FullscreenPeek._reset_view`.  Its body
+  (`self._offset = 0; self._auto_scroll = True`) was byte-for-byte identical
+  to `scroll_to_bottom`.  The two call sites in `_step_iteration` now call
+  `scroll_to_bottom()` directly; the "snap to newest line + follow" intent
+  moved into a docstring on the surviving method.  No other scroll-reset
+  duplication remains.
 - ef9a178 — replaced the single cross-class `_fullscreen_view._iteration_id`
   access in `_archive_current_iteration_unlocked` with the public
   `iteration_id` property on `_FullscreenPeek`.  No behavior change —
