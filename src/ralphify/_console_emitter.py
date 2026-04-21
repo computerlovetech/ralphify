@@ -1035,10 +1035,7 @@ class ConsoleEmitter:
 
     def panel_for(self, iteration_id: int) -> _LivePanelBase | None:
         """Look up the panel for *iteration_id* in history or active state."""
-        if (
-            self._current_iteration == iteration_id
-            and self._active_renderable is not None
-        ):
+        if self.is_live(iteration_id):
             return self._active_renderable
         return self._iteration_history.get(iteration_id)
 
