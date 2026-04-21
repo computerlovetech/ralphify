@@ -2,6 +2,8 @@
 
 One line per iteration: `<sha> <summary>`.
 
+59b0e34 refactor: inline `_fullscreen_page_size()` into the space/b lambdas in `_handle_fullscreen_key` — the `page` local was computed unconditionally in the non-exit branch but only consumed by the page-down (" ") and page-up ("b") action lambdas.  j/k/g/G/[/] now skip the call entirely; space/b still compute it exactly once per keypress, now at action-invocation time under the same lock.  Same Phase 4 "narrow the scope of a one-branch local" shape as 134078d / ef176bf / b19625e.
+
 52e0272 refactor: inline `msg` alias in `_apply_assistant` — the `msg = raw.get("message", {})` local was read exactly once on the next line as `msg.get("usage")`.  Collapsing into `raw.get("message", {}).get("usage")` matches the chained-get style already used by `_iter_content_blocks` (which independently does `raw.get("message", {}).get("content", [])`) and the inline-alias pattern from 497c028 / fc5e1cb.
 
 b19625e refactor: drop `new_offset` alias in `_FullscreenPeek.scroll_down` — the local was assigned to `self._offset` and then re-read only as `new_offset == 0`, which is identical to `self._offset == 0` after the assignment.  Sibling `scroll_up` needs its local because it compares old vs new before the assignment; `scroll_down` has no such comparison, so the alias was dead.  Same shape as ef176bf and 134078d.

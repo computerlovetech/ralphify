@@ -1,9 +1,20 @@
 # `_console_emitter.py` coverage
 
-Valid at: 52e0272
+Valid at: 59b0e34
 
 ## Recent changes
 
+- 59b0e34 — inlined `self._fullscreen_page_size()` into the space/b
+  action lambdas in `_handle_fullscreen_key`.  The `page` local was
+  computed unconditionally in the non-exit branch but only consumed by
+  the page-down (" ") and page-up ("b") lambdas — j/k/g/G/[/] now skip
+  the call entirely.  Space/b still compute it exactly once per keypress,
+  now at action-invocation time (under the same `_console_lock`), so
+  behavior is unchanged.  `_fullscreen_page_size()` is a pure read of
+  `self._console.size.height` in a try/except, so deferring evaluation
+  has no observable effect — the dict build and action invocation happen
+  back-to-back inside the lock.  Same Phase 4 shape as 134078d / ef176bf
+  / b19625e.
 - 52e0272 — inlined the `msg = raw.get("message", {})` local in
   `_IterationPanel._apply_assistant`.  The alias was read exactly once on
   the next line as `msg.get("usage")`.  Collapsing to
