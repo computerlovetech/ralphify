@@ -1858,7 +1858,7 @@ class TestFullscreenPeekEmitter:
                 ) if i > 2 else None
                 emitter.emit(_make_event(EventType.ITERATION_STARTED, iteration=i))
             assert 1 in emitter._iteration_history
-            assert len(emitter._iteration_order) <= _MAX_HISTORY_ITERATIONS
+            assert len(emitter._iteration_history) <= _MAX_HISTORY_ITERATIONS
         finally:
             emitter._stop_live()
 

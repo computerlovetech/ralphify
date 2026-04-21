@@ -974,10 +974,10 @@ class ConsoleEmitter:
         # receiving events).  ``None`` between iterations.
         self._current_iteration: int | None = None
         # Bounded ring buffer of finished iteration panels, keyed by
-        # iteration number.  Insertion order is tracked separately so
-        # eviction is O(1).  Used by fullscreen peek for browsing.
+        # iteration number.  Python dicts preserve insertion order, so
+        # the oldest entry is always first — used for eviction.  Used by
+        # fullscreen peek for browsing.
         self._iteration_history: dict[int, _LivePanelBase] = {}
-        self._iteration_order: list[int] = []
         # Fullscreen peek state — a second Live using Rich's alt-screen
         # that shows an iteration's full activity buffer with scroll +
         # iteration-navigation controls.  While fullscreen is active the
@@ -1109,10 +1109,10 @@ class ConsoleEmitter:
         iteration_id = self._current_iteration
         panel.freeze(outcome)
         # Record (or refresh order of) the iteration in history.
-        if iteration_id in self._iteration_history:
-            self._iteration_order.remove(iteration_id)
+        # Pop-then-insert moves an existing entry to the end of the dict's
+        # insertion order so eviction always drops the oldest first.
+        self._iteration_history.pop(iteration_id, None)
         self._iteration_history[iteration_id] = panel
-        self._iteration_order.append(iteration_id)
         # Eviction: drop oldest until at or below the cap, but skip the
         # iteration the user is currently viewing in fullscreen.
         viewing = (
@@ -1120,17 +1120,16 @@ class ConsoleEmitter:
             if self._fullscreen_view is not None
             else None
         )
-        while len(self._iteration_order) > _MAX_HISTORY_ITERATIONS:
+        while len(self._iteration_history) > _MAX_HISTORY_ITERATIONS:
             candidate = next(
-                (iid for iid in self._iteration_order if iid != viewing),
+                (iid for iid in self._iteration_history if iid != viewing),
                 None,
             )
             if candidate is None:
                 # All remaining entries are the viewed iteration (impossible
                 # with one viewer) — bail to avoid an infinite loop.
                 break
-            self._iteration_order.remove(candidate)
-            self._iteration_history.pop(candidate, None)
+            self._iteration_history.pop(candidate)
         self._active_renderable = None
         self._current_iteration = None
 
@@ -1343,8 +1342,8 @@ class ConsoleEmitter:
             if self._fullscreen_view is not None:
                 return True  # already active — no-op
             initial_id: int | None = self._current_iteration
-            if initial_id is None and self._iteration_order:
-                initial_id = self._iteration_order[-1]
+            if initial_id is None and self._iteration_history:
+                initial_id = next(reversed(self._iteration_history))
             if initial_id is None or self.panel_for(initial_id) is None:
                 self._console.print("[dim]Full peek: no iterations yet[/]")
                 return False
