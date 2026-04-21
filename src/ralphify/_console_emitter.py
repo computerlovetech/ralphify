@@ -629,6 +629,10 @@ class _IterationSpinner(_LivePanelBase):
 _FULLSCREEN_CHROME_ROWS = 2
 _FULLSCREEN_MIN_VISIBLE = 3
 
+# Fallback terminal height used before the first render populates the
+# real value, and when ``Console.size.height`` access fails.
+_DEFAULT_CONSOLE_HEIGHT = 40
+
 
 @dataclass(slots=True)
 class _ScrollbarMetrics:
@@ -811,7 +815,7 @@ class _FullscreenPeek:
 
     # ── Rendering ────────────────────────────────────────────────────
 
-    _console_height: int = 40  # updated on every render
+    _console_height: int = _DEFAULT_CONSOLE_HEIGHT  # updated on every render
 
     def _build_header(self, total: int, visible: int) -> Text:
         header = Text(no_wrap=True, overflow="ellipsis")
@@ -1409,7 +1413,7 @@ class ConsoleEmitter:
         try:
             height = self._console.size.height
         except Exception:
-            height = 40
+            height = _DEFAULT_CONSOLE_HEIGHT
         return max(1, height - _FULLSCREEN_CHROME_ROWS - 2)
 
     def handle_key(self, key: str) -> None:
