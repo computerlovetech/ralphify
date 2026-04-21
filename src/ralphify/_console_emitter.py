@@ -835,7 +835,7 @@ class _FullscreenPeek:
                     header.append("  ·  ", style="dim")
                     header.append(outcome, style=f"italic {_brand.LAVENDER}")
         header.append("  ·  ", style="dim")
-        header.append(f"{_plural(total, 'line')}", style="dim")
+        header.append(_plural(total, "line"), style="dim")
         if self._auto_scroll:
             header.append("  ·  ", style="dim")
             header.append("following", style=f"italic {_brand.GREEN}")
