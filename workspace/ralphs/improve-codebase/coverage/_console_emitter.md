@@ -1,9 +1,21 @@
 # `_console_emitter.py` coverage
 
-Valid at: 3a8908d
+Valid at: d0060b3
 
 ## Recent changes
 
+- d0060b3 — added a public `outcome` property on `_LivePanelBase` and
+  replaced `source._outcome` in `_FullscreenPeek._build_header` with
+  `source.outcome`.  Mirrors ef9a178's `iteration_id` cleanup — both
+  commits expose an existing private attribute through a getter so the
+  cross-class read doesn't have to dip into private state.  The
+  `_outcome` attribute is still the single source of truth (written
+  only in `freeze`), and tests that read `_outcome` directly
+  (test_console_emitter.py:1766) keep working.  Two private-attr
+  cross-class reads remain in the module (`source._scroll_lines` at
+  lines 750 and 872); those touch a mutable list that the class itself
+  appends to, so a read-only property would paper over the mutation
+  asymmetry — not taking until a real need appears.
 - 3a8908d — replaced the `if initial_id is None and self._iteration_history:`
   guard in `enter_fullscreen` with `next(reversed(self._iteration_history), None)`.
   The compound condition was doing two jobs at once: pick the fallback only
@@ -116,6 +128,7 @@ Valid at: 3a8908d
   `_FullscreenPeek` already exposes this via an `@property` (line 739-741);
   the private-attribute shortcut was an oversight from earlier iterations.
   Now `_iteration_id` is only read from within `_FullscreenPeek` itself.
+  (d0060b3 applied the same pattern to `_LivePanelBase._outcome`.)
 - c4469a1 — extracted `_FullscreenPeek._step_iteration(direction)` from
   `prev_iteration` / `next_iteration`.  The two methods were 12-line
   mirror images differing only in step direction (-1 vs +1) and

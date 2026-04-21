@@ -80,6 +80,14 @@ the handful of remaining single-site `2`s are flagged below with
 - (134078d — narrowed `name_col` scope in `_IterationPanel._apply_assistant`
   so the padded name column is only computed on the branch that renders
   it.)
+- (d0060b3 — exposed `_LivePanelBase.outcome` as a public property and
+  switched `_FullscreenPeek._build_header`'s `source._outcome` read to
+  go through it.  Mirror of ef9a178's `iteration_id` cleanup.)  Two
+  private-attr cross-class reads remain — both of `source._scroll_lines`
+  in `_FullscreenPeek._max_offset` and `__rich_console__`.  Those touch a
+  mutable list the class itself appends to, so a read-only property
+  would hide the mutation asymmetry; defer unless a clearer abstraction
+  emerges (e.g., a "get a snapshot of visible lines" helper).
 - `_IterationPanel._apply_assistant` still juggles three block types
   (`thinking` / `text` / `tool_use`) in one ~50-line method.  Splitting
   into `_render_thinking_block` / `_render_text_block` / `_render_tool_use_block`
