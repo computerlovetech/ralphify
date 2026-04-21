@@ -2,6 +2,8 @@
 
 One line per iteration: `<sha> <summary>`.
 
+52e0272 refactor: inline `msg` alias in `_apply_assistant` — the `msg = raw.get("message", {})` local was read exactly once on the next line as `msg.get("usage")`.  Collapsing into `raw.get("message", {}).get("usage")` matches the chained-get style already used by `_iter_content_blocks` (which independently does `raw.get("message", {}).get("content", [])`) and the inline-alias pattern from 497c028 / fc5e1cb.
+
 b19625e refactor: drop `new_offset` alias in `_FullscreenPeek.scroll_down` — the local was assigned to `self._offset` and then re-read only as `new_offset == 0`, which is identical to `self._offset == 0` after the assignment.  Sibling `scroll_up` needs its local because it compares old vs new before the assignment; `scroll_down` has no such comparison, so the alias was dead.  Same shape as ef176bf and 134078d.
 
 497c028 refactor: inline `agent` alias in `_on_run_started` — the local served a single use as the arg to `_is_claude_command(...)`.  Reading `data["agent"]` directly matches the sibling style from fc5e1cb (`total_in` inline).  Preserved `ralph_name` — it's used inside an f-string on line 1247 where the alias still helps readability.

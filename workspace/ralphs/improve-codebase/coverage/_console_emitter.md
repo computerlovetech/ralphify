@@ -1,9 +1,17 @@
 # `_console_emitter.py` coverage
 
-Valid at: b19625e
+Valid at: 52e0272
 
 ## Recent changes
 
+- 52e0272 — inlined the `msg = raw.get("message", {})` local in
+  `_IterationPanel._apply_assistant`.  The alias was read exactly once on
+  the next line as `msg.get("usage")`.  Collapsing to
+  `usage = raw.get("message", {}).get("usage")` matches the chained-get
+  style already used by `_iter_content_blocks` two functions above
+  (`raw.get("message", {}).get("content", [])`), and the same
+  inline-alias pattern as 497c028 (`agent`) and fc5e1cb (`total_in`).
+  No other reference to `msg` exists in the function — verified by grep.
 - b19625e — dropped the `new_offset` alias in `_FullscreenPeek.scroll_down`.
   The local was assigned directly to `self._offset`, then the
   follow-mode check re-read it as `new_offset == 0` — identical to
