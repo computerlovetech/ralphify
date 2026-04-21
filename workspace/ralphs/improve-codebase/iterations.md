@@ -2,6 +2,8 @@
 
 One line per iteration: `<sha> <summary>`.
 
+b19625e refactor: drop `new_offset` alias in `_FullscreenPeek.scroll_down` — the local was assigned to `self._offset` and then re-read only as `new_offset == 0`, which is identical to `self._offset == 0` after the assignment.  Sibling `scroll_up` needs its local because it compares old vs new before the assignment; `scroll_down` has no such comparison, so the alias was dead.  Same shape as ef176bf and 134078d.
+
 497c028 refactor: inline `agent` alias in `_on_run_started` — the local served a single use as the arg to `_is_claude_command(...)`.  Reading `data["agent"]` directly matches the sibling style from fc5e1cb (`total_in` inline).  Preserved `ralph_name` — it's used inside an f-string on line 1247 where the alias still helps readability.
 
 ef176bf refactor: drop `line_count` alias in `_IterationSpinner._build_footer` — local was computed unconditionally but only used on the truthy branch (both as predicate `> 0` and as `_plural` arg).  Inlined the truthy check on `self._scroll_lines` and moved the `len()` call inside the branch that uses it.  Matches the style of sibling `_IterationPanel._build_footer` which uses `if self._tool_count > 0:` with no local alias.  Same Phase 4 shape as 134078d's `name_col` narrowing.

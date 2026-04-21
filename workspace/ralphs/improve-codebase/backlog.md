@@ -52,7 +52,9 @@ only when they land in a commit.
 - (01f2f1c — dropped `_FullscreenPeek._reset_view` which had the same body
   as `scroll_to_bottom`.)  No other near-duplicate scroll helpers spotted
   in that class; `scroll_up` / `scroll_down` / `scroll_to_top` each touch
-  `_auto_scroll` under different conditions.
+  `_auto_scroll` under different conditions.  (b19625e — dropped the
+  `new_offset` alias in `scroll_down`; `scroll_up` keeps its local
+  because it compares old vs new before the assignment.)
 
 ## Phase 3 — magic values
 

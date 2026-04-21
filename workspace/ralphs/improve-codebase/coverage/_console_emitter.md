@@ -1,9 +1,17 @@
 # `_console_emitter.py` coverage
 
-Valid at: 497c028
+Valid at: b19625e
 
 ## Recent changes
 
+- b19625e — dropped the `new_offset` alias in `_FullscreenPeek.scroll_down`.
+  The local was assigned directly to `self._offset`, then the
+  follow-mode check re-read it as `new_offset == 0` — identical to
+  `self._offset == 0` after the assignment.  Sibling `scroll_up` keeps
+  its local because it compares old vs new *before* assigning (needed
+  to conditionally disable auto-scroll on a real move); `scroll_down`
+  has no such comparison, so the alias was dead.  Same Phase 4 shape
+  as ef176bf (`line_count`) and 134078d (`name_col`).
 - 497c028 — inlined the `agent = data["agent"]` local in `_on_run_started`.
   The alias was read exactly once, immediately below, as the arg to
   `_is_claude_command(agent)`.  Reading `data["agent"]` directly matches
