@@ -25,9 +25,13 @@ behavior (even by one log line), skip it and leave a note in backlog.md.
 
 ## Current phase
 
-**Phase 1 — dead code / unused symbols.** Start by auditing the largest files
-for unused private helpers, constants, and imports: `_console_emitter.py`
-(1589 LOC), `_agent.py` (728 LOC), `cli.py` (586 LOC), `engine.py` (382 LOC).
+**Phase 3 — magic values & local constants.** Phase 1 looks exhausted: all
+vulture flags (60% and above) were verified live, typing imports were all
+checked used, and the cli.py / _console_emitter.py / _agent.py audits turned
+up no remaining unused helpers. Move on to numeric/stringly literals that
+repeat inside a single module; lift to a named constant near the top.
+Phase 2 (duplication) is kept open for any near-duplicate block spotted in
+passing — see backlog.
 
 ## Priorities (tailored to this repo)
 

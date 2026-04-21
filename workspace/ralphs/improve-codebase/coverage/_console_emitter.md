@@ -1,9 +1,18 @@
 # `_console_emitter.py` coverage
 
-Valid at: d34e957
+Valid at: 1d7251f
 
 ## Recent changes
 
+- 1d7251f — promoted the `40` fallback-terminal-height literal to a named
+  module constant `_DEFAULT_CONSOLE_HEIGHT` near the other fullscreen
+  constants (`_FULLSCREEN_CHROME_ROWS`, `_FULLSCREEN_MIN_VISIBLE`).  Two
+  use-sites both meant "reasonable default terminal height when the
+  real value isn't available": `_FullscreenPeek._console_height` (class-
+  attribute default used before the first `__rich_console__` call) and
+  `ConsoleEmitter._fullscreen_page_size`'s except-branch fallback.  The
+  constant keeps them in lockstep.  No other bare `40`s remain in the
+  module (grep confirmed).
 - d34e957 — dropped redundant `f"{_plural(total, 'line')}"` wrap in
   `_FullscreenPeek._build_header`.  `_plural` already returns a str
   so the f-string just format-identity-copied it.  Same shape as the

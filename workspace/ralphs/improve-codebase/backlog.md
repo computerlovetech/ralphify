@@ -57,7 +57,16 @@ only when they land in a commit.
 ## Phase 3 — magic values
 
 - Scan each module's numeric literals (especially timeouts, widths, retry
-  counts) and promote to module constants when reused.
+  counts) and promote to module constants when reused.  (1d7251f —
+  promoted `40` → `_DEFAULT_CONSOLE_HEIGHT` for the two fallback-height
+  sites in `_console_emitter.py`.)
+- `_console_emitter.py:_fullscreen_page_size` uses a bare `2` as the
+  "page overlap lines" magic — only one site, but could be named
+  `_PAGE_OVERLAP` for symmetry with `_FULLSCREEN_CHROME_ROWS` if a
+  second page-size helper ever appears.
+- `_keypress.py` has `_POLL_INTERVAL`, `_WIN_POLL_INTERVAL`,
+  `_THREAD_JOIN_TIMEOUT` already at module top.  No obvious leftover
+  literals worth promoting.
 
 ## Notes / ideas to triage
 
