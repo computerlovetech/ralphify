@@ -169,7 +169,7 @@ def _format_params(tool_input: dict[str, Any], keys: list[str]) -> str:
         val = tool_input.get(key)
         if val is not None:
             parts.append(f"{key}: {val}")
-    return " · ".join(parts) if parts else ""
+    return " · ".join(parts)
 
 
 def _extract_file_path(i: dict[str, Any]) -> str:
