@@ -1,9 +1,18 @@
 # `_console_emitter.py` coverage
 
-Valid at: bcadee1
+Valid at: ad7523e
 
 ## Recent changes
 
+- ad7523e — moved the `if self._structured_agent: return` short-circuit
+  in `_on_agent_output_line` from inside `_console_lock` to before
+  acquisition.  The flag is write-once (set in `_on_run_started` before
+  any iteration events can flow) and already read lock-free in
+  `_on_agent_activity` — now both structured/raw output handlers use the
+  same pattern.  Bonus: avoids a lock acquisition per stdout line under
+  Claude, where every line short-circuits anyway.  Added a comment
+  explaining the write-once invariant so the lock-free read doesn't look
+  accidental.
 - bcadee1 — dropped the `if self._active_renderable is not None:` guard
   wrapping `_archive_current_iteration_unlocked("interrupted")` in
   `_on_iteration_started`.  The archive helper already no-ops when

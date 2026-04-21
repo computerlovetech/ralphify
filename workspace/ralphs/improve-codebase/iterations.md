@@ -2,6 +2,7 @@
 
 One line per iteration: `<sha> <summary>`.
 
+ad7523e refactor: move `_structured_agent` short-circuit out of `_console_lock` in `_on_agent_output_line` — flag is write-once (set in `_on_run_started`), matches `_on_agent_activity`'s pattern, avoids lock acquisition per stdout line under Claude
 bcadee1 refactor: drop redundant `_active_renderable` guard in `_on_iteration_started` — archive call already no-ops when nothing is active
 134078d refactor: narrow `name_col` scope into `if arg:` in `_apply_assistant` — padded variant was computed but unused when arg falsy
 1d7251f refactor: promote 40-line fallback height to `_DEFAULT_CONSOLE_HEIGHT` — two sites used the literal 40 for "default terminal height when unknown"
