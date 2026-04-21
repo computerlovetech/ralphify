@@ -1,9 +1,16 @@
 # `_console_emitter.py` coverage
 
-Valid at: 8cb0d47
+Valid at: 5337d88
 
 ## Recent changes
 
+- 5337d88 — dropped `if not self._tool_categories: return ""` early
+  return in `_IterationPanel._format_categories`.  Empty dict yields an
+  empty list comprehension which `" · ".join` turns into `""`, so the
+  guard was dead — same shape as 4ccfa9a's `_format_params` cleanup.
+  No other empty-collection-then-join pattern remains in the module
+  (`_format_tokens` builds its `parts` list with conditional appends, so
+  it has no comprehension to short-circuit).
 - 8cb0d47 — dropped the `max(total - visible, 1)` guard in
   `_scrollbar_metrics`.  The early return `if total <= visible` already
   guarantees `total - visible ≥ 1`, so the `max(..., 1)` floor was dead
