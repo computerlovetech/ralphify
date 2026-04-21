@@ -80,6 +80,14 @@ the handful of remaining single-site `2`s are flagged below with
 - (134078d — narrowed `name_col` scope in `_IterationPanel._apply_assistant`
   so the padded name column is only computed on the branch that renders
   it.)
+- (7730dd4 — narrowed `secs = total % _SECONDS_PER_MINUTE` in
+  `_output.py:format_duration` into the `if minutes < _MINUTES_PER_HOUR:`
+  branch.  Saved a modulo on every duration ≥ 1h and co-located the
+  local with its only use site.)
+- `_output.py:collect_output` has `text = ensure_str(stream)` then
+  `parts.append(text)` one line later.  Same alias-inline shape as
+  fc5e1cb / 497c028 / 52e0272 — single use, helper name already
+  documents intent.  Small but consistent Phase 4 candidate.
 - (d0060b3 — exposed `_LivePanelBase.outcome` as a public property and
   switched `_FullscreenPeek._build_header`'s `source._outcome` read to
   go through it.  Mirror of ef9a178's `iteration_id` cleanup.)  Two
