@@ -419,7 +419,6 @@ def _run_agent_streaming(
     stderr volume can't deadlock the child on a full OS pipe buffer while
     the main thread is reading stdout.
     """
-    stream_cmd = cmd + [_OUTPUT_FORMAT_FLAG, _STREAM_FORMAT, _VERBOSE_FLAG]
     start = time.monotonic()
     deadline = (start + timeout) if timeout is not None else None
 
@@ -428,7 +427,7 @@ def _run_agent_streaming(
     stderr_thread: threading.Thread | None = None
 
     proc = subprocess.Popen(
-        stream_cmd,
+        cmd + [_OUTPUT_FORMAT_FLAG, _STREAM_FORMAT, _VERBOSE_FLAG],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
