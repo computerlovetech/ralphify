@@ -1,9 +1,16 @@
 # `_console_emitter.py` coverage
 
-Valid at: 01f2f1c
+Valid at: 3838006
 
 ## Recent changes
 
+- 3838006 — rewrote `ConsoleEmitter.panel_for` to call `self.is_live(...)`
+  for its guard instead of re-stating the
+  `cur_iter == id and active is not None` expression.  Same behavior;
+  one source of truth for "this is the active iteration" check.  Type
+  checker is happy: returning `self._active_renderable` (typed
+  `_LivePanelBase | None`) matches the declared return type even though
+  the runtime invariant guarantees non-None whenever `is_live` is True.
 - 01f2f1c — dropped `_FullscreenPeek._reset_view`.  Its body
   (`self._offset = 0; self._auto_scroll = True`) was byte-for-byte identical
   to `scroll_to_bottom`.  The two call sites in `_step_iteration` now call
@@ -67,6 +74,3 @@ Private helpers and constants that look unused but are legitimately used:
   start with `Text(no_wrap=True, overflow="ellipsis")` and use
   `_footer_grid(summary)` — the `Text(...)` construction repeats, but only
   twice.  Not worth extracting unless a third subclass appears.
-- `panel_for` / `is_live` share the guard
-  `self._current_iteration == iteration_id and self._active_renderable is not None`.
-  Two call sites; extracting would be premature.

@@ -2,6 +2,7 @@
 
 One line per iteration: `<sha> <summary>`.
 
+3838006 refactor: defer `panel_for` guard to `is_live` to dedupe identical condition
 01f2f1c refactor: drop `_reset_view` in `_FullscreenPeek` — identical body to `scroll_to_bottom`
 ef9a178 refactor: replace `_fullscreen_view._iteration_id` cross-class private access with public `iteration_id` property
 c4469a1 refactor: extract `_step_iteration` to dedupe prev/next iteration browsing in `_FullscreenPeek`

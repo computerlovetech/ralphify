@@ -63,3 +63,13 @@ only when they land in a commit.
 
 - `scripts/tui_dev/` has its own fixtures; out of scope unless it blocks a
   src/ralphify/ change.
+- `_IterationPanel._format_tokens` has `total_in = self._input_tokens`
+  followed by two reads of `total_in` — pointless rename, the alias hints
+  at a "total" that no longer exists (cache-read tokens are intentionally
+  not added in).  Inlining `self._input_tokens` would clarify intent.
+  Skipped this iter; leave as low-payoff polish.
+- `_IterationPanel._cache_read_tokens` is captured from usage but never
+  read in production — only the regression test
+  `test_format_tokens_does_not_double_count_cached_input` reads it.  The
+  capture protects against a hypothetical future display, so not strictly
+  dead, but worth revisiting when token rendering changes.
