@@ -342,8 +342,7 @@ def _read_agent_stream(
     result_text: str | None = None
 
     line_q: queue.Queue[str | None] = queue.Queue()
-    reader = threading.Thread(target=_readline_pump, args=(stdout, line_q), daemon=True)
-    reader.start()
+    threading.Thread(target=_readline_pump, args=(stdout, line_q), daemon=True).start()
 
     while True:
         # Compute how long we can wait for the next line.
