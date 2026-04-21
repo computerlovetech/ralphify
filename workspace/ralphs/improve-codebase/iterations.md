@@ -2,6 +2,7 @@
 
 One line per iteration: `<sha> <summary>`.
 
+ef9a178 refactor: replace `_fullscreen_view._iteration_id` cross-class private access with public `iteration_id` property
 c4469a1 refactor: extract `_step_iteration` to dedupe prev/next iteration browsing in `_FullscreenPeek`
 5337d88 refactor: drop redundant empty-dict guard in `_format_categories` — `" · ".join([])` already returns `""`
 8cb0d47 refactor: drop redundant `max(total - visible, 1)` guard in `_scrollbar_metrics` — early return makes `total - visible ≥ 1`

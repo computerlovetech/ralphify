@@ -1,9 +1,15 @@
 # `_console_emitter.py` coverage
 
-Valid at: c4469a1
+Valid at: ef9a178
 
 ## Recent changes
 
+- ef9a178 — replaced the single cross-class `_fullscreen_view._iteration_id`
+  access in `_archive_current_iteration_unlocked` with the public
+  `iteration_id` property on `_FullscreenPeek`.  No behavior change —
+  `_FullscreenPeek` already exposes this via an `@property` (line 739-741);
+  the private-attribute shortcut was an oversight from earlier iterations.
+  Now `_iteration_id` is only read from within `_FullscreenPeek` itself.
 - c4469a1 — extracted `_FullscreenPeek._step_iteration(direction)` from
   `prev_iteration` / `next_iteration`.  The two methods were 12-line
   mirror images differing only in step direction (-1 vs +1) and
