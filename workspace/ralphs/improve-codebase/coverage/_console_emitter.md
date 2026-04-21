@@ -1,9 +1,15 @@
 # `_console_emitter.py` coverage
 
-Valid at: 3838006
+Valid at: fc5e1cb
 
 ## Recent changes
 
+- fc5e1cb — inlined `total_in = self._input_tokens` alias in
+  `_IterationPanel._format_tokens`.  The rename hinted at a "total
+  input" aggregate that no longer exists (cache-read tokens are
+  intentionally excluded from ctx); reading `self._input_tokens`
+  directly matches what the value actually is.  Matches the existing
+  style in the sibling `if self._output_tokens > 0` branch.
 - 3838006 — rewrote `ConsoleEmitter.panel_for` to call `self.is_live(...)`
   for its guard instead of re-stating the
   `cur_iter == id and active is not None` expression.  Same behavior;
