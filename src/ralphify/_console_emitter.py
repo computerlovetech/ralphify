@@ -558,8 +558,6 @@ class _IterationPanel(_LivePanelBase):
         return " · ".join(parts)
 
     def _format_categories(self) -> str:
-        if not self._tool_categories:
-            return ""
         parts = [f"{v} {k}" for k, v in self._tool_categories.items()]
         return " · ".join(parts)
 
