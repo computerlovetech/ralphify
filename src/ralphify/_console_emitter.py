@@ -661,8 +661,8 @@ def _scrollbar_metrics(total: int, visible: int, offset: int) -> _ScrollbarMetri
     if total <= visible:
         return _ScrollbarMetrics(show=False, thumb_start=0, thumb_size=0)
     thumb_size = max(1, visible * visible // total)
-    max_off = max(total - visible, 1)
-    frac = 1.0 - (offset / max_off)
+    # Safe: the early return above guarantees total > visible, so total - visible ≥ 1.
+    frac = 1.0 - (offset / (total - visible))
     track_space = visible - thumb_size
     thumb_start = int(frac * track_space)
     return _ScrollbarMetrics(show=True, thumb_start=thumb_start, thumb_size=thumb_size)
