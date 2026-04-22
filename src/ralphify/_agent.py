@@ -49,6 +49,22 @@ ActivityCallback = Callable[[dict[str, Any]], None]
 OutputLineCallback = Callable[[str, OutputStream], None]
 """Receives raw output lines with their stream name ("stdout"/"stderr")."""
 
+
+def _call_safely(callback: Callable[..., Any] | None, *args: Any) -> None:
+    """Invoke an observer *callback* with *args*, swallowing any exception.
+
+    Used for best-effort observer callbacks during output draining: a
+    raising callback must never stop the drain loop or leave the reader
+    thread hung.
+    """
+    if callback is None:
+        return
+    try:
+        callback(*args)
+    except Exception:
+        pass
+
+
 # Typed constants for the OutputStream literal so the type checker enforces
 # that only "stdout" / "stderr" ever reach ``on_output_line``.
 _STDOUT: OutputStream = "stdout"
@@ -340,18 +356,15 @@ def _read_agent_stream(
     result_text: str | None = None
 
     line_q: queue.Queue[str | None] = queue.Queue()
-    reader = threading.Thread(target=_readline_pump, args=(stdout, line_q), daemon=True)
-    reader.start()
+    threading.Thread(target=_readline_pump, args=(stdout, line_q), daemon=True).start()
 
     while True:
         # Compute how long we can wait for the next line.
         if deadline is not None:
-            remaining = deadline - time.monotonic()
-            # Use max(remaining, 0) so that an already-expired deadline
-            # still does a non-blocking drain of queued lines before
-            # returning — lines the reader thread already buffered are
-            # not silently lost.
-            get_timeout: float | None = max(remaining, 0)
+            # Clamp to 0 so that an already-expired deadline still does a
+            # non-blocking drain of queued lines before returning — lines
+            # the reader thread already buffered are not silently lost.
+            get_timeout: float | None = max(deadline - time.monotonic(), 0)
         else:
             get_timeout = None
 
@@ -374,30 +387,21 @@ def _read_agent_stream(
 
         if stdout_lines is not None:
             stdout_lines.append(line)
-        if on_output_line is not None:
-            try:
-                on_output_line(line.rstrip("\r\n"), _STDOUT)
-            except Exception:
-                # Callback is best-effort; draining must not stop.
-                pass
+        _call_safely(on_output_line, line.rstrip("\r\n"), _STDOUT)
 
         stripped = line.strip()
         if stripped:
             try:
                 parsed = json.loads(stripped)
             except json.JSONDecodeError:
-                parsed = None
-            if isinstance(parsed, dict):
-                if parsed.get("type") == _RESULT_EVENT_TYPE and isinstance(
-                    parsed.get(_RESULT_FIELD), str
-                ):
-                    result_text = parsed[_RESULT_FIELD]
-                if on_activity is not None:
-                    try:
-                        on_activity(parsed)
-                    except Exception:
-                        # Callback is best-effort; draining must not stop.
-                        pass
+                pass
+            else:
+                if isinstance(parsed, dict):
+                    if parsed.get("type") == _RESULT_EVENT_TYPE and isinstance(
+                        parsed.get(_RESULT_FIELD), str
+                    ):
+                        result_text = parsed[_RESULT_FIELD]
+                    _call_safely(on_activity, parsed)
 
         # Also check deadline after processing — if the reader thread
         # already queued many lines, this prevents unbounded processing
@@ -534,12 +538,7 @@ def _pump_stream(
         for line in iter(stream.readline, ""):
             if buffer is not None:
                 buffer.append(line)
-            if on_output_line is not None:
-                try:
-                    on_output_line(line.rstrip("\r\n"), stream_name)
-                except Exception:
-                    # Callback is best-effort; draining must not stop.
-                    pass
+            _call_safely(on_output_line, line.rstrip("\r\n"), stream_name)
     except (ValueError, OSError):
         # Pipe closed concurrently — exit cleanly so join() returns.
         pass

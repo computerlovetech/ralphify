@@ -173,7 +173,7 @@ def _format_params(tool_input: dict[str, Any], keys: list[str]) -> str:
         val = tool_input.get(key)
         if val is not None:
             parts.append(f"{key}: {val}")
-    return " · ".join(parts) if parts else ""
+    return " · ".join(parts)
 
 
 def _extract_file_path(i: dict[str, Any]) -> str:
@@ -357,6 +357,11 @@ class _LivePanelBase:
             self._end = time.monotonic()
         self._outcome = outcome
 
+    @property
+    def outcome(self) -> str | None:
+        """The frozen-iteration outcome label, or ``None`` while live."""
+        return self._outcome
+
     # ── Scroll buffer management ─────────────────────────────────────
 
     def add_scroll_line(self, markup: str) -> None:
@@ -411,8 +416,7 @@ class _LivePanelBase:
         """Body group: scroll lines (or peek message) + spacer + footer."""
         rows: list[Any] = []
         if self._peek_visible:
-            visible = self._scroll_lines[-_MAX_VISIBLE_SCROLL:]
-            for line in visible:
+            for line in self._scroll_lines[-_MAX_VISIBLE_SCROLL:]:
                 line.no_wrap = True
                 line.overflow = "ellipsis"
                 rows.append(line)
@@ -487,10 +491,8 @@ class _IterationPanel(_LivePanelBase):
             )
 
     def _apply_assistant(self, raw: dict[str, Any]) -> None:
-        msg = raw.get("message", {})
-
         # Update token counts from usage
-        usage = msg.get("usage")
+        usage = raw.get("message", {}).get("usage")
         if isinstance(usage, dict):
             self._input_tokens = usage.get("input_tokens", self._input_tokens)
             self._output_tokens = usage.get("output_tokens", self._output_tokens)
@@ -526,14 +528,14 @@ class _IterationPanel(_LivePanelBase):
                 color, cat, arg = _tool_display(name, tool_input)
                 self._tool_categories[cat] = self._tool_categories.get(cat, 0) + 1
 
-                # Pad short names to a fixed column so arguments line up;
-                # longer names get a guaranteed two-space gap so the arg
-                # never collides with the tool label.
-                if len(name) < _TOOL_NAME_COL:
-                    name_col = f"{name:<{_TOOL_NAME_COL}}"
-                else:
-                    name_col = f"{name}  "
                 if arg:
+                    # Pad short names to a fixed column so arguments line up;
+                    # longer names get a guaranteed two-space gap so the arg
+                    # never collides with the tool label.
+                    if len(name) < _TOOL_NAME_COL:
+                        name_col = f"{name:<{_TOOL_NAME_COL}}"
+                    else:
+                        name_col = f"{name}  "
                     self.add_scroll_line(
                         f"[bold {color}]{escape_markup(name_col)}[/]"
                         f"[dim]{escape_markup(arg)}[/]"
@@ -554,16 +556,13 @@ class _IterationPanel(_LivePanelBase):
     def _format_tokens(self) -> str:
         """Format token counts as compact ctx/out string."""
         parts: list[str] = []
-        total_in = self._input_tokens
-        if total_in > 0:
-            parts.append(f"ctx {format_count(total_in)}")
+        if self._input_tokens > 0:
+            parts.append(f"ctx {format_count(self._input_tokens)}")
         if self._output_tokens > 0:
             parts.append(f"out {format_count(self._output_tokens)}")
         return " · ".join(parts)
 
     def _format_categories(self) -> str:
-        if not self._tool_categories:
-            return ""
         parts = [f"{v} {k}" for k, v in self._tool_categories.items()]
         return " · ".join(parts)
 
@@ -615,11 +614,10 @@ class _IterationSpinner(_LivePanelBase):
     """
 
     def _build_footer(self) -> Table:
-        line_count = len(self._scroll_lines)
         summary = Text(no_wrap=True, overflow="ellipsis")
-        if line_count > 0:
+        if self._scroll_lines:
             summary.append(
-                _plural(line_count, "line"),
+                _plural(len(self._scroll_lines), "line"),
                 style=f"bold {_brand.PURPLE}",
             )
             summary.append(" of agent output", style="dim")
@@ -635,6 +633,10 @@ class _IterationSpinner(_LivePanelBase):
 # panel title and footer in the subtitle, so they cost no extra rows.
 _FULLSCREEN_CHROME_ROWS = 2
 _FULLSCREEN_MIN_VISIBLE = 3
+
+# Fallback terminal height used before the first render populates the
+# real value, and when ``Console.size.height`` access fails.
+_DEFAULT_CONSOLE_HEIGHT = 40
 
 
 @dataclass(slots=True)
@@ -665,8 +667,8 @@ def _scrollbar_metrics(total: int, visible: int, offset: int) -> _ScrollbarMetri
     if total <= visible:
         return _ScrollbarMetrics(show=False, thumb_start=0, thumb_size=0)
     thumb_size = max(1, visible * visible // total)
-    max_off = max(total - visible, 1)
-    frac = 1.0 - (offset / max_off)
+    # Safe: the early return above guarantees total > visible, so total - visible ≥ 1.
+    frac = 1.0 - (offset / (total - visible))
     track_space = visible - thumb_size
     thumb_start = int(frac * track_space)
     return _ScrollbarMetrics(show=True, thumb_start=thumb_start, thumb_size=thumb_size)
@@ -767,9 +769,8 @@ class _FullscreenPeek:
 
     def scroll_down(self, lines: int = 1) -> None:
         """Scroll toward newer lines (offset shrinks)."""
-        new_offset = max(0, self._offset - lines)
-        self._offset = new_offset
-        if new_offset == 0:
+        self._offset = max(0, self._offset - lines)
+        if self._offset == 0:
             self._auto_scroll = True
 
     def scroll_to_top(self) -> None:
@@ -778,54 +779,47 @@ class _FullscreenPeek:
         self._auto_scroll = False
 
     def scroll_to_bottom(self) -> None:
+        """Snap to the newest line and re-enable follow mode."""
         self._offset = 0
         self._auto_scroll = True
 
     # ── Iteration navigation ─────────────────────────────────────────
 
-    def _reset_view(self) -> None:
-        """Snap to bottom + follow when switching iterations."""
-        self._offset = 0
-        self._auto_scroll = True
+    def _step_iteration(self, direction: int) -> bool:
+        """Move *direction* iterations (-1 = prev, +1 = next).
+
+        Returns ``True`` when the view changed; ``False`` when already at
+        the boundary in the requested direction.  When the current
+        iteration was evicted from the navigator, snaps to the oldest
+        (prev) or newest (next) entry instead of failing.
+        """
+        ids = self._navigator.iteration_ids()
+        if not ids:
+            return False
+        if self._iteration_id not in ids:
+            self._iteration_id = ids[0] if direction < 0 else ids[-1]
+            self.scroll_to_bottom()
+            return True
+        new_idx = ids.index(self._iteration_id) + direction
+        if not 0 <= new_idx < len(ids):
+            return False
+        self._iteration_id = ids[new_idx]
+        self.scroll_to_bottom()
+        return True
 
     def prev_iteration(self) -> bool:
         """Move to the iteration before the current one.  Returns ``True``
         if the view changed; ``False`` when there is no older iteration."""
-        ids = self._navigator.iteration_ids()
-        if not ids:
-            return False
-        if self._iteration_id not in ids:
-            # Current iteration was evicted — snap to oldest available.
-            self._iteration_id = ids[0]
-            self._reset_view()
-            return True
-        idx = ids.index(self._iteration_id)
-        if idx == 0:
-            return False
-        self._iteration_id = ids[idx - 1]
-        self._reset_view()
-        return True
+        return self._step_iteration(-1)
 
     def next_iteration(self) -> bool:
         """Move to the iteration after the current one.  Returns ``True``
         if the view changed; ``False`` when already on the newest."""
-        ids = self._navigator.iteration_ids()
-        if not ids:
-            return False
-        if self._iteration_id not in ids:
-            self._iteration_id = ids[-1]
-            self._reset_view()
-            return True
-        idx = ids.index(self._iteration_id)
-        if idx >= len(ids) - 1:
-            return False
-        self._iteration_id = ids[idx + 1]
-        self._reset_view()
-        return True
+        return self._step_iteration(+1)
 
     # ── Rendering ────────────────────────────────────────────────────
 
-    _console_height: int = 40  # updated on every render
+    _console_height: int = _DEFAULT_CONSOLE_HEIGHT  # updated on every render
 
     def _build_header(self, total: int, visible: int) -> Text:
         header = Text(no_wrap=True, overflow="ellipsis")
@@ -844,12 +838,12 @@ class _FullscreenPeek:
                 header.append("live", style=f"italic {_brand.GREEN}")
             else:
                 source = self._source
-                outcome = source._outcome if source is not None else None
+                outcome = source.outcome if source is not None else None
                 if outcome:
                     header.append("  ·  ", style="dim")
                     header.append(outcome, style=f"italic {_brand.LAVENDER}")
         header.append("  ·  ", style="dim")
-        header.append(f"{_plural(total, 'line')}", style="dim")
+        header.append(_plural(total, "line"), style="dim")
         if self._auto_scroll:
             header.append("  ·  ", style="dim")
             header.append("following", style=f"italic {_brand.GREEN}")
@@ -978,10 +972,10 @@ class ConsoleEmitter:
         # receiving events).  ``None`` between iterations.
         self._current_iteration: int | None = None
         # Bounded ring buffer of finished iteration panels, keyed by
-        # iteration number.  Insertion order is tracked separately so
-        # eviction is O(1).  Used by fullscreen peek for browsing.
+        # iteration number.  Python dicts preserve insertion order, so
+        # the oldest entry is always first — used for eviction.  Used by
+        # fullscreen peek for browsing.
         self._iteration_history: dict[int, _LivePanelBase] = {}
-        self._iteration_order: list[int] = []
         # Fullscreen peek state — a second Live using Rich's alt-screen
         # that shows an iteration's full activity buffer with scroll +
         # iteration-navigation controls.  While fullscreen is active the
@@ -1048,10 +1042,7 @@ class ConsoleEmitter:
 
     def panel_for(self, iteration_id: int) -> _LivePanelBase | None:
         """Look up the panel for *iteration_id* in history or active state."""
-        if (
-            self._current_iteration == iteration_id
-            and self._active_renderable is not None
-        ):
+        if self.is_live(iteration_id):
             return self._active_renderable
         return self._iteration_history.get(iteration_id)
 
@@ -1113,28 +1104,27 @@ class ConsoleEmitter:
         iteration_id = self._current_iteration
         panel.freeze(outcome)
         # Record (or refresh order of) the iteration in history.
-        if iteration_id in self._iteration_history:
-            self._iteration_order.remove(iteration_id)
+        # Pop-then-insert moves an existing entry to the end of the dict's
+        # insertion order so eviction always drops the oldest first.
+        self._iteration_history.pop(iteration_id, None)
         self._iteration_history[iteration_id] = panel
-        self._iteration_order.append(iteration_id)
         # Eviction: drop oldest until at or below the cap, but skip the
         # iteration the user is currently viewing in fullscreen.
         viewing = (
-            self._fullscreen_view._iteration_id
+            self._fullscreen_view.iteration_id
             if self._fullscreen_view is not None
             else None
         )
-        while len(self._iteration_order) > _MAX_HISTORY_ITERATIONS:
+        while len(self._iteration_history) > _MAX_HISTORY_ITERATIONS:
             candidate = next(
-                (iid for iid in self._iteration_order if iid != viewing),
+                (iid for iid in self._iteration_history if iid != viewing),
                 None,
             )
             if candidate is None:
                 # All remaining entries are the viewed iteration (impossible
                 # with one viewer) — bail to avoid an infinite loop.
                 break
-            self._iteration_order.remove(candidate)
-            self._iteration_history.pop(candidate, None)
+            self._iteration_history.pop(candidate)
         self._active_renderable = None
         self._current_iteration = None
 
@@ -1207,14 +1197,18 @@ class ConsoleEmitter:
         return self._active_renderable
 
     def _on_agent_output_line(self, data: AgentOutputLineData) -> None:
+        # When we have structured rendering, raw lines are redundant noise.
+        # ``_structured_agent`` is write-once (set in ``_on_run_started``
+        # before any iteration events flow), so the check is lock-free —
+        # same pattern as ``_on_agent_activity``.  Skipping the lock also
+        # avoids contention on every stdout line when running Claude.
+        if self._structured_agent:
+            return
         with self._console_lock:
-            # When we have structured rendering, raw lines are redundant noise.
-            if self._structured_agent:
-                return
-            line = escape_markup(data["line"])
             target = self._panel_for_event(data["iteration"])
             if not isinstance(target, _IterationSpinner):
                 return
+            line = escape_markup(data["line"])
             target.add_scroll_line(f"[white]{line}[/]")
             self._refresh_live_unlocked(target)
 
@@ -1300,6 +1294,15 @@ class ConsoleEmitter:
         )
         self._live.start()
 
+    def _stop_compact_live_unlocked(self) -> None:
+        """Stop the compact Live region if active.  No-op otherwise.
+
+        Caller must hold ``_console_lock``.
+        """
+        if self._live is not None:
+            self._live.stop()
+            self._live = None
+
     def _stop_live_unlocked(self) -> None:
         """Tear down all Live regions and forget the active iteration.
 
@@ -1313,9 +1316,7 @@ class ConsoleEmitter:
             self._fullscreen_live.stop()
             self._fullscreen_live = None
         self._fullscreen_view = None
-        if self._live is not None:
-            self._live.stop()
-            self._live = None
+        self._stop_compact_live_unlocked()
         self._active_renderable = None
         self._current_iteration = None
 
@@ -1340,8 +1341,8 @@ class ConsoleEmitter:
             if self._fullscreen_view is not None:
                 return True  # already active — no-op
             initial_id: int | None = self._current_iteration
-            if initial_id is None and self._iteration_order:
-                initial_id = self._iteration_order[-1]
+            if initial_id is None:
+                initial_id = next(reversed(self._iteration_history), None)
             if initial_id is None or self.panel_for(initial_id) is None:
                 self._console.print("[dim]Full peek: no iterations yet[/]")
                 return False
@@ -1349,9 +1350,7 @@ class ConsoleEmitter:
             self._fullscreen_view = view
             # Stop the compact Live before taking over the terminal so
             # the two Rich renderers don't fight for the same console.
-            if self._live is not None:
-                self._live.stop()
-                self._live = None
+            self._stop_compact_live_unlocked()
             self._fullscreen_live = Live(
                 view,
                 console=self._console,
@@ -1422,7 +1421,7 @@ class ConsoleEmitter:
         try:
             height = self._console.size.height
         except Exception:
-            height = 40
+            height = _DEFAULT_CONSOLE_HEIGHT
         return max(1, height - _FULLSCREEN_CHROME_ROWS - 2)
 
     def handle_key(self, key: str) -> None:
@@ -1451,12 +1450,11 @@ class ConsoleEmitter:
             if view is None:
                 return  # raced with exit
             if key not in ("q", FULLSCREEN_PEEK_KEY):
-                page = self._fullscreen_page_size()
                 actions: dict[str, Callable[[], object]] = {
                     "j": lambda: view.scroll_down(1),
                     "k": lambda: view.scroll_up(1),
-                    " ": lambda: view.scroll_down(page),
-                    "b": lambda: view.scroll_up(page),
+                    " ": lambda: view.scroll_down(self._fullscreen_page_size()),
+                    "b": lambda: view.scroll_up(self._fullscreen_page_size()),
                     "g": view.scroll_to_top,
                     "G": view.scroll_to_bottom,
                     PREV_ITERATION_KEY: view.prev_iteration,
@@ -1476,9 +1474,9 @@ class ConsoleEmitter:
         with self._console_lock:
             self._peek_broken = False
             # Defensive: if a previous iteration didn't archive (engine
-            # error), evict it now so we don't leak panel state.
-            if self._active_renderable is not None:
-                self._archive_current_iteration_unlocked("interrupted")
+            # error), evict it now so we don't leak panel state.  The
+            # archive call no-ops when nothing is active.
+            self._archive_current_iteration_unlocked("interrupted")
             self._current_iteration = iteration
             renderable = self._create_panel_unlocked()
 
@@ -1528,9 +1526,7 @@ class ConsoleEmitter:
             # underlying panel is preserved in history for fullscreen
             # browsing.  When fullscreen is active there is no compact
             # Live to stop; the panel was buffering events directly.
-            if self._live is not None:
-                self._live.stop()
-                self._live = None
+            self._stop_compact_live_unlocked()
             self._archive_current_iteration_unlocked(outcome)
 
             def do_print() -> None:

@@ -71,10 +71,9 @@ def collect_output(
     parts: list[str] = []
     for stream in (stdout, stderr):
         if stream:
-            text = ensure_str(stream)
             if parts and not parts[-1].endswith("\n"):
                 parts.append("\n")
-            parts.append(text)
+            parts.append(ensure_str(stream))
     return "".join(parts)
 
 
@@ -130,8 +129,8 @@ def format_duration(seconds: float) -> str:
     # latter silently drops 0.5s when the total is even (e.g. 90.5→90).
     total = int(seconds + 0.5)
     minutes = total // _SECONDS_PER_MINUTE
-    secs = total % _SECONDS_PER_MINUTE
     if minutes < _MINUTES_PER_HOUR:
+        secs = total % _SECONDS_PER_MINUTE
         return f"{minutes}m {secs}s"
     hours = minutes // _MINUTES_PER_HOUR
     mins = minutes % _MINUTES_PER_HOUR
