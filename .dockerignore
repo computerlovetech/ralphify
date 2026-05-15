@@ -1,0 +1,13 @@
+*
+
+!src/
+!docs/
+!website/
+!examples/
+!mkdocs.yml
+!pyproject.toml
+!uv.lock
+!README.md
+!CHANGELOG.md
+!LICENSE
+!nginx.conf
