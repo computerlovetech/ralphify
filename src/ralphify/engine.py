@@ -149,11 +149,16 @@ def _assemble_prompt(
 ) -> str:
     """Build the full prompt for one iteration.
 
-    Reads the RALPH.md body, resolves user args, command output, and
-    context placeholders.
+    Uses ``config.prompt`` as the body when set (no file read, no
+    frontmatter parse); otherwise reads the RALPH.md body.  Either way it
+    resolves user args, command output, and context placeholders.
     """
-    raw = config.ralph_file.read_text(encoding="utf-8")
-    _, prompt = parse_frontmatter(raw)
+    if config.prompt is not None:
+        prompt = config.prompt
+    else:
+        assert config.ralph_file is not None  # __post_init__ guarantees one is set
+        raw = config.ralph_file.read_text(encoding="utf-8")
+        _, prompt = parse_frontmatter(raw)
     ralph_context = _build_ralph_context(config, state)
     prompt = resolve_all(prompt, command_outputs, config.args, ralph_context)
     if config.credit:

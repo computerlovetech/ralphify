@@ -686,6 +686,10 @@ version = "0.4.0b3"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+cli = [
     { name = "rich" },
     { name = "typer" },
 ]
@@ -697,6 +701,7 @@ dev = [
     { name = "mkdocs-material" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "ralphify", extra = ["cli"] },
     { name = "ruff" },
     { name = "ty" },
 ]
@@ -704,9 +709,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rich", specifier = ">=13.0" },
-    { name = "typer", specifier = ">=0.9" },
+    { name = "rich", marker = "extra == 'cli'", specifier = ">=13.0" },
+    { name = "typer", marker = "extra == 'cli'", specifier = ">=0.9" },
 ]
+provides-extras = ["cli"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -715,6 +721,7 @@ dev = [
     { name = "mkdocs-material", specifier = ">=9.7.5" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=6.0" },
+    { name = "ralphify", extras = ["cli"] },
     { name = "ruff", specifier = ">=0.6" },
     { name = "ty", specifier = ">=0.0.14" },
 ]

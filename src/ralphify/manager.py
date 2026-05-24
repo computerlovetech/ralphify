@@ -7,11 +7,24 @@ controlling, and inspecting multiple runs from external code.
 from __future__ import annotations
 
 import threading
+import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from ralphify._events import EventEmitter, FanoutEmitter, QueueEmitter
-from ralphify._run_types import RunConfig, RunState, generate_run_id
+from ralphify._run_types import (
+    RunConfig,
+    RunResult,
+    RunState,
+    RunStatus,
+    generate_run_id,
+)
 from ralphify.engine import run_loop
+
+
+_TERMINAL_STATUSES = frozenset(
+    {RunStatus.COMPLETED, RunStatus.STOPPED, RunStatus.FAILED}
+)
 
 
 @dataclass(slots=True)
@@ -59,6 +72,9 @@ class RunManager:
     def __init__(self) -> None:
         self._runs: dict[str, ManagedRun] = {}
         self._lock = threading.Lock()
+        # Notified once whenever any run thread exits, so waiters can wake
+        # and re-check terminal status without polling.
+        self._done = threading.Condition()
 
     def _lookup(self, run_id: str) -> ManagedRun:
         """Look up a run by ID. Caller must hold ``_lock``."""
@@ -103,9 +119,18 @@ class RunManager:
             if managed.thread is not None:
                 raise RuntimeError(f"Run '{run_id}' has already been started")
             emitter = managed.build_emitter()
+            config = managed.config
+            state = managed.state
+
+            def target() -> None:
+                try:
+                    run_loop(config, state, emitter)
+                finally:
+                    with self._done:
+                        self._done.notify_all()
+
             thread = threading.Thread(
-                target=run_loop,
-                args=(managed.config, managed.state, emitter),
+                target=target,
                 daemon=True,
                 name=f"run-{run_id}",
             )
@@ -133,3 +158,107 @@ class RunManager:
         """Look up a run by ID, returning ``None`` if not found."""
         with self._lock:
             return self._runs.get(run_id)
+
+    def _finished_ids(self, run_ids: Sequence[str]) -> list[str]:
+        """Return the subset of *run_ids* whose status is terminal."""
+        with self._lock:
+            return [
+                run_id
+                for run_id in run_ids
+                if run_id in self._runs
+                and self._runs[run_id].state.status in _TERMINAL_STATUSES
+            ]
+
+    def wait_for_any(
+        self, run_ids: Sequence[str], timeout: float | None = None
+    ) -> list[str]:
+        """Block until at least one of *run_ids* reaches a terminal status.
+
+        Returns the finished run IDs.  Returns ``[]`` if *timeout* elapses
+        before any finish.  Unknown IDs are ignored (never reported as
+        finished); when *run_ids* is empty or none are registered, returns
+        ``[]`` immediately rather than blocking forever (nothing can wake it).
+        """
+        deadline = None if timeout is None else time.monotonic() + timeout
+        with self._lock:
+            if not any(run_id in self._runs for run_id in run_ids):
+                return []
+        with self._done:
+            while True:
+                finished = self._finished_ids(run_ids)
+                if finished:
+                    return finished
+                remaining = None
+                if deadline is not None:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return []
+                self._done.wait(timeout=remaining)
+
+    def wait_for_all(
+        self, run_ids: Sequence[str], timeout: float | None = None
+    ) -> bool:
+        """Block until every run in *run_ids* finishes or *timeout* elapses.
+
+        Returns ``True`` iff all finished.  Unknown IDs can never finish, so
+        if any ID in *run_ids* is not registered this returns ``False``
+        immediately rather than blocking forever.  An empty *run_ids* is
+        vacuously satisfied and returns ``True``.
+        """
+        deadline = None if timeout is None else time.monotonic() + timeout
+        target = set(run_ids)
+        with self._lock:
+            if not all(run_id in self._runs for run_id in run_ids):
+                return False
+        with self._done:
+            while True:
+                if set(self._finished_ids(run_ids)) >= target:
+                    return True
+                remaining = None
+                if deadline is not None:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return False
+                self._done.wait(timeout=remaining)
+
+    def get_result(self, run_id: str) -> RunResult:
+        """Snapshot the run's status and iteration counts.
+
+        Returns current counts regardless of terminal state — wait first
+        (e.g. via :meth:`wait_for_all`) for a final result.  Raises
+        ``KeyError`` if the run ID is unknown.
+        """
+        state = self._require_run(run_id).state
+        return RunResult(
+            run_id=state.run_id,
+            status=state.status,
+            total=state.total,
+            completed=state.completed,
+            failed=state.failed,
+            timed_out_count=state.timed_out_count,
+        )
+
+    def shutdown(self, timeout: float | None = None) -> bool:
+        """Request stop on every run and join its thread.
+
+        Returns ``True`` iff all live threads joined within *timeout*.
+        With ``timeout=None`` this blocks until every run thread exits.
+        """
+        with self._lock:
+            runs = list(self._runs.values())
+        for managed in runs:
+            managed.state.request_stop()
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        all_joined = True
+        for managed in runs:
+            thread = managed.thread
+            if thread is None:
+                continue
+            remaining = None
+            if deadline is not None:
+                remaining = max(0.0, deadline - time.monotonic())
+            thread.join(timeout=remaining)
+            if thread.is_alive():
+                all_joined = False
+        return all_joined

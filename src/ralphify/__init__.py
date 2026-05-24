@@ -24,23 +24,53 @@ except PackageNotFoundError:
     __version__ = "0.0.0"
 
 from ralphify.engine import run_loop
-from ralphify._run_types import Command, RunConfig, RunState, RunStatus
+from ralphify._run_types import (
+    Command,
+    RunConfig,
+    RunResult,
+    RunState,
+    RunStatus,
+)
 from ralphify._events import (
+    AgentActivityData,
+    AgentOutputLineData,
     BoundEmitter,
+    CommandsCompletedData,
+    CommandsStartedData,
     Event,
+    EventData,
     EventEmitter,
     EventType,
     FanoutEmitter,
+    IterationEndedData,
+    IterationStartedData,
+    LogMessageData,
     NullEmitter,
+    PromptAssembledData,
     QueueEmitter,
+    RunStartedData,
+    RunStoppedData,
     StopReason,
+    ToolUseData,
+    TurnApproachingLimitData,
+    TurnCappedData,
 )
 from ralphify.manager import ManagedRun, RunManager
 
 
 def main() -> None:
     """Entry point for the ``ralph`` CLI (called by the console script)."""
-    from ralphify.cli import app
+    try:
+        from ralphify.cli import app
+    except ModuleNotFoundError as exc:
+        # Only a genuinely-absent CLI dependency gets the install hint; any
+        # other missing module is a real bug inside ralphify.cli, so re-raise
+        # it rather than masking it behind the [cli]-extra message.
+        if exc.name in {"rich", "typer"}:
+            raise SystemExit(
+                "The `ralph` CLI requires the [cli] extra: pip install 'ralphify[cli]'"
+            ) from exc
+        raise
 
     app()
 
@@ -51,9 +81,11 @@ __all__ = [
     "BoundEmitter",
     "Command",
     "RunConfig",
+    "RunResult",
     "RunState",
     "RunStatus",
     "Event",
+    "EventData",
     "EventEmitter",
     "EventType",
     "FanoutEmitter",
@@ -62,4 +94,18 @@ __all__ = [
     "StopReason",
     "ManagedRun",
     "RunManager",
+    # Typed event payloads
+    "AgentActivityData",
+    "AgentOutputLineData",
+    "CommandsCompletedData",
+    "CommandsStartedData",
+    "IterationEndedData",
+    "IterationStartedData",
+    "LogMessageData",
+    "PromptAssembledData",
+    "RunStartedData",
+    "RunStoppedData",
+    "ToolUseData",
+    "TurnApproachingLimitData",
+    "TurnCappedData",
 ]

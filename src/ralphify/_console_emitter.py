@@ -34,6 +34,7 @@ from ralphify._events import (
     AgentOutputLineData,
     CommandsCompletedData,
     Event,
+    EventData,
     EventType,
     IterationEndedData,
     IterationStartedData,
@@ -1238,7 +1239,7 @@ class ConsoleEmitter:
                     "[dim]peek: live activity unavailable (continuing)[/]"
                 )
 
-    def emit(self, event: Event) -> None:
+    def emit(self, event: Event[EventData]) -> None:
         handler = self._handlers.get(event.type)
         if handler is not None:
             handler(event.data)

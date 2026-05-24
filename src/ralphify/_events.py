@@ -12,11 +12,12 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import (
     Any,
+    Generic,
     Literal,
     NotRequired,
     Protocol,
     TypedDict,
-    cast,
+    TypeVar,
     runtime_checkable,
 )
 
@@ -181,8 +182,13 @@ class LogMessageData(TypedDict):
     traceback: NotRequired[str]
 
 
+class NoData(TypedDict):
+    """Empty payload for events that carry no data (e.g. ``RUN_PAUSED``)."""
+
+
 EventData = (
-    RunStartedData
+    NoData
+    | RunStartedData
     | RunStoppedData
     | IterationStartedData
     | IterationEndedData
@@ -199,13 +205,26 @@ EventData = (
 """Union of all typed event data payloads."""
 
 
+# Plain TypeVar (no PEP 696 default) — the Python floor is 3.11; the
+# ``default=`` arg needs 3.13+ or a runtime typing_extensions dep, which
+# would fight the pyyaml-only core. Bare ``Event`` references resolve
+# to the EventData bound.
+DataT = TypeVar("DataT", bound="EventData")
+
+
 @dataclass(slots=True)
-class Event:
-    """A structured event emitted by the run loop."""
+class Event(Generic[DataT]):
+    """A structured event emitted by the run loop.
+
+    Generic over its payload so embedders can annotate handlers with the
+    concrete data type (``def on(e: Event[IterationEndedData])``) without
+    casting at every access site. ``TypedDict``s are plain dicts at
+    runtime, so :meth:`to_dict` is unaffected.
+    """
 
     type: EventType
     run_id: str
-    data: dict[str, Any] = field(default_factory=dict)
+    data: DataT = field(default_factory=dict)  # empty dict for no-payload events
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> dict[str, Any]:
@@ -222,7 +241,7 @@ class Event:
 class EventEmitter(Protocol):
     """Protocol for objects that receive run-loop events."""
 
-    def emit(self, event: Event) -> None: ...
+    def emit(self, event: Event[EventData]) -> None: ...
 
     def wants_agent_output_lines(self) -> bool:
         """Return True if this emitter will render AGENT_OUTPUT_LINE events.
@@ -237,7 +256,7 @@ class EventEmitter(Protocol):
 class NullEmitter:
     """Discards all events silently."""
 
-    def emit(self, event: Event) -> None:
+    def emit(self, event: Event[EventData]) -> None:
         pass
 
     def wants_agent_output_lines(self) -> bool:
@@ -247,10 +266,10 @@ class NullEmitter:
 class QueueEmitter:
     """Pushes events into a :class:`queue.Queue` for async consumption."""
 
-    def __init__(self, q: queue.Queue[Event] | None = None) -> None:
-        self.queue: queue.Queue[Event] = q or queue.Queue()
+    def __init__(self, q: queue.Queue[Event[EventData]] | None = None) -> None:
+        self.queue: queue.Queue[Event[EventData]] = q or queue.Queue()
 
-    def emit(self, event: Event) -> None:
+    def emit(self, event: Event[EventData]) -> None:
         self.queue.put(event)
 
     def wants_agent_output_lines(self) -> bool:
@@ -263,7 +282,7 @@ class FanoutEmitter:
     def __init__(self, emitters: list[EventEmitter]) -> None:
         self._emitters = emitters
 
-    def emit(self, event: Event) -> None:
+    def emit(self, event: Event[EventData]) -> None:
         for e in self._emitters:
             e.emit(event)
 
@@ -292,13 +311,12 @@ class BoundEmitter:
         event_type: EventType,
         data: EventData | None = None,
     ) -> None:
-        self._emitter.emit(
-            Event(
-                type=event_type,
-                run_id=self._run_id,
-                data=cast(dict[str, Any], data) if data is not None else {},
-            )
+        event: Event[EventData] = Event(
+            type=event_type,
+            run_id=self._run_id,
+            data=data if data is not None else NoData(),
         )
+        self._emitter.emit(event)
 
     def log_info(self, message: str) -> None:
         """Emit a ``LOG_MESSAGE`` event at info level."""

@@ -23,7 +23,7 @@ from rich.console import Console
 from ralphify._agent import AgentResult
 from ralphify._console_emitter import ConsoleEmitter
 from ralphify._events import BoundEmitter, EventType, NullEmitter, QueueEmitter
-from ralphify._run_types import Command, RunStatus
+from ralphify._run_types import Command, RunConfig, RunStatus
 from ralphify._runner import RunResult
 from ralphify.engine import (
     _assemble_prompt,
@@ -1390,6 +1390,61 @@ class TestAssemblePrompt:
         result = _assemble_prompt(config, state, {})
 
         assert result == "Name: my-ralph"
+
+
+class TestInMemoryPrompt:
+    """Curd 3 — RunConfig(prompt=...) runs the body without a file read."""
+
+    def test_assemble_uses_prompt_body_without_reading_file(self, tmp_path):
+        config = RunConfig(
+            agent="echo",
+            ralph_dir=tmp_path,
+            prompt="Search {{ args.dir }} now",
+            args={"dir": "./src"},
+            max_iterations=1,
+            credit=False,
+        )
+        state = make_state()
+        state.iteration = 1
+
+        with patch("pathlib.Path.read_text") as mock_read:
+            result = _assemble_prompt(config, state, {})
+
+        mock_read.assert_not_called()
+        assert result == "Search ./src now"
+
+    def test_prompt_body_is_not_frontmatter_parsed(self, tmp_path):
+        # A leading '---' block stays verbatim — it is the body, not frontmatter.
+        body = "---\nnot: parsed\n---\nreal prompt"
+        config = RunConfig(
+            agent="echo",
+            ralph_dir=tmp_path,
+            prompt=body,
+            max_iterations=1,
+            credit=False,
+        )
+        state = make_state()
+        state.iteration = 1
+
+        assert _assemble_prompt(config, state, {}) == body
+
+    @patch(MOCK_SUBPROCESS, side_effect=ok_proc)
+    def test_run_loop_with_in_memory_prompt(self, mock_run, tmp_path):
+        config = RunConfig(
+            agent="echo",
+            ralph_dir=tmp_path,
+            prompt="do work",
+            max_iterations=1,
+        )
+        state = make_state()
+        q = QueueEmitter()
+
+        with patch("pathlib.Path.read_text") as mock_read:
+            run_loop(config, state, q)
+
+        mock_read.assert_not_called()
+        assert state.status == RunStatus.COMPLETED
+        assert state.completed == 1
 
 
 class TestCreditInLoop:

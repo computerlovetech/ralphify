@@ -11,6 +11,7 @@ from ralphify._run_types import (
     RUN_ID_LENGTH,
     Command,
     RunConfig,
+    RunResult,
     RunState,
     RunStatus,
     generate_run_id,
@@ -64,6 +65,59 @@ class TestRunConfig:
         assert config.stop_on_error is False
         assert config.log_dir is None
         assert config.credit is True
+        assert config.prompt is None
+
+    def test_prompt_body_instead_of_ralph_file(self, tmp_path):
+        config = RunConfig(
+            agent="echo",
+            ralph_dir=tmp_path,
+            prompt="do work",
+        )
+        assert config.prompt == "do work"
+        assert config.ralph_file is None
+
+    def test_requires_prompt_or_ralph_file(self, tmp_path):
+        with pytest.raises(ValueError, match="exactly one of `prompt` or `ralph_file`"):
+            RunConfig(agent="echo", ralph_dir=tmp_path)
+
+    def test_rejects_both_prompt_and_ralph_file(self, tmp_path):
+        with pytest.raises(ValueError, match="exactly one of `prompt` or `ralph_file`"):
+            RunConfig(
+                agent="echo",
+                ralph_dir=tmp_path,
+                ralph_file=tmp_path / RALPH_MARKER,
+                prompt="do work",
+            )
+
+
+class TestRunResult:
+    def test_holds_status_and_counts(self):
+        result = RunResult(
+            run_id="r1",
+            status=RunStatus.COMPLETED,
+            total=3,
+            completed=2,
+            failed=1,
+            timed_out_count=0,
+        )
+        assert result.run_id == "r1"
+        assert result.status == RunStatus.COMPLETED
+        assert result.total == 3
+        assert result.completed == 2
+        assert result.failed == 1
+        assert result.timed_out_count == 0
+
+    def test_is_frozen(self):
+        result = RunResult(
+            run_id="r1",
+            status=RunStatus.COMPLETED,
+            total=1,
+            completed=1,
+            failed=0,
+            timed_out_count=0,
+        )
+        with pytest.raises(AttributeError):
+            result.completed = 5  # type: ignore[misc]
 
 
 class TestRunState:

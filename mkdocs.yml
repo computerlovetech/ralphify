@@ -132,6 +132,7 @@ nav:
     - Quick Reference: quick-reference.md
     - CLI: cli.md
     - Python API: api.md
+    - Embedding: embedding.md
   - Blog: blog/index.md
   - Help:
     - Troubleshooting: troubleshooting.md

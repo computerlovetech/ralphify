@@ -90,7 +90,10 @@ class RunConfig:
 
     agent: str
     ralph_dir: Path
-    ralph_file: Path
+    ralph_file: Path | None = None
+    # In-memory prompt *body* (no frontmatter). Mutually exclusive with
+    # ``ralph_file``: supply exactly one. Placeholders are still resolved.
+    prompt: str | None = None
     commands: list[Command] = field(default_factory=list)
     args: dict[str, str] = field(default_factory=dict)
     max_iterations: int | None = None
@@ -108,6 +111,12 @@ class RunConfig:
     max_turns: int | None = None
     # Soft wind-down fires at ``max_turns - max_turns_grace``.
     max_turns_grace: int = 2
+
+    def __post_init__(self) -> None:
+        if (self.prompt is None) == (self.ralph_file is None):
+            raise ValueError(
+                "RunConfig requires exactly one of `prompt` or `ralph_file`"
+            )
 
 
 @dataclass(slots=True)
@@ -186,3 +195,20 @@ class RunState:
         """Record a timed-out iteration (also counts as failed)."""
         self.timed_out_count += 1
         self.mark_failed()
+
+
+@dataclass(frozen=True, slots=True)
+class RunResult:
+    """Immutable snapshot of a run's outcome — status plus iteration counts.
+
+    Built by :meth:`RunManager.get_result` from a :class:`RunState`.  The
+    ``timed_out_count`` is a subset of ``failed`` (see :class:`RunState`'s
+    counter invariant), and ``total == completed + failed``.
+    """
+
+    run_id: str
+    status: RunStatus
+    total: int
+    completed: int
+    failed: int
+    timed_out_count: int

@@ -18,7 +18,10 @@ classifiers = [
     "Topic :: Software Development :: Build Tools",
     "Topic :: Software Development :: Quality Assurance",
 ]
-dependencies = ["typer>=0.9", "rich>=13.0", "pyyaml>=6.0"]
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+cli = ["typer>=0.9", "rich>=13.0"]
 
 
 [project.scripts]
@@ -26,6 +29,7 @@ ralph = "ralphify:main"
 
 [dependency-groups]
 dev = [
+    "ralphify[cli]",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.5",
     "mkdocs-git-revision-date-localized-plugin>=1.2",

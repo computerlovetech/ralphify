@@ -74,7 +74,8 @@ config = RunConfig(
 |---|---|---|---|
 | `agent` | `str` | -- | Full agent command string |
 | `ralph_dir` | `Path` | -- | Path to the ralph directory |
-| `ralph_file` | `Path` | -- | Path to the RALPH.md file |
+| `ralph_file` | `Path | None` | `None` | Path to the RALPH.md file. Supply exactly one of `ralph_file` or `prompt`. |
+| `prompt` | `str | None` | `None` | In-memory prompt body (no frontmatter). Supply exactly one of `ralph_file` or `prompt`. See [Embedding](embedding.md#running-a-prompt-from-memory). |
 | `commands` | `list[Command]` | `[]` | Commands to run each iteration |
 | `args` | `dict[str, str]` | `{}` | User argument values |
 | `max_iterations` | `int | None` | `None` | Max iterations (`None` = unlimited) |
@@ -387,6 +388,12 @@ When extra listeners are registered, events are broadcast to both the built-in q
 | `resume_run(run_id)` | Resume a paused run. |
 | `list_runs()` | Return a snapshot of all registered runs. |
 | `get_run(run_id)` | Look up a run by ID. |
+| `wait_for_any(run_ids, timeout=None)` | Block until at least one of `run_ids` reaches a terminal status; returns the finished IDs (`[]` on timeout). |
+| `wait_for_all(run_ids, timeout=None)` | Block until all `run_ids` finish or `timeout` elapses; returns `True` iff all finished. |
+| `get_result(run_id)` | Snapshot the run's status and counts as a frozen `RunResult`. Raises `KeyError` if unknown. |
+| `shutdown(timeout=None)` | Request stop on every run and join their threads; returns `True` iff all joined in time. |
+
+For the create → start → wait → result → shutdown lifecycle and thread-safety notes, see [Embedding](embedding.md).
 
 ---
 
