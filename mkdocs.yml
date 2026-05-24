@@ -76,25 +76,10 @@ plugins:
   - search:
       separator: '[\s\-\.]+'
       lang: en
-  - blog:
-      blog_dir: blog
-      blog_toc: true
-      post_date_format: long
-      post_url_format: "{slug}"
-      post_readtime: true
-      post_excerpt: required
-      categories: true
-      archive: true
-      authors: true
-      pagination_per_page: 10
   - git-revision-date-localized:
       enable_creation_date: true
       type: timeago
       fallback_to_build_date: true
-      exclude:
-        - blog/archive/*
-        - blog/category/*
-        - blog/posts/*
 
 extra_css:
   - stylesheets/extra.css
@@ -132,7 +117,6 @@ nav:
     - Quick Reference: quick-reference.md
     - CLI: cli.md
     - Python API: api.md
-  - Blog: blog/index.md
   - Help:
     - Troubleshooting: troubleshooting.md
     - Changelog: changelog.md
