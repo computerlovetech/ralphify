@@ -9,6 +9,8 @@ installed-name = "brand-guidelines"
 [[skill]]
 handle = "microsoft/playwright-cli/playwright-cli"
 source = "github"
+commit = "0406adaed4c6ba95bbfa6952229e76188bc59993"
+content-hash = "sha256:0030912c6e82ae000ad23fd8e9ffb532b95231607f063504750c1c12921c0f6f"
 installed-name = "playwright-cli"
 
 [[skill]]
@@ -21,7 +23,7 @@ installed-name = "docs-audit"
 [[skill]]
 handle = "computerlovetech/setup-agent-workspace"
 source = "github"
-commit = "5674fdd2eb72497761061cc0acd6623b76185832"
+commit = "8bff044d76f9304cbd4981fb3ce4f837fd4eb5a2"
 content-hash = "sha256:4bcd7df99e67fd99f49098bf3732a44a053562ee2516de098c2c70204a191b61"
 installed-name = "setup-agent-workspace"
 
@@ -43,6 +45,6 @@ installed-name = "bug-hunter"
 [[ralph]]
 handle = "computerlovetech/ralphs/improve-codebase"
 source = "github"
-commit = "70a0dabf5a59ae1a3acaf50a9e619c83e174a35f"
-content-hash = "sha256:0afc55d5b2d4061fa82c270a147c66c8bc21589ab62c47d9747ddb5f382c708d"
+commit = "82c5c4dd1e2e244e86e2ddad3f987b4d9a6d27f2"
+content-hash = "sha256:637929bdfe382116efaac98e3a46cfac1de4978978b9f1d984c51d65b49d408a"
 installed-name = "improve-codebase"
