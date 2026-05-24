@@ -157,7 +157,7 @@ Each iteration:
 | `Ctrl+C` (once) | Finishes the current iteration gracefully, then stops |
 | `Ctrl+C` (twice) | Force-kills the agent process and exits immediately |
 | `p` | Toggle live peek of the agent's stdout (on by default in an interactive terminal — press to silence, press again to resume) |
-| `P` (shift+p) | Open full-screen peek — scroll the entire activity buffer. `j/k` line, `space/b` page, `g/G` top/bottom, `q` or `P` exits |
+| `P` (shift+p) | Open full-screen peek — scroll the buffer and browse iterations. `j/k` line, `space/b` page, `g/G` top/bottom, `[/]` prev/next iteration, `q` or `P` exits |
 | `-n` limit reached | Stops after the specified number of iterations |
 | `--stop-on-error` | Stops if agent exits non-zero or times out |
 
