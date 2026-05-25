@@ -25,6 +25,8 @@ from ralphify.adapters._protocol import (
     AdapterEventKind,
     CLIAdapter,
     CountsWhat,
+    Invocation,
+    stdin_invocation,
 )
 
 
@@ -50,7 +52,7 @@ def _register_builtin_adapters() -> None:
     module (executed once at first package import) so cyclic-import risk
     is contained.
     """
-    from ralphify.adapters import claude, codex, copilot  # noqa: F401
+    from ralphify.adapters import claude, codex, copilot, opencode  # noqa: F401
 
 
 _register_builtin_adapters()
@@ -62,5 +64,7 @@ __all__ = [
     "AdapterEventKind",
     "CLIAdapter",
     "CountsWhat",
+    "Invocation",
     "select_adapter",
+    "stdin_invocation",
 ]

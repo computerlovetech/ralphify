@@ -1,7 +1,9 @@
 """Tests for the run engine."""
 
+import sys
 import threading
 import time
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -25,6 +27,7 @@ from ralphify._console_emitter import ConsoleEmitter
 from ralphify._events import BoundEmitter, EventType, NullEmitter, QueueEmitter
 from ralphify._run_types import Command, RunConfig, RunStatus
 from ralphify._runner import RunResult
+from ralphify.adapters import select_adapter
 from ralphify.engine import (
     _assemble_prompt,
     _delay_if_needed,
@@ -1572,3 +1575,62 @@ class TestAgentOutputLineFiltering:
         assert output.count("first") == 0
         assert output.count("second") == 0
         assert output.count("third") == 0
+
+
+def _write_opencode_stub(tmp_path: Path) -> Path:
+    """Write an executable ``opencode`` stub emitting opencode-shaped JSON.
+
+    The stub ignores stdin entirely (arg-delivery), prints a tool_use and a
+    step_finish event followed by a promise completion tag, then exits 0.
+    Named ``opencode`` so ``select_adapter`` dispatches to OpenCodeAdapter.
+    """
+    script = tmp_path / "opencode"
+    script.write_text(
+        f"#!{sys.executable}\n"
+        "import sys\n"
+        'print(\'{"type": "step_start", "part": {}}\', flush=True)\n'
+        'print(\'{"type": "tool_use", "part": {"name": "Edit"}}\', flush=True)\n'
+        'print(\'{"type": "step_finish", "part": {"tokens": 10}}\', flush=True)\n'
+        "print('<promise>RALPH_PROMISE_COMPLETE</promise>', flush=True)\n"
+    )
+    script.chmod(0o755)
+    return script
+
+
+class TestOpenCodeEndToEnd:
+    """End-to-end run_loop with a real arg-delivery opencode stub (FR-9)."""
+
+    def test_opencode_stub_runs_and_completes_on_promise(self, tmp_path, monkeypatch):
+        # The autouse _disable_streaming fixture forces blocking mode on every
+        # adapter; re-enable streaming on the registered opencode instance so
+        # this test exercises the real JSON-parsing activity path.
+        opencode_adapter = select_adapter(["opencode", "run"])
+        monkeypatch.setattr(opencode_adapter, "supports_streaming", True)
+
+        stub = _write_opencode_stub(tmp_path)
+        config = make_config(
+            tmp_path,
+            agent=f"{stub} run",
+            max_iterations=3,
+            stop_on_completion_signal=True,
+        )
+        state = make_state()
+        emitter = QueueEmitter()
+
+        run_loop(config, state, emitter)
+
+        # Promise tag in stdout stops the loop after the first iteration.
+        assert state.promise_completed is True
+        assert state.iteration == 1
+        assert state.completed == 1
+        assert state.failed == 0
+        assert state.status == RunStatus.COMPLETED
+
+        events = drain_events(emitter)
+        activity = events_of_type(events, EventType.AGENT_ACTIVITY)
+        kinds = [e.data["raw"].get("type") for e in activity]
+        assert "tool_use" in kinds
+        assert "step_finish" in kinds
+
+        stop_event = events_of_type(events, EventType.RUN_STOPPED)[0]
+        assert stop_event.data["reason"] == "completed"

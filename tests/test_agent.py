@@ -944,7 +944,7 @@ class TestRunAgentStreamingPipeGuard:
         proc.poll.return_value = None  # process still running for finally cleanup
         mock_popen.return_value = proc
 
-        with pytest.raises(RuntimeError, match="PIPE streams"):
+        with pytest.raises(RuntimeError, match="PIPE stdin"):
             _run_agent_streaming(
                 ["claude", "-p"],
                 "prompt",
@@ -1001,7 +1001,7 @@ class TestRunAgentBlockingLineStreaming:
 
         result = _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt="",
+            stdin_text="",
             timeout=10,
             log_dir=tmp_path,
             iteration=1,
@@ -1030,7 +1030,7 @@ class TestRunAgentBlockingLineStreaming:
 
         _run_agent_blocking(
             [sys.executable, "-u", "-c", script],
-            prompt="",
+            stdin_text="",
             timeout=10,
             log_dir=tmp_path,
             iteration=1,
@@ -1050,7 +1050,7 @@ class TestRunAgentBlockingLineStreaming:
 
         _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt="hello-from-prompt\n",
+            stdin_text="hello-from-prompt\n",
             timeout=10,
             log_dir=tmp_path,
             iteration=1,
@@ -1082,7 +1082,7 @@ class TestRunAgentBlockingLineStreaming:
 
         result = _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt=large_prompt,
+            stdin_text=large_prompt,
             timeout=15,
             log_dir=tmp_path,
             iteration=1,
@@ -1101,7 +1101,7 @@ class TestRunAgentBlockingLineStreaming:
 
         result = _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt=large_prompt,
+            stdin_text=large_prompt,
             timeout=10,
             log_dir=tmp_path,
             iteration=1,
@@ -1128,7 +1128,7 @@ class TestRunAgentBlockingLineStreaming:
 
         result = _run_agent_streaming(
             [sys.executable, "-c", script],
-            prompt="hi",
+            stdin_text="hi",
             timeout=15,
             log_dir=tmp_path,
             iteration=1,
@@ -1158,7 +1158,7 @@ class TestRunAgentBlockingLineStreaming:
         start = time.monotonic()
         result = _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt=large_prompt,
+            stdin_text=large_prompt,
             timeout=2.0,
             log_dir=tmp_path,
             iteration=1,
@@ -1194,7 +1194,7 @@ class TestStreamingDeadlineAndBuffering:
         start = time.monotonic()
         result = _run_agent_streaming(
             [sys.executable, "-u", "-c", script],
-            prompt="go",
+            stdin_text="go",
             timeout=1.0,
             log_dir=tmp_path,
             iteration=1,
@@ -1230,7 +1230,7 @@ class TestStreamingDeadlineAndBuffering:
 
         result = _run_agent_streaming(
             [sys.executable, "-u", "-c", script],
-            prompt="go",
+            stdin_text="go",
             timeout=15,
             log_dir=tmp_path,
             iteration=1,
@@ -1326,7 +1326,7 @@ class TestBlockingInheritPath:
 
         result = _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt="",
+            stdin_text="",
             timeout=10,
             log_dir=None,
             iteration=1,
@@ -1347,7 +1347,7 @@ class TestBlockingInheritPath:
 
         result = _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt="",
+            stdin_text="",
             timeout=10,
             log_dir=None,
             iteration=1,
@@ -1380,7 +1380,7 @@ class TestPumpStreamExceptionHandling:
 
         result = _run_agent_blocking(
             [sys.executable, "-u", "-c", script],
-            prompt="",
+            stdin_text="",
             timeout=10,
             log_dir=None,
             iteration=1,
@@ -1402,7 +1402,7 @@ class TestPumpStreamExceptionHandling:
 
         result = _run_agent_blocking(
             [sys.executable, "-u", "-c", script],
-            prompt="",
+            stdin_text="",
             timeout=10,
             log_dir=tmp_path,
             iteration=1,
@@ -1530,7 +1530,7 @@ class TestBoundedReaderThreadJoins:
         start = time.monotonic()
         result = _run_agent_blocking(
             [sys.executable, "-c", script],
-            prompt="",
+            stdin_text="",
             timeout=15,
             log_dir=tmp_path,
             iteration=1,
@@ -1608,7 +1608,7 @@ class TestBoundedReaderThreadJoins:
                 ):
                     _run_agent_blocking(
                         [sys.executable, "-c", script],
-                        prompt="",
+                        stdin_text="",
                         timeout=10,
                         log_dir=None,
                         iteration=1,
@@ -1627,3 +1627,154 @@ class TestBoundedReaderThreadJoins:
                 f"{name} reader thread still alive after exception — "
                 "joins are not in the finally block"
             )
+
+
+class TestArgDeliveryStdin:
+    """Tests for the arg-delivery stdin decision threaded through _agent.
+
+    When an adapter's ``deliver_prompt`` returns ``stdin_text=None`` the
+    spawn must use ``stdin=DEVNULL`` and start no writer thread; when it
+    returns a string the prior stdin=PIPE + writer-thread path is preserved
+    byte-for-byte.
+    """
+
+    @patch("ralphify._agent._start_writer_thread")
+    @patch(MOCK_SUBPROCESS, side_effect=ok_proc)
+    def test_streaming_arg_delivery_uses_devnull_and_no_writer(
+        self, mock_popen, mock_writer
+    ):
+        _run_agent_streaming(
+            ["opencode", "run", "--format", "json", "hi"],
+            None,
+            timeout=None,
+            log_dir=None,
+            iteration=1,
+        )
+
+        assert mock_popen.call_args.kwargs["stdin"] == subprocess.DEVNULL
+        mock_writer.assert_not_called()
+
+    @patch("ralphify._agent._start_writer_thread")
+    @patch(MOCK_SUBPROCESS, side_effect=ok_proc)
+    def test_streaming_stdin_delivery_pipes_and_writes(self, mock_popen, mock_writer):
+        _run_agent_streaming(
+            ["claude", "-p"],
+            "the prompt",
+            timeout=None,
+            log_dir=None,
+            iteration=1,
+        )
+
+        assert mock_popen.call_args.kwargs["stdin"] == subprocess.PIPE
+        mock_writer.assert_called_once()
+
+    @patch("ralphify._agent._start_writer_thread")
+    @patch(MOCK_SUBPROCESS, side_effect=ok_proc)
+    def test_blocking_arg_delivery_uses_devnull_and_no_writer(
+        self, mock_popen, mock_writer
+    ):
+        _run_agent_blocking(
+            ["aider", "the prompt"],
+            None,
+            timeout=None,
+            log_dir=None,
+            iteration=1,
+        )
+
+        assert mock_popen.call_args.kwargs["stdin"] == subprocess.DEVNULL
+        mock_writer.assert_not_called()
+
+    @patch("ralphify._agent._start_writer_thread")
+    @patch(MOCK_SUBPROCESS, side_effect=ok_proc)
+    def test_blocking_stdin_delivery_pipes_and_writes(self, mock_popen, mock_writer):
+        _run_agent_blocking(
+            ["aider"],
+            "the prompt",
+            timeout=None,
+            log_dir=None,
+            iteration=1,
+        )
+
+        assert mock_popen.call_args.kwargs["stdin"] == subprocess.PIPE
+        mock_writer.assert_called_once()
+
+    def test_execute_agent_threads_arg_delivery_through_opencode(self, tmp_path):
+        """execute_agent must route the opencode adapter to DEVNULL stdin.
+
+        The opencode adapter appends the prompt to argv and reports
+        ``stdin_text=None``; execute_agent must spawn with stdin=DEVNULL.
+        """
+        with patch(MOCK_SUBPROCESS, side_effect=ok_proc) as mock_popen:
+            execute_agent(
+                ["opencode", "run"],
+                "do the work",
+                timeout=None,
+                log_dir=None,
+                iteration=1,
+            )
+
+        spawn_cmd = mock_popen.call_args.args[0]
+        assert spawn_cmd == ["opencode", "run", "--format", "json", "do the work"]
+        assert mock_popen.call_args.kwargs["stdin"] == subprocess.DEVNULL
+
+    def test_arg_delivery_does_not_hang_when_child_ignores_stdin(self, tmp_path):
+        """Real subprocess: an arg-delivery agent that never reads stdin must
+        still complete and have its stdout parsed.
+
+        With ``stdin=DEVNULL`` the child gets immediate EOF; nothing writes
+        to a pipe, so there is no deadlock and the result event is parsed.
+        """
+        # Child writes a JSON result line and exits, never touching stdin.
+        script = (
+            'import sys; sys.stdout.write(\'{"type": "result", "result": "ok"}\\n\')'
+        )
+
+        start = time.monotonic()
+        result = _run_agent_streaming(
+            [sys.executable, "-u", "-c", script],
+            None,
+            timeout=10,
+            log_dir=tmp_path,
+            iteration=1,
+        )
+        elapsed = time.monotonic() - start
+
+        assert result.returncode == 0
+        assert result.timed_out is False
+        assert result.result_text == "ok"
+        assert elapsed < 9.0
+
+    def test_arg_delivery_devnull_gives_child_eof_when_it_reads_stdin(self, tmp_path):
+        """Real subprocess: a child that *blocks reading stdin* must still
+        finish under arg delivery.
+
+        This is the hardening guard for the DEVNULL choice. The child does
+        ``sys.stdin.read()`` (blocks until EOF) before emitting its result.
+        ``stdin=DEVNULL`` delivers immediate EOF so ``read()`` returns ``""``
+        and the child proceeds. If the spawn ever regressed to leaving stdin
+        as an unwritten open pipe, ``read()`` would block forever and the run
+        would hit the timeout — so a deadline-driven completion here would be
+        a failure, not a pass.
+        """
+        # Child blocks on stdin.read(), then reports what it received.
+        script = (
+            "import sys, json\n"
+            "data = sys.stdin.read()\n"
+            'sys.stdout.write(json.dumps({"type": "result", "result": data}) + "\\n")\n'
+        )
+
+        start = time.monotonic()
+        result = _run_agent_streaming(
+            [sys.executable, "-u", "-c", script],
+            None,
+            timeout=10,
+            log_dir=tmp_path,
+            iteration=1,
+        )
+        elapsed = time.monotonic() - start
+
+        assert result.timed_out is False, "child blocked on stdin — DEVNULL gave no EOF"
+        assert result.returncode == 0
+        # EOF on DEVNULL means read() returned the empty string, not a hang.
+        assert result.result_text == ""
+        assert elapsed < 9.0

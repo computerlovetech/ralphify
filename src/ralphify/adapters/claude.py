@@ -21,7 +21,13 @@ import json
 from pathlib import Path
 
 from ralphify._promise import has_promise_completion
-from ralphify.adapters._protocol import ADAPTERS, AdapterEvent, CountsWhat
+from ralphify.adapters._protocol import (
+    ADAPTERS,
+    AdapterEvent,
+    CountsWhat,
+    Invocation,
+    stdin_invocation,
+)
 
 
 CLAUDE_BINARY_STEM = "claude"
@@ -76,6 +82,10 @@ class ClaudeAdapter:
         if _VERBOSE_FLAG not in result:
             result.append(_VERBOSE_FLAG)
         return result
+
+    def deliver_prompt(self, cmd: list[str], prompt: str) -> Invocation:
+        """Claude reads the prompt from stdin (``-p`` non-interactive mode)."""
+        return stdin_invocation(cmd, prompt)
 
     def parse_event(self, line: str) -> AdapterEvent | None:
         """Parse one stream-json line into an :class:`AdapterEvent`.

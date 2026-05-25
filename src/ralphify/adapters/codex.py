@@ -20,7 +20,13 @@ import json
 from pathlib import Path
 
 from ralphify._promise import has_promise_completion
-from ralphify.adapters._protocol import ADAPTERS, AdapterEvent, CountsWhat
+from ralphify.adapters._protocol import (
+    ADAPTERS,
+    AdapterEvent,
+    CountsWhat,
+    Invocation,
+    stdin_invocation,
+)
 
 
 CODEX_BINARY_STEM = "codex"
@@ -65,6 +71,10 @@ class CodexAdapter:
         if _JSON_FLAG not in result:
             result.append(_JSON_FLAG)
         return result
+
+    def deliver_prompt(self, cmd: list[str], prompt: str) -> Invocation:
+        """Codex reads the prompt from stdin (``codex exec -``)."""
+        return stdin_invocation(cmd, prompt)
 
     def parse_event(self, line: str) -> AdapterEvent | None:
         """Classify one JSONL line as turn / tool_use / message / result.

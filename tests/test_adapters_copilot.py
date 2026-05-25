@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from ralphify.adapters import select_adapter
+from ralphify.adapters import Invocation, select_adapter
 from ralphify.adapters.copilot import CopilotAdapter
 
 
@@ -33,6 +33,14 @@ def test_build_command_is_idempotent() -> None:
     once = adapter.build_command(["copilot"])
     twice = adapter.build_command(once)
     assert once == twice
+
+
+def test_deliver_prompt_uses_stdin() -> None:
+    adapter = CopilotAdapter()
+    cmd = ["copilot", "--output-format", "json"]
+    inv = adapter.deliver_prompt(cmd, "p")
+    assert inv == Invocation(cmd, "p")
+    assert inv.stdin_text == "p"
 
 
 def test_parse_tool_use_variants() -> None:

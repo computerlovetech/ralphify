@@ -10,7 +10,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from ralphify._promise import has_promise_completion
-from ralphify.adapters._protocol import AdapterEvent, CountsWhat
+from ralphify.adapters._protocol import (
+    AdapterEvent,
+    CountsWhat,
+    Invocation,
+    stdin_invocation,
+)
 
 
 class GenericAdapter:
@@ -30,6 +35,10 @@ class GenericAdapter:
 
     def build_command(self, cmd: list[str]) -> list[str]:
         return list(cmd)
+
+    def deliver_prompt(self, cmd: list[str], prompt: str) -> Invocation:
+        """Unknown CLIs are assumed to read the prompt from stdin."""
+        return stdin_invocation(cmd, prompt)
 
     def parse_event(self, line: str) -> AdapterEvent | None:
         return None

@@ -2,6 +2,16 @@
 
 All notable changes to ralphify are documented here.
 
+## Unreleased
+
+### Added
+
+- **First-class opencode adapter** — agents that take the prompt as a positional argument instead of stdin are now first-class. Set `agent: opencode run` and ralphify adds `--format json`, appends your prompt as a safe positional argument (no `bash -c` wrapper, no quoting hazards), and parses opencode's JSON event stream for live tool-use tracking. See [Using with Different Agents](https://ralphify.co/docs/agents/#opencode) for the permission setup opencode needs to run autonomously.
+
+### Changed
+
+- **Prompt delivery is now an adapter concern** — the agent execution layer asks each adapter where the prompt goes (stdin vs. a positional argument) via a new `deliver_prompt` step. Existing stdin agents (Claude, Codex, Copilot, generic, and `bash -c` wrappers) are unaffected; arg-delivery agents spawn with `stdin=DEVNULL` and no stdin writer thread.
+
 ## 0.4.0b3 — 2026-04-12
 
 ### Improved

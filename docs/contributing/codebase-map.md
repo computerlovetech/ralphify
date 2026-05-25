@@ -31,7 +31,14 @@ src/ralphify/           # All source code
 ├── _events.py          # Event types, emitter protocol, and BoundEmitter convenience wrapper
 ├── _keypress.py        # Cross-platform single-keypress listener (powers the `p` peek toggle)
 ├── _output.py          # ProcessResult base class, subprocess constants (SESSION_KWARGS, SUBPROCESS_TEXT_KWARGS), format durations
-└── _brand.py           # Brand color constants shared across CLI and console rendering
+├── _brand.py           # Brand color constants shared across CLI and console rendering
+└── adapters/           # Pluggable CLI adapter layer — one module per agent CLI
+    ├── _protocol.py    # CLIAdapter Protocol, AdapterEvent, Invocation, stdin_invocation, ADAPTERS registry
+    ├── claude.py       # Claude Code adapter (stdin, stream-json)
+    ├── codex.py        # Codex adapter (stdin, --json)
+    ├── copilot.py      # GitHub Copilot adapter (stdin, blocking)
+    ├── opencode.py     # opencode adapter (prompt as positional arg, --format json)
+    └── _generic.py     # Fallback adapter for unknown CLIs (stdin, no parsing)
 
 tests/                  # Pytest tests — one test file per module
 docs/                   # MkDocs site (Material theme) — user-facing documentation

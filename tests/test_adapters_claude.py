@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from ralphify.adapters import select_adapter
+from ralphify.adapters import Invocation, select_adapter
 from ralphify.adapters.claude import ClaudeAdapter
 
 
@@ -52,6 +52,14 @@ def test_build_command_preserves_user_flags() -> None:
     assert result[:3] == ["claude", "--print", "-p"]
     assert "--output-format" in result
     assert "stream-json" in result
+
+
+def test_deliver_prompt_uses_stdin() -> None:
+    adapter = ClaudeAdapter()
+    cmd = ["claude", "--output-format", "stream-json", "--verbose"]
+    inv = adapter.deliver_prompt(cmd, "p")
+    assert inv == Invocation(cmd, "p")
+    assert inv.stdin_text == "p"
 
 
 def test_parse_tool_use_event() -> None:

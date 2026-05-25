@@ -24,7 +24,13 @@ import json
 from pathlib import Path
 
 from ralphify._promise import has_promise_completion
-from ralphify.adapters._protocol import ADAPTERS, AdapterEvent, CountsWhat
+from ralphify.adapters._protocol import (
+    ADAPTERS,
+    AdapterEvent,
+    CountsWhat,
+    Invocation,
+    stdin_invocation,
+)
 
 
 COPILOT_BINARY_STEM = "copilot"
@@ -83,6 +89,10 @@ class CopilotAdapter:
             else:
                 result.append(output_format_value)
         return result
+
+    def deliver_prompt(self, cmd: list[str], prompt: str) -> Invocation:
+        """Copilot reads the prompt from stdin (blocking path)."""
+        return stdin_invocation(cmd, prompt)
 
     def parse_event(self, line: str) -> AdapterEvent | None:
         """Parse best-effort; return ``None`` for unknown shapes.

@@ -416,7 +416,7 @@ def _read_agent_stream(
 
 def _run_agent_streaming(
     cmd: list[str],
-    prompt: str,
+    stdin_text: str | None,
     timeout: float | None,
     log_dir: Path | None,
     iteration: int,
@@ -432,6 +432,12 @@ def _run_agent_streaming(
     list *must already include* any adapter-required flags —
     :func:`execute_agent` calls ``adapter.build_command`` before dispatching.
 
+    *stdin_text* is the adapter-resolved prompt payload: a string when the
+    agent reads its prompt from stdin (the writer thread delivers it), or
+    ``None`` for arg-delivery agents whose prompt already lives in *cmd*.
+    When ``None``, stdin is wired to ``DEVNULL`` so the child gets immediate
+    EOF and no writer thread runs.
+
     Stream processing is delegated to :func:`_read_agent_stream`; this
     function owns the subprocess lifecycle (spawn, stdin delivery, timeout
     kill, and cleanup via ``try/finally``).
@@ -446,6 +452,7 @@ def _run_agent_streaming(
     capture_stdout_text = log_dir is not None or capture_stdout
     pipe_stderr = log_dir is not None or on_output_line is not None
     capture_stderr_text = log_dir is not None
+    pipe_stdin = stdin_text is not None
 
     writer_thread: threading.Thread | None = None
     stderr_lines: list[str] | None = [] if capture_stderr_text else None
@@ -453,7 +460,7 @@ def _run_agent_streaming(
 
     proc = subprocess.Popen(
         cmd,
-        stdin=subprocess.PIPE,
+        stdin=subprocess.PIPE if pipe_stdin else subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE if pipe_stderr else None,
         **SUBPROCESS_TEXT_KWARGS,
@@ -462,8 +469,10 @@ def _run_agent_streaming(
     try:
         # Popen with PIPE guarantees non-None streams; guard explicitly
         # so the type checker narrows and -O mode cannot skip the check.
-        if proc.stdin is None or proc.stdout is None:
-            raise RuntimeError("subprocess.Popen failed to create PIPE streams")
+        if proc.stdout is None:
+            raise RuntimeError("subprocess.Popen failed to create PIPE stdout")
+        if pipe_stdin and proc.stdin is None:
+            raise RuntimeError("subprocess.Popen failed to create PIPE stdin")
         if pipe_stderr and proc.stderr is None:
             raise RuntimeError("subprocess.Popen failed to create PIPE stderr")
 
@@ -479,8 +488,10 @@ def _run_agent_streaming(
         # (child not reading stdin, pipe buffer full) cannot prevent
         # proc.wait / deadline checks from firing.  Killing the process
         # group unblocks the write with BrokenPipeError, which
-        # _deliver_prompt already swallows.
-        writer_thread = _start_writer_thread(proc, prompt)
+        # _deliver_prompt already swallows.  Arg-delivery agents
+        # (stdin_text is None) skip this entirely.
+        if stdin_text is not None:
+            writer_thread = _start_writer_thread(proc, stdin_text)
 
         stream = _read_agent_stream(
             proc.stdout,
@@ -627,7 +638,7 @@ def _cleanup_agent(
 
 def _run_agent_blocking(
     cmd: list[str],
-    prompt: str,
+    stdin_text: str | None,
     timeout: float | None,
     log_dir: Path | None,
     iteration: int,
@@ -636,6 +647,11 @@ def _run_agent_blocking(
     capture_stdout: bool = False,
 ) -> AgentResult:
     """Run the agent subprocess and return the result.
+
+    *stdin_text* is the adapter-resolved prompt payload: a string when the
+    agent reads its prompt from stdin (the writer thread delivers it), or
+    ``None`` for arg-delivery agents whose prompt already lives in *cmd*.
+    When ``None``, stdin is wired to ``DEVNULL`` and no writer thread runs.
 
     Conditionally pipes stdout/stderr based on whether any subscriber
     needs the output:
@@ -664,6 +680,7 @@ def _run_agent_blocking(
         capture_stdout_text or on_output_line is not None or capture_result_text
     )
     pipe_stderr = capture_stderr_text or on_output_line is not None
+    pipe_stdin = stdin_text is not None
 
     # When no subscriber needs the bytes, stdout/stderr are left
     # un-piped so the child writes directly to the terminal.  When
@@ -691,14 +708,14 @@ def _run_agent_blocking(
 
     proc = subprocess.Popen(
         cmd,
-        stdin=subprocess.PIPE,
+        stdin=subprocess.PIPE if pipe_stdin else subprocess.DEVNULL,
         stdout=subprocess.PIPE if pipe_stdout else None,
         stderr=subprocess.PIPE if pipe_stderr else None,
         **SUBPROCESS_TEXT_KWARGS,
         **SESSION_KWARGS,
     )
     try:
-        if proc.stdin is None:
+        if pipe_stdin and proc.stdin is None:
             raise RuntimeError("subprocess.Popen failed to create PIPE stdin")
         if pipe_stdout:
             if proc.stdout is None:
@@ -713,7 +730,10 @@ def _run_agent_blocking(
                 proc.stderr, stderr_lines, _STDERR, _on_output_line
             )
 
-        writer_thread = _start_writer_thread(proc, prompt)
+        # Arg-delivery agents (stdin_text is None) get DEVNULL stdin and no
+        # writer thread; the prompt already lives in the spawned argv.
+        if stdin_text is not None:
+            writer_thread = _start_writer_thread(proc, stdin_text)
 
         try:
             returncode = proc.wait(timeout=timeout)
@@ -767,6 +787,11 @@ def execute_agent(
     if adapter is None:
         adapter = select_adapter(cmd)
     cmd = adapter.build_command(cmd)
+    # Let the adapter decide where the prompt goes: stdin adapters return
+    # the command unchanged with ``stdin_text=prompt``; arg-delivery adapters
+    # (e.g. opencode) append the prompt to argv and return ``stdin_text=None``
+    # so the child is spawned with ``stdin=DEVNULL`` and no writer thread.
+    inv = adapter.deliver_prompt(cmd, prompt)
     supports_streaming = adapter.supports_streaming
     if capture_stdout is None:
         capture_stdout = log_dir is not None or (
@@ -775,8 +800,8 @@ def execute_agent(
 
     if supports_streaming:
         return _run_agent_streaming(
-            cmd,
-            prompt,
+            inv.argv,
+            inv.stdin_text,
             timeout,
             log_dir,
             iteration,
@@ -786,8 +811,8 @@ def execute_agent(
             capture_stdout=capture_stdout,
         )
     return _run_agent_blocking(
-        cmd,
-        prompt,
+        inv.argv,
+        inv.stdin_text,
         timeout,
         log_dir,
         iteration,

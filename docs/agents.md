@@ -15,11 +15,12 @@ This page shows how to configure the [`agent` frontmatter field](quick-reference
 
 ## Agent comparison
 
-| Agent | Stdin support | Streaming | Wrapper needed |
+| Agent | Prompt delivery | Streaming | Wrapper needed |
 |---|---|---|---|
-| [Claude Code](#claude-code) | Native (`-p`) | Yes — real-time activity tracking | No |
+| [Claude Code](#claude-code) | Stdin (`-p`) | Yes — real-time activity tracking | No |
+| [opencode](#opencode) | Positional arg (`run "<prompt>"`) | Yes — tool-use tracking | No |
 | [Aider](#aider) | Via bash wrapper | No | Yes (`bash -c`) |
-| [Codex CLI](#codex-cli) | Native (`exec`) | No | No |
+| [Codex CLI](#codex-cli) | Stdin (`exec`) | No | No |
 | [Custom](#custom-wrapper-script) | You implement it | No | Yes (script) |
 
 If you're not sure which to pick: **start with Claude Code.** It has the deepest integration, the best autonomous coding capabilities, and is the default.
@@ -98,6 +99,32 @@ This enables ralphify to:
 - Parse Claude Code's structured JSON output line by line
 - Track agent activity in real time
 - Extract the final result text from the agent's response
+
+## opencode
+
+[opencode](https://opencode.ai) takes the prompt as a **positional argument** to its `run` subcommand rather than on stdin. Ralphify has a first-class adapter for it — no `bash -c` wrapper needed.
+
+```markdown
+---
+agent: opencode run --agent build
+---
+```
+
+| Flag | Purpose |
+|---|---|
+| `run` | Non-interactive mode — runs one prompt and exits |
+| `--agent build` | Selects an agent profile permissive enough to edit files autonomously (see the caveat below) |
+
+When ralphify detects that the agent command's binary is `opencode`, it automatically:
+
+- Adds `--format json` so opencode emits a parseable event stream.
+- Appends the assembled prompt as the final positional argument (no stdin, no shell — quotes, `$(...)`, and newlines in the prompt are passed through safely as a single argument).
+- Parses the JSON stream to track tool use in real time.
+
+!!! warning "opencode refuses writes by default"
+    opencode's built-in agents start with restrictive `ask`/`deny` permission presets ([anomalyco/opencode #10411](https://github.com/anomalyco/opencode/issues/10411), [#13851](https://github.com/anomalyco/opencode/issues/13851)). An unconfigured `opencode run` will stall waiting for approval or refuse to edit files — there is no one to approve in an autonomous loop.
+
+    This is opencode-side configuration, not something ralphify can override. Before looping, set up an agent profile (or permission config) that allows the edits and commands your prompt needs — the opencode analogue of Claude Code's `--dangerously-skip-permissions`. See [opencode's permissions docs](https://opencode.ai/docs/permissions/) for the `--agent` profile and permission settings.
 
 ## Aider
 

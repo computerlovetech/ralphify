@@ -34,6 +34,28 @@ class AdapterEvent(NamedTuple):
     raw: dict | None = None
 
 
+class Invocation(NamedTuple):
+    """How to launch an agent with a given prompt.
+
+    ``argv`` is the final spawn command; ``stdin_text`` is the payload to
+    write to the child's stdin, or ``None`` to signal that stdin must not
+    be piped (the caller uses ``DEVNULL`` so the child gets immediate EOF).
+    """
+
+    argv: list[str]
+    stdin_text: str | None
+
+
+def stdin_invocation(cmd: list[str], prompt: str) -> Invocation:
+    """Build the default stdin-delivery invocation for *cmd* and *prompt*.
+
+    Shared by every adapter that pipes the prompt to the child's stdin
+    (claude / codex / copilot / generic) so each does not hand-roll the
+    same ``Invocation(list(cmd), prompt)`` construction.
+    """
+    return Invocation(argv=list(cmd), stdin_text=prompt)
+
+
 @runtime_checkable
 class CLIAdapter(Protocol):
     """Protocol every CLI adapter must satisfy.
@@ -58,6 +80,17 @@ class CLIAdapter(Protocol):
         """Return the command with any adapter-required flags appended.
 
         Idempotent: calling twice returns the same command.
+        """
+        ...
+
+    def deliver_prompt(self, cmd: list[str], prompt: str) -> Invocation:
+        """Return the final argv and the stdin payload for this prompt.
+
+        *cmd* is the already-flag-injected command (output of
+        :meth:`build_command`).  stdin adapters return
+        ``Invocation(cmd, prompt)`` (via :func:`stdin_invocation`);
+        arg-delivery adapters append the prompt to argv and return
+        ``stdin_text=None`` so the caller pipes ``DEVNULL`` instead.
         """
         ...
 

@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from ralphify.adapters import select_adapter
+from ralphify.adapters import Invocation, select_adapter
 from ralphify.adapters.codex import CodexAdapter
 
 
@@ -29,6 +29,14 @@ def test_build_command_is_idempotent() -> None:
     once = adapter.build_command(["codex"])
     twice = adapter.build_command(once)
     assert once == twice
+
+
+def test_deliver_prompt_uses_stdin() -> None:
+    adapter = CodexAdapter()
+    cmd = ["codex", "exec", "--json"]
+    inv = adapter.deliver_prompt(cmd, "p")
+    assert inv == Invocation(cmd, "p")
+    assert inv.stdin_text == "p"
 
 
 def test_parse_tool_call_events() -> None:
