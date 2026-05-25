@@ -52,7 +52,13 @@ def _register_builtin_adapters() -> None:
     module (executed once at first package import) so cyclic-import risk
     is contained.
     """
-    from ralphify.adapters import claude, codex, copilot, opencode  # noqa: F401
+    from ralphify.adapters import (  # noqa: F401
+        claude,
+        codex,
+        copilot,
+        crush,
+        opencode,
+    )
 
 
 _register_builtin_adapters()

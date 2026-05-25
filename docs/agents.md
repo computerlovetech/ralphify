@@ -21,6 +21,7 @@ This page shows how to configure the [`agent` frontmatter field](quick-reference
 | [opencode](#opencode) | Positional arg (`run "<prompt>"`) | Yes — tool-use tracking | No |
 | [Aider](#aider) | Via bash wrapper | No | Yes (`bash -c`) |
 | [Codex CLI](#codex-cli) | Stdin (`exec`) | No | No |
+| [Crush](#crush) | Stdin (`run`) | No | No |
 | [Custom](#custom-wrapper-script) | You implement it | No | Yes (script) |
 
 If you're not sure which to pick: **start with Claude Code.** It has the deepest integration, the best autonomous coding capabilities, and is the default.
@@ -168,6 +169,28 @@ agent: codex exec --sandbox danger-full-access -
 | `exec` | Non-interactive mode — designed for piped/scripted use |
 | `--sandbox danger-full-access` | Full filesystem access for autonomous operation |
 | `-` | Read prompt from stdin |
+
+## Crush
+
+[Charm Crush](https://github.com/charmbracelet/crush) is TUI-first but supports non-interactive use via its `run` subcommand, which reads the prompt from stdin. Ralphify has a first-class adapter for it — no `bash -c` wrapper needed.
+
+```markdown
+---
+agent: crush run
+---
+```
+
+| Flag | Purpose |
+|---|---|
+| `run` | Non-interactive mode — runs one prompt from stdin and exits |
+
+When ralphify detects that the agent command's binary is `crush`, it automatically adds `--quiet` to hide the progress spinner. `crush run` auto-approves every permission request for the duration of the invocation, so no `--yolo`-style flag is needed to run autonomously.
+
+!!! info "Configure a provider first"
+    `crush run` exits with "no providers configured" if no model provider is set up. Configure one non-interactively before looping — e.g. export `ANTHROPIC_API_KEY` (or another provider's key) or commit a `crush.json`. Run `crush` once interactively if you prefer the guided setup.
+
+!!! warning "No structured output — turn capping unavailable"
+    Crush emits plain text only (no JSON/streaming-event mode), so ralphify runs it in [blocking mode](#blocking-mode-all-other-agents) and cannot count tool calls or enforce `max_turns` for it. Completion still works via the [`<promise>` tag](#what-ralphify-needs-from-an-agent) scanned from stdout. Use [`--timeout`](cli.md#ralph-run) as the safety net instead of a turn cap.
 
 ## Custom wrapper script
 

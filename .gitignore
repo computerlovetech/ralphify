@@ -16,4 +16,6 @@ mess/
 .coverage
 .ralphify/
 scripts/tui_dev/output/
+.cheese/
+.serena/
 

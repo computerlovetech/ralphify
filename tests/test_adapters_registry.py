@@ -7,6 +7,7 @@ from ralphify.adapters._generic import GenericAdapter
 from ralphify.adapters.claude import ClaudeAdapter
 from ralphify.adapters.codex import CodexAdapter
 from ralphify.adapters.copilot import CopilotAdapter
+from ralphify.adapters.crush import CrushAdapter
 from ralphify.adapters.opencode import OpenCodeAdapter
 
 
@@ -15,6 +16,7 @@ def test_registry_contains_builtin_adapters() -> None:
     assert ClaudeAdapter in types
     assert CodexAdapter in types
     assert CopilotAdapter in types
+    assert CrushAdapter in types
     assert OpenCodeAdapter in types
 
 
@@ -22,6 +24,7 @@ def test_select_adapter_dispatches_by_binary_stem() -> None:
     assert isinstance(select_adapter(["claude"]), ClaudeAdapter)
     assert isinstance(select_adapter(["codex", "exec"]), CodexAdapter)
     assert isinstance(select_adapter(["copilot"]), CopilotAdapter)
+    assert isinstance(select_adapter(["crush", "run"]), CrushAdapter)
     assert isinstance(select_adapter(["opencode", "run"]), OpenCodeAdapter)
 
 
