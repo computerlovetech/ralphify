@@ -16,8 +16,9 @@ Event mapping:
   from ``part``).
 - ``step_finish`` -> ``AdapterEvent(kind="result", ...)`` (carries token /
   cost data in ``part`` that this adapter does not surface).
-- ``step_start`` / ``text`` / ``tool_result`` -> ``AdapterEvent(kind="message")``
-  so callers can render them without counting against the turn cap.
+- ``step_start`` / ``text`` / ``reasoning`` / ``error`` ->
+  ``AdapterEvent(kind="message")`` so callers can render them without
+  counting against the turn cap.
 - unknown / malformed -> ``None`` (MUST NOT raise, for parity with the
   other adapters).
 
@@ -48,7 +49,13 @@ _FORMAT_FLAGS: tuple[str, ...] = ("--format", "json")
 
 _TOOL_USE_EVENT = "tool_use"
 _RESULT_EVENT = "step_finish"
-_MESSAGE_EVENTS: frozenset[str] = frozenset({"step_start", "text", "tool_result"})
+# opencode v1.15.x emits these informational events (verified against the
+# run.ts emit() call sites): they render in the peek panel without counting
+# against the turn cap. There is no ``tool_result`` event — tool output rides
+# on the ``tool_use`` event once the tool part reaches completed/error status.
+_MESSAGE_EVENTS: frozenset[str] = frozenset(
+    {"step_start", "text", "reasoning", "error"}
+)
 
 
 class OpenCodeAdapter:

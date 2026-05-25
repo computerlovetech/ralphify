@@ -103,7 +103,7 @@ def test_parse_step_finish_is_result() -> None:
     assert event.raw == {"type": "step_finish", "part": {"tokens": 42, "cost": 0.01}}
 
 
-@pytest.mark.parametrize("event_type", ["step_start", "text", "tool_result"])
+@pytest.mark.parametrize("event_type", ["step_start", "text", "reasoning", "error"])
 def test_parse_message_events(event_type: str) -> None:
     adapter = OpenCodeAdapter()
     line = json.dumps({"type": event_type, "part": {}})
