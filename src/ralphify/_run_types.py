@@ -13,8 +13,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ralphify._events import STOP_COMPLETED, STOP_ERROR, STOP_USER_REQUESTED, StopReason
+
+
+if TYPE_CHECKING:
+    from ralphify.hooks import AgentHook
 
 
 DEFAULT_COMMAND_TIMEOUT: float = 60
@@ -111,6 +116,8 @@ class RunConfig:
     max_turns: int | None = None
     # Soft wind-down fires at ``max_turns - max_turns_grace``.
     max_turns_grace: int = 2
+    # User-supplied lifecycle hooks from ``RALPH.md`` frontmatter.
+    hooks: list["AgentHook"] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if (self.prompt is None) == (self.ralph_file is None):

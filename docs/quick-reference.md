@@ -80,6 +80,9 @@ Your instructions here. Use {{ args.dir }} for user arguments. <!-- (6) -->
 | `credit` | bool | no | Append co-author trailer instruction to prompt (default: `true`) |
 | `completion_signal` | string | no | Inner text for the completion promise tag. `COMPLETE` means the agent must emit `<promise>COMPLETE</promise>` (default inner text: `RALPH_PROMISE_COMPLETE`) |
 | `stop_on_completion_signal` | bool | no | Stop the loop early when the matching `<promise>...</promise>` tag is detected (default: `false`) |
+| `max_turns` | int | no | Hard cap on tool-use events per iteration. Streaming adapters (Claude, Codex, opencode) are SIGTERM'd at the limit; blocking adapters (Copilot) cannot be preempted mid-run, so their tool uses are counted post-hoc after the process exits and the iteration is marked completed-at-cap once the count reaches the limit. Missing disables the cap; adapters that count no tool uses treat it as a no-op. |
+| `max_turns_grace` | int | no | Tool-use count before `max_turns` at which a soft wind-down message is injected into Claude/Codex (default: `2`; `0` disables the wind-down). |
+| `hooks` | list | no | Shell commands run at lifecycle points. Each entry is `{event, run}`. See [Hooks](hooks.md). |
 
 ### Command fields
 

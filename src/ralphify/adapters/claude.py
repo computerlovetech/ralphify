@@ -18,6 +18,7 @@ counted exactly once.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from ralphify._promise import has_promise_completion
@@ -40,6 +41,12 @@ _VERBOSE_FLAG = "--verbose"
 _EVENT_TYPE_ASSISTANT = "assistant"
 _EVENT_TYPE_RESULT = "result"
 _BLOCK_TYPE_TOOL_USE = "tool_use"
+
+_SETTINGS_FILENAME = "settings.json"
+"""File Claude reads for hook configuration when ``CLAUDE_CONFIG_DIR`` is set."""
+
+_HOOK_EVENT = "PreToolUse"
+"""Claude hook stage that fires before each tool invocation."""
 
 
 class ClaudeAdapter:
@@ -162,10 +169,21 @@ class ClaudeAdapter:
         cap: int,
         grace: int,
     ) -> dict[str, str]:
-        raise NotImplementedError(
-            "Claude soft wind-down (settings.json PreToolUse hook) is scheduled "
-            "for Phase 3 of the CLI adapter layer spec."
+        """Write Claude's ``settings.json`` and return a ``CLAUDE_CONFIG_DIR`` override.
+
+        The settings file registers a ``PreToolUse`` hook that invokes
+        :mod:`ralphify._wind_down_shim` with the per-iteration counter
+        path.  Spawning Claude with ``CLAUDE_CONFIG_DIR=<tempdir>``
+        isolates the hook from the user's real ``~/.claude`` config so a
+        crash leaves no global side effects.
+        """
+        settings_path = tempdir / _SETTINGS_FILENAME
+        command = _build_shim_command(counter_path, cap, grace)
+        settings_path.write_text(
+            json.dumps(_build_settings_payload(command), indent=2),
+            encoding="utf-8",
         )
+        return {"CLAUDE_CONFIG_DIR": str(tempdir)}
 
 
 def _iter_content_blocks(raw: dict) -> list[dict]:
@@ -177,6 +195,40 @@ def _iter_content_blocks(raw: dict) -> list[dict]:
     if not isinstance(content, list):
         return []
     return [block for block in content if isinstance(block, dict)]
+
+
+def _build_shim_command(counter_path: Path, cap: int, grace: int) -> str:
+    """Return the shell command string Claude's hook runner will execute.
+
+    Uses ``sys.executable`` so the shim runs under the same Python that
+    spawned ralphify — avoids relying on a system ``python`` on PATH.
+    """
+    return (
+        f"{sys.executable} -m ralphify._wind_down_shim "
+        f"{counter_path} {cap} {grace} claude"
+    )
+
+
+def _build_settings_payload(command: str) -> dict:
+    """Return the JSON dict written to ``settings.json``.
+
+    The shape matches Claude Code's hook reference: the top-level
+    ``hooks`` mapping keys event names to a list of matcher groups, each
+    of which carries an inner ``hooks`` list of ``{type, command}``
+    entries.
+    """
+    return {
+        "hooks": {
+            _HOOK_EVENT: [
+                {
+                    "matcher": "*",  # fire on every tool
+                    "hooks": [
+                        {"type": "command", "command": command},
+                    ],
+                }
+            ]
+        }
+    }
 
 
 ADAPTERS.append(ClaudeAdapter())

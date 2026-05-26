@@ -1,0 +1,7 @@
+{"type":"TurnStarted"}
+{"type":"CommandExecution","command":"ls -la"}
+{"type":"CollabToolCall","name":"Read"}
+{"msg":{"type":"McpToolCall","tool":"git_status"}}
+{"type":"CommandExecution","command":"uv run pytest"}
+{"type":"TurnCompleted"}
+{"type":"TaskComplete","text":"Done. <promise>COMPLETE</promise>"}

@@ -32,11 +32,14 @@ src/ralphify/           # All source code
 ├── _keypress.py        # Cross-platform single-keypress listener (powers the `p` peek toggle)
 ├── _output.py          # ProcessResult base class, subprocess constants (SESSION_KWARGS, SUBPROCESS_TEXT_KWARGS), format durations
 ├── _brand.py           # Brand color constants shared across CLI and console rendering
+├── hooks.py            # Agent lifecycle hooks — AgentHook Protocol, ShellAgentHook, CombinedAgentHook
+├── _wind_down_shim.py  # Module invoked by per-CLI hooks to nudge agents toward max_turns wind-down
 └── adapters/           # Pluggable CLI adapter layer — one module per agent CLI
     ├── _protocol.py    # CLIAdapter Protocol, AdapterEvent, Invocation, stdin_invocation, ADAPTERS registry
-    ├── claude.py       # Claude Code adapter (stdin, stream-json)
-    ├── codex.py        # Codex adapter (stdin, --json)
+    ├── claude.py       # Claude Code adapter (stdin, stream-json, PreToolUse wind-down)
+    ├── codex.py        # Codex adapter (stdin, --json, PostToolUse wind-down)
     ├── copilot.py      # GitHub Copilot adapter (stdin, blocking)
+    ├── crush.py        # Crush adapter (stdin, blocking, plain text — no tool-use counting)
     ├── opencode.py     # opencode adapter (prompt as positional arg, --format json)
     └── _generic.py     # Fallback adapter for unknown CLIs (stdin, no parsing)
 

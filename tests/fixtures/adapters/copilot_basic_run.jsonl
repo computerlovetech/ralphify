@@ -1,0 +1,5 @@
+{"type":"tool_use","name":"Read"}
+{"type":"tool_call","name":"Edit"}
+{"type":"ToolCall","tool":"Bash"}
+{"type":"progress","message":"thinking..."}
+{"type":"result","text":"done <promise>COMPLETE</promise>"}

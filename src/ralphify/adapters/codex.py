@@ -17,6 +17,7 @@ them; they do not count against ``max_turns`` today (counts_what is
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from ralphify._promise import has_promise_completion
@@ -40,6 +41,24 @@ _TOOL_CALL_EVENTS: frozenset[str] = frozenset(
     {"CollabToolCall", "McpToolCall", "CommandExecution"}
 )
 _RESULT_EVENTS: frozenset[str] = frozenset({"TaskComplete", "TurnCompleted"})
+
+_HOOKS_FILENAME = "hooks.json"
+"""File Codex reads from ``$CODEX_HOME`` to discover hook scripts."""
+
+_CONFIG_FILENAME = "config.toml"
+"""Codex config file; the hooks feature is enabled here via the ``[features]`` table."""
+
+_HOOK_EVENT = "PostToolUse"
+"""Codex hook stage that fires after each tool invocation — the earliest
+deterministic point where the counter file has an authoritative value."""
+
+_FEATURE_FLAG_TOML = "[features]\nhooks = true\n"
+"""Minimal config.toml body that enables the hook runner.
+
+Codex reads the hooks feature flag from the ``[features]`` table (maturity
+Stable, default ``true``); writing it explicitly keeps the per-iteration
+``CODEX_HOME`` self-contained regardless of the user's real config.
+"""
 
 
 class CodexAdapter:
@@ -151,10 +170,42 @@ class CodexAdapter:
         cap: int,
         grace: int,
     ) -> dict[str, str]:
-        raise NotImplementedError(
-            "Codex soft wind-down (hooks.json PostToolUse) is scheduled "
-            "for Phase 3 of the CLI adapter layer spec."
+        """Write Codex's ``hooks.json`` + ``config.toml`` and override ``CODEX_HOME``.
+
+        Codex's hook system is gated behind a feature flag in
+        ``config.toml``; this method writes both files atomically into
+        *tempdir* and points the CLI at it via ``CODEX_HOME`` so the
+        user's real ``~/.codex`` config stays untouched.
+        """
+        command = _build_shim_command(counter_path, cap, grace)
+        (tempdir / _HOOKS_FILENAME).write_text(
+            json.dumps(_build_hooks_payload(command), indent=2),
+            encoding="utf-8",
         )
+        (tempdir / _CONFIG_FILENAME).write_text(_FEATURE_FLAG_TOML, encoding="utf-8")
+        return {"CODEX_HOME": str(tempdir)}
+
+
+def _build_shim_command(counter_path: Path, cap: int, grace: int) -> str:
+    """Return the shell command Codex's hook runner executes."""
+    return (
+        f"{sys.executable} -m ralphify._wind_down_shim "
+        f"{counter_path} {cap} {grace} codex"
+    )
+
+
+def _build_hooks_payload(command: str) -> dict:
+    """Return the JSON dict written to ``hooks.json``."""
+    return {
+        _HOOK_EVENT: [
+            {
+                "matcher": "*",  # fire on every tool
+                "hooks": [
+                    {"type": "command", "command": command},
+                ],
+            }
+        ]
+    }
 
 
 def _event_type(parsed: dict) -> str | None:

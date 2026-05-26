@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from ralphify.adapters import Invocation, select_adapter
 from ralphify.adapters.claude import ClaudeAdapter
 
@@ -169,10 +167,20 @@ def test_extract_completion_signal_handles_missing_result_text() -> None:
     )
 
 
-def test_install_wind_down_hook_raises_not_implemented(tmp_path) -> None:
+def test_install_wind_down_hook_writes_settings(tmp_path) -> None:
     adapter = ClaudeAdapter()
-    with pytest.raises(NotImplementedError):
-        adapter.install_wind_down_hook(tmp_path, tmp_path / "counter", 10, 2)
+    counter = tmp_path / "counter"
+    env = adapter.install_wind_down_hook(tmp_path, counter, 10, 2)
+    assert env["CLAUDE_CONFIG_DIR"] == str(tmp_path)
+    settings = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
+    hooks = settings["hooks"]["PreToolUse"]
+    assert hooks[0]["matcher"] == "*"
+    command = hooks[0]["hooks"][0]["command"]
+    assert "ralphify._wind_down_shim" in command
+    assert str(counter) in command
+    assert " 10 " in command
+    assert " 2 " in command
+    assert command.rstrip().endswith("claude")
 
 
 def test_capability_flags() -> None:

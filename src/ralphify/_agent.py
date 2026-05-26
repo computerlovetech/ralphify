@@ -16,13 +16,17 @@ Two execution modes are supported:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import queue
+import shutil
 import signal
 import subprocess
+import tempfile
 import threading
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,6 +43,11 @@ from ralphify._output import (
 )
 from ralphify.adapters import CLIAdapter, select_adapter
 
+_log = logging.getLogger(__name__)
+
+_counter_write_failure_logged = False
+"""Module-level latch so the wind-down counter write failure logs only once."""
+
 # ── Callback type aliases ──────────────────────────────────────────────
 # Used across the streaming and blocking execution paths for callbacks
 # that observe live agent output.
@@ -48,6 +57,12 @@ ActivityCallback = Callable[[dict[str, Any]], None]
 
 OutputLineCallback = Callable[[str, OutputStream], None]
 """Receives raw output lines with their stream name ("stdout"/"stderr")."""
+
+ToolUseCallback = Callable[[str, int], None]
+"""Invoked by both the streaming path (as lines arrive) and the blocking
+path (after the subprocess exits, during post-hoc counting).  Best-effort:
+exceptions are swallowed so a buggy subscriber cannot kill the agent loop.
+"""
 
 
 def _call_safely(callback: Callable[..., Any] | None, *args: Any) -> None:
@@ -88,6 +103,17 @@ _THREAD_JOIN_TIMEOUT = 5.0
 
 # Seconds to wait for the agent process to exit after a kill signal.
 _PROCESS_WAIT_TIMEOUT = 5.0
+
+# Tempdir prefix for per-iteration wind-down hook config.  Surfaces in
+# ``$TMPDIR`` listings so users can spot stale dirs after a crash.
+_HOOK_TEMPDIR_PREFIX = "ralphify-"
+
+# Counter filename when ``log_dir`` is unset and the file lives inside
+# the per-iteration tempdir.  When ``log_dir`` is set, the counter lives
+# at ``<log_dir>/<iter>.turncount``.
+_COUNTER_FILENAME = "turncount"
+_COUNTER_LOG_SUFFIX = ".turncount"
+_COUNTER_PAD_WIDTH = _LOG_ITERATION_PAD_WIDTH
 
 
 def _extract_result_text_from_lines(lines: list[str] | None) -> str | None:
@@ -267,6 +293,34 @@ class AgentResult(ProcessResult):
     result_text: str | None = None
     captured_stdout: str | None = None
     captured_stderr: str | None = None
+    # Tool-use events the adapter reported for this iteration; ``0`` when
+    # no adapter was active or the adapter's ``counts_what != "tool_use"``.
+    tool_use_count: int = 0
+    # True when the cap was reached and the agent process was terminated
+    # (streaming) or the cap was exceeded post-hoc (blocking path).
+    turn_capped: bool = False
+
+
+@dataclass(slots=True)
+class _WindDownContext:
+    """Per-iteration tempdir and counter state for soft wind-down hooks.
+
+    Built by :func:`_setup_wind_down` for adapters whose
+    ``supports_soft_wind_down`` is True and a ``max_turns`` cap is
+    configured.  Carries the env-var overrides the spawned agent needs,
+    plus the cleanup hook called from the streaming path's ``finally``.
+    """
+
+    tempdir: Path
+    counter_path: Path
+    env_overrides: dict[str, str]
+
+    def cleanup(self) -> None:
+        try:
+            self.counter_path.unlink()
+        except (FileNotFoundError, OSError):
+            pass
+        shutil.rmtree(self.tempdir, ignore_errors=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -276,6 +330,8 @@ class _StreamResult:
     stdout_lines: tuple[str, ...] | None
     result_text: str | None
     timed_out: bool
+    tool_use_count: int = 0
+    turn_capped: bool = False
 
 
 def _write_log(
@@ -323,6 +379,9 @@ def _read_agent_stream(
     on_output_line: OutputLineCallback | None = None,
     *,
     capture_stdout: bool = True,
+    adapter: CLIAdapter | None = None,
+    max_turns: int | None = None,
+    on_tool_use: ToolUseCallback | None = None,
 ) -> _StreamResult:
     """Read the agent's JSON stream line-by-line until EOF or timeout.
 
@@ -354,6 +413,9 @@ def _read_agent_stream(
     """
     stdout_lines: list[str] | None = [] if capture_stdout else None
     result_text: str | None = None
+    tool_use_count = 0
+    turn_capped = False
+    count_tool_use = adapter is not None and adapter.counts_what == "tool_use"
 
     line_q: queue.Queue[str | None] = queue.Queue()
     threading.Thread(target=_readline_pump, args=(stdout, line_q), daemon=True).start()
@@ -376,6 +438,8 @@ def _read_agent_stream(
                 stdout_lines=tuple(stdout_lines) if stdout_lines is not None else None,
                 result_text=result_text,
                 timed_out=True,
+                tool_use_count=tool_use_count,
+                turn_capped=turn_capped,
             )
 
         if line is None:  # EOF sentinel from reader thread
@@ -383,6 +447,8 @@ def _read_agent_stream(
                 stdout_lines=tuple(stdout_lines) if stdout_lines is not None else None,
                 result_text=result_text,
                 timed_out=False,
+                tool_use_count=tool_use_count,
+                turn_capped=turn_capped,
             )
 
         if stdout_lines is not None:
@@ -403,6 +469,24 @@ def _read_agent_stream(
                         result_text = parsed[_RESULT_FIELD]
                     _call_safely(on_activity, parsed)
 
+            if count_tool_use and adapter is not None:
+                event = adapter.parse_event(stripped)
+                if event is not None and event.kind == "tool_use":
+                    tool_use_count += 1
+                    _call_safely(on_tool_use, event.name or "", tool_use_count)
+                    if max_turns is not None and tool_use_count >= max_turns:
+                        return _StreamResult(
+                            stdout_lines=(
+                                tuple(stdout_lines)
+                                if stdout_lines is not None
+                                else None
+                            ),
+                            result_text=result_text,
+                            timed_out=False,
+                            tool_use_count=tool_use_count,
+                            turn_capped=True,
+                        )
+
         # Also check deadline after processing — if the reader thread
         # already queued many lines, this prevents unbounded processing
         # past the deadline.
@@ -411,6 +495,8 @@ def _read_agent_stream(
                 stdout_lines=tuple(stdout_lines) if stdout_lines is not None else None,
                 result_text=result_text,
                 timed_out=True,
+                tool_use_count=tool_use_count,
+                turn_capped=turn_capped,
             )
 
 
@@ -424,6 +510,10 @@ def _run_agent_streaming(
     on_output_line: OutputLineCallback | None = None,
     capture_result_text: bool = False,
     capture_stdout: bool = False,
+    adapter: CLIAdapter | None = None,
+    max_turns: int | None = None,
+    on_tool_use: ToolUseCallback | None = None,
+    env: dict[str, str] | None = None,
 ) -> AgentResult:
     """Run the agent subprocess with line-by-line streaming of JSON output.
 
@@ -458,11 +548,13 @@ def _run_agent_streaming(
     stderr_lines: list[str] | None = [] if capture_stderr_text else None
     stderr_thread: threading.Thread | None = None
 
+    spawn_env = _build_spawn_env(env)
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE if pipe_stdin else subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE if pipe_stderr else None,
+        env=spawn_env,
         **SUBPROCESS_TEXT_KWARGS,
         **SESSION_KWARGS,
     )
@@ -499,9 +591,12 @@ def _run_agent_streaming(
             on_activity,
             on_output_line,
             capture_stdout=capture_stdout_text,
+            adapter=adapter,
+            max_turns=max_turns,
+            on_tool_use=on_tool_use,
         )
 
-        if stream.timed_out:
+        if stream.timed_out or stream.turn_capped:
             _kill_process_group(proc)
         proc.wait()
     finally:
@@ -520,6 +615,8 @@ def _run_agent_streaming(
         timed_out=stream.timed_out,
         captured_stdout=stdout if capture_stdout_text else None,
         captured_stderr=stderr if capture_stderr_text else None,
+        tool_use_count=stream.tool_use_count,
+        turn_capped=stream.turn_capped,
     )
 
 
@@ -645,6 +742,10 @@ def _run_agent_blocking(
     on_output_line: OutputLineCallback | None = None,
     capture_result_text: bool = False,
     capture_stdout: bool = False,
+    adapter: CLIAdapter | None = None,
+    max_turns: int | None = None,
+    on_tool_use: ToolUseCallback | None = None,
+    env: dict[str, str] | None = None,
 ) -> AgentResult:
     """Run the agent subprocess and return the result.
 
@@ -674,7 +775,17 @@ def _run_agent_blocking(
     Raises ``FileNotFoundError`` if the command binary does not exist.
     """
     start = time.monotonic()
-    capture_stdout_text = log_dir is not None or capture_stdout
+    # Blocking-path adapters count tool uses post-hoc by re-scanning the
+    # captured stdout (see _count_tool_uses_post_hoc), so a cap is only
+    # enforceable when the bytes are buffered.  Force buffering when a cap
+    # is set on a tool-use-counting adapter, otherwise tool_use_count would
+    # always be 0 and turn_capped would never fire.
+    needs_post_hoc_count = (
+        max_turns is not None
+        and adapter is not None
+        and adapter.counts_what == "tool_use"
+    )
+    capture_stdout_text = log_dir is not None or capture_stdout or needs_post_hoc_count
     capture_stderr_text = log_dir is not None
     pipe_stdout = (
         capture_stdout_text or on_output_line is not None or capture_result_text
@@ -706,11 +817,13 @@ def _run_agent_blocking(
         if on_output_line is not None:
             on_output_line(line, stream_name)
 
+    spawn_env = _build_spawn_env(env)
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE if pipe_stdin else subprocess.DEVNULL,
         stdout=subprocess.PIPE if pipe_stdout else None,
         stderr=subprocess.PIPE if pipe_stderr else None,
+        env=spawn_env,
         **SUBPROCESS_TEXT_KWARGS,
         **SESSION_KWARGS,
     )
@@ -747,6 +860,13 @@ def _run_agent_blocking(
     stderr = "".join(stderr_lines) if stderr_lines is not None else None
     log_file = _write_log(log_dir, iteration, stdout, stderr)
 
+    tool_use_count, turn_capped = _count_tool_uses_post_hoc(
+        adapter=adapter,
+        stdout_lines=stdout_lines,
+        max_turns=max_turns,
+        on_tool_use=on_tool_use,
+    )
+
     return AgentResult(
         returncode=None if timed_out else returncode,
         elapsed=time.monotonic() - start,
@@ -755,6 +875,8 @@ def _run_agent_blocking(
         timed_out=timed_out,
         captured_stdout=stdout if capture_stdout_text else None,
         captured_stderr=stderr if capture_stderr_text else None,
+        tool_use_count=tool_use_count,
+        turn_capped=turn_capped,
     )
 
 
@@ -770,6 +892,9 @@ def execute_agent(
     on_output_line: OutputLineCallback | None = None,
     capture_result_text: bool = False,
     capture_stdout: bool | None = None,
+    max_turns: int | None = None,
+    max_turns_grace: int = 0,
+    on_tool_use: ToolUseCallback | None = None,
 ) -> AgentResult:
     """Run the agent subprocess, auto-selecting streaming or blocking mode.
 
@@ -780,6 +905,14 @@ def execute_agent(
     ``adapter.build_command(cmd)`` is applied before spawning, so the CLI
     receives any flags the adapter requires (e.g. Claude's
     ``--output-format stream-json --verbose`` or Codex's ``--json``).
+
+    When *max_turns* is set, the streaming path counts adapter-reported
+    tool-use events and terminates the subprocess once the cap is reached.
+    The blocking path cannot preempt but records the post-hoc count.
+    *max_turns_grace* enables a soft wind-down: if the adapter supports it,
+    a per-iteration tempdir is set up with a counter file and environment
+    variables pointing the agent at ``_wind_down_shim`` so it can warn the
+    agent when the cap is ``grace`` tool-uses away.
 
     This is the single entry point the engine should use — callers don't need
     to know which execution mode is selected.
@@ -798,25 +931,205 @@ def execute_agent(
             not supports_streaming and on_output_line is None and capture_result_text
         )
 
-    if supports_streaming:
-        return _run_agent_streaming(
+    wind_down = _setup_wind_down(
+        adapter=adapter,
+        max_turns=max_turns,
+        max_turns_grace=max_turns_grace,
+        log_dir=log_dir,
+        iteration=iteration,
+    )
+    wrapped_on_tool_use = _wrap_tool_use_with_counter(
+        on_tool_use=on_tool_use,
+        counter_path=wind_down.counter_path if wind_down is not None else None,
+    )
+    env = wind_down.env_overrides if wind_down is not None else None
+
+    try:
+        if supports_streaming:
+            return _run_agent_streaming(
+                inv.argv,
+                inv.stdin_text,
+                timeout,
+                log_dir,
+                iteration,
+                on_activity=on_activity,
+                on_output_line=on_output_line,
+                capture_result_text=capture_result_text,
+                capture_stdout=capture_stdout,
+                adapter=adapter,
+                max_turns=max_turns,
+                on_tool_use=wrapped_on_tool_use,
+                env=env,
+            )
+        return _run_agent_blocking(
             inv.argv,
             inv.stdin_text,
             timeout,
             log_dir,
             iteration,
-            on_activity=on_activity,
             on_output_line=on_output_line,
             capture_result_text=capture_result_text,
             capture_stdout=capture_stdout,
+            adapter=adapter,
+            max_turns=max_turns,
+            on_tool_use=wrapped_on_tool_use,
+            env=env,
         )
-    return _run_agent_blocking(
-        inv.argv,
-        inv.stdin_text,
-        timeout,
-        log_dir,
-        iteration,
-        on_output_line=on_output_line,
-        capture_result_text=capture_result_text,
-        capture_stdout=capture_stdout,
+    finally:
+        if wind_down is not None:
+            wind_down.cleanup()
+
+
+def _build_spawn_env(overrides: dict[str, str] | None) -> dict[str, str] | None:
+    """Compose a spawn environment merging *overrides* onto ``os.environ``.
+
+    Returns ``None`` when no overrides are requested so ``Popen`` inherits
+    the parent's environment directly (the common case).
+    """
+    if not overrides:
+        return None
+    merged = os.environ.copy()
+    merged.update(overrides)
+    return merged
+
+
+def _setup_wind_down(
+    *,
+    adapter: CLIAdapter,
+    max_turns: int | None,
+    max_turns_grace: int,
+    log_dir: Path | None,
+    iteration: int,
+) -> _WindDownContext | None:
+    """Prepare the per-iteration tempdir + counter for soft wind-down.
+
+    Returns ``None`` — skipping the hook wiring entirely — when any of the
+    preconditions are not met:
+
+    - *max_turns* is unset (no cap = nothing to wind down toward).
+    - *max_turns_grace* is ``0`` (user opted out of the warning window).
+    - The adapter's ``supports_soft_wind_down`` flag is ``False``.
+    - The adapter's ``install_wind_down_hook`` raises
+      ``NotImplementedError`` (e.g. Copilot has no hook system today).
+
+    The tempdir is created with a ``ralphify-`` prefix so stale dirs are
+    easy to spot in ``$TMPDIR`` after a crash.  The counter file lives in
+    *log_dir* when logging is enabled (so it's co-located with the
+    iteration log) and inside the tempdir otherwise.  Either way the
+    caller must invoke :meth:`_WindDownContext.cleanup` in its ``finally``.
+    """
+    if max_turns is None or max_turns_grace <= 0:
+        return None
+    if not adapter.supports_soft_wind_down:
+        return None
+    # Clamp the grace below the cap.  A grace >= max_turns is reachable via
+    # the library API (RunConfig does not validate it the way the CLI does);
+    # left unclamped the shim's threshold (max(cap - grace, 0)) collapses to
+    # 0 and injects the wind-down nudge on the very first tool use.
+    effective_grace = min(max_turns_grace, max(max_turns - 1, 0))
+    tempdir = Path(tempfile.mkdtemp(prefix=_HOOK_TEMPDIR_PREFIX))
+    counter_path = _resolve_counter_path(log_dir, iteration, tempdir)
+    _atomic_write_counter(counter_path, 0)
+    try:
+        env_overrides = adapter.install_wind_down_hook(
+            tempdir=tempdir,
+            counter_path=counter_path,
+            cap=max_turns,
+            grace=effective_grace,
+        )
+    except NotImplementedError:
+        # counter_path may live in log_dir rather than the tempdir, so
+        # removing the tempdir alone would orphan the "0" counter file in
+        # the log directory.  Remove it explicitly, best-effort.
+        with suppress(OSError):
+            counter_path.unlink(missing_ok=True)
+        shutil.rmtree(tempdir, ignore_errors=True)
+        return None
+    return _WindDownContext(
+        tempdir=tempdir,
+        counter_path=counter_path,
+        env_overrides=env_overrides,
     )
+
+
+def _resolve_counter_path(
+    log_dir: Path | None,
+    iteration: int,
+    tempdir: Path,
+) -> Path:
+    """Pick the counter file location: co-located with the log or inside tempdir."""
+    if log_dir is not None:
+        filename = f"{iteration:0{_COUNTER_PAD_WIDTH}d}{_COUNTER_LOG_SUFFIX}"
+        return log_dir / filename
+    return tempdir / _COUNTER_FILENAME
+
+
+def _atomic_write_counter(counter_path: Path, value: int) -> None:
+    """Write *value* to *counter_path* via rename so readers never see a partial int.
+
+    Best-effort: on any I/O failure the caller proceeds without wind-down
+    state — the warning subscription is advisory, not required.  The first
+    failure is logged once at WARNING so a silently-disabled wind-down is
+    greppable; subsequent failures stay quiet to avoid per-iteration spam.
+    """
+    global _counter_write_failure_logged
+    try:
+        tmp_path = counter_path.with_name(counter_path.name + ".tmp")
+        tmp_path.write_text(str(value), encoding="utf-8")
+        os.replace(tmp_path, counter_path)
+    except OSError as exc:
+        if not _counter_write_failure_logged:
+            _counter_write_failure_logged = True
+            _log.warning(
+                "soft wind-down counter write to %s failed (%s); "
+                "wind-down will not fire this run",
+                counter_path,
+                exc,
+            )
+
+
+def _wrap_tool_use_with_counter(
+    on_tool_use: ToolUseCallback | None,
+    counter_path: Path | None,
+) -> ToolUseCallback | None:
+    """Return a callback that atomically updates *counter_path* on each tool-use.
+
+    Returns *on_tool_use* unchanged when no counter file is in play, so the
+    streaming path only pays for the disk write when wind-down is active.
+    """
+    if counter_path is None:
+        return on_tool_use
+
+    def _wrapped(name: str, count: int) -> None:
+        _atomic_write_counter(counter_path, count)
+        _call_safely(on_tool_use, name, count)
+
+    return _wrapped
+
+
+def _count_tool_uses_post_hoc(
+    *,
+    adapter: CLIAdapter | None,
+    stdout_lines: list[str] | None,
+    max_turns: int | None,
+    on_tool_use: ToolUseCallback | None,
+) -> tuple[int, bool]:
+    """Re-scan captured stdout for tool-use events when the blocking path runs.
+
+    Blocking-path adapters (no structured event stream) cannot preempt the
+    subprocess, so the cap is reported — not enforced — by scanning the
+    accumulated stdout after the child exits.  ``turn_capped`` is ``True``
+    when the post-hoc count reached *max_turns*, so the engine can emit the
+    same ``ITERATION_TURN_CAPPED`` event either way.
+    """
+    if adapter is None or adapter.counts_what != "tool_use" or not stdout_lines:
+        return 0, False
+    count = 0
+    for line in stdout_lines:
+        event = adapter.parse_event(line)
+        if event is None or event.kind != "tool_use":
+            continue
+        count += 1
+        _call_safely(on_tool_use, event.name or "", count)
+    turn_capped = max_turns is not None and count >= max_turns
+    return count, turn_capped

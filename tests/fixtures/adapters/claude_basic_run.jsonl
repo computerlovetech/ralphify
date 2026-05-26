@@ -1,0 +1,8 @@
+{"type":"system","subtype":"init","session_id":"fixture-001","model":"claude-opus-4-7"}
+{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"Plan: read RALPH.md then edit."}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/work/RALPH.md"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","content":"# prompt body"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"/work/RALPH.md","old_string":"todo","new_string":"done"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"uv run pytest -x"}}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"All tests pass."}]}}
+{"type":"result","subtype":"success","result":"All tests pass. <promise>COMPLETE</promise>"}

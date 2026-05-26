@@ -30,6 +30,9 @@ from ralphify._events import (
     PromptAssembledData,
     RunStartedData,
     RunStoppedData,
+    ToolUseData,
+    TurnApproachingLimitData,
+    TurnCappedData,
 )
 from ralphify._frontmatter import (
     FIELD_AGENT,
@@ -47,6 +50,7 @@ from ralphify._run_types import (
 from ralphify._resolver import resolve_all, resolve_args
 from ralphify._runner import run_command
 from ralphify.adapters import select_adapter
+from ralphify.hooks import CombinedAgentHook
 
 
 _PAUSE_POLL_INTERVAL = 0.25  # seconds between pause/resume checks
@@ -171,6 +175,7 @@ def _run_agent_phase(
     config: RunConfig,
     state: RunState,
     emit: BoundEmitter,
+    hooks: CombinedAgentHook | None,
 ) -> tuple[bool, bool]:
     """Run the agent subprocess, update state counters, and emit the result event.
 
@@ -205,6 +210,14 @@ def _run_agent_phase(
     )
     capture_stdout = config.log_dir is not None or capture_stdout_for_promise
 
+    on_tool_use = _build_tool_use_bridge(
+        state=state,
+        emit=emit,
+        hooks=hooks,
+        max_turns=config.max_turns,
+        max_turns_grace=config.max_turns_grace,
+    )
+
     try:
 
         def on_activity(data: dict[str, Any]) -> None:
@@ -224,6 +237,9 @@ def _run_agent_phase(
             on_output_line=on_output_line,
             capture_result_text=True,
             capture_stdout=capture_stdout,
+            max_turns=config.max_turns,
+            max_turns_grace=config.max_turns_grace,
+            on_tool_use=on_tool_use,
         )
     except FileNotFoundError as exc:
         raise FileNotFoundError(
@@ -239,10 +255,30 @@ def _run_agent_phase(
     if promise_completed:
         state.promise_completed = True
 
+    if agent.turn_capped:
+        emit(
+            EventType.ITERATION_TURN_CAPPED,
+            TurnCappedData(
+                iteration=state.iteration,
+                count=agent.tool_use_count,
+            ),
+        )
+        if hooks is not None:
+            hooks.on_turn_capped(
+                iteration=state.iteration,
+                count=agent.tool_use_count,
+            )
+
     if agent.timed_out:
         state.mark_timed_out()
         event_type = EventType.ITERATION_TIMED_OUT
         state_detail = f"timed out after {duration}"
+    elif agent.turn_capped:
+        state.mark_completed()
+        event_type = EventType.ITERATION_COMPLETED
+        state_detail = (
+            f"completed at turn cap ({agent.tool_use_count} tool uses, {duration})"
+        )
     elif agent.success:
         state.mark_completed()
         event_type = EventType.ITERATION_COMPLETED
@@ -279,13 +315,102 @@ def _run_agent_phase(
             ended_data["echo_stdout"] = agent.captured_stdout
 
     emit(event_type, ended_data)
+    if hooks is not None:
+        hooks.on_iteration_completed(
+            iteration=state.iteration,
+            result={
+                "returncode": agent.returncode,
+                "timed_out": agent.timed_out,
+                "turn_capped": agent.turn_capped,
+                "tool_use_count": agent.tool_use_count,
+                "duration": agent.elapsed,
+                "result_text": agent.result_text,
+            },
+        )
+        if promise_completed:
+            hooks.on_completion_signal(
+                iteration=state.iteration,
+                signal=completion_signal,
+            )
     return agent.success, promise_completed and config.stop_on_completion_signal
+
+
+def _build_tool_use_bridge(
+    *,
+    state: RunState,
+    emit: BoundEmitter,
+    hooks: CombinedAgentHook | None,
+    max_turns: int | None,
+    max_turns_grace: int,
+):
+    """Return a ``ToolUseCallback`` that emits ``TOOL_USE`` and approaching-limit events.
+
+    Collapses the per-tool-use notification shape expected by ``_agent``
+    (``(tool_name, count)``) into structured events plus the hook
+    notifications. Returns ``None`` when no subscriber cares — the
+    streaming path then skips all per-line overhead.
+    """
+    if max_turns is None and hooks is None:
+        return None
+
+    # Clamp the grace below the cap.  ``RunConfig`` does not reject a grace
+    # >= max_turns the way the CLI does, so an unclamped value would make
+    # the threshold <= 0 and fire ITERATION_TURN_APPROACHING_LIMIT on the
+    # first tool use.  Mirrors the wind-down shim's clamp.
+    approaching_threshold = (
+        (max_turns - min(max_turns_grace, max(max_turns - 1, 0)))
+        if max_turns is not None and max_turns_grace > 0
+        else None
+    )
+    approaching_fired = False
+
+    def _on_tool_use(tool_name: str, count: int) -> None:
+        nonlocal approaching_fired
+        emit(
+            EventType.TOOL_USE,
+            ToolUseData(
+                iteration=state.iteration,
+                tool_name=tool_name,
+                count=count,
+            ),
+        )
+        if hooks is not None:
+            hooks.on_tool_use(
+                iteration=state.iteration,
+                tool_name=tool_name,
+                count=count,
+            )
+        if (
+            not approaching_fired
+            and approaching_threshold is not None
+            and max_turns is not None
+            and count >= approaching_threshold
+            and count < max_turns
+        ):
+            approaching_fired = True
+            emit(
+                EventType.ITERATION_TURN_APPROACHING_LIMIT,
+                TurnApproachingLimitData(
+                    iteration=state.iteration,
+                    count=count,
+                    max_turns=max_turns,
+                ),
+            )
+            if hooks is not None:
+                hooks.on_turn_approaching_limit(
+                    iteration=state.iteration,
+                    count=count,
+                    max_turns=max_turns,
+                )
+
+    return _on_tool_use
 
 
 def _run_iteration(
     config: RunConfig,
     state: RunState,
     emit: BoundEmitter,
+    hooks: CombinedAgentHook | None,
 ) -> tuple[bool, bool]:
     """Execute one iteration of the agent loop.
 
@@ -296,6 +421,8 @@ def _run_iteration(
     iteration = state.iteration
 
     emit(EventType.ITERATION_STARTED, IterationStartedData(iteration=iteration))
+    if hooks is not None:
+        hooks.on_iteration_started(iteration=iteration)
 
     command_outputs: dict[str, str] = {}
     if config.commands:
@@ -316,15 +443,19 @@ def _run_iteration(
                 count=len(command_outputs),
             ),
         )
+        if hooks is not None:
+            hooks.on_commands_completed(iteration=iteration, outputs=command_outputs)
 
     prompt = _assemble_prompt(config, state, command_outputs)
     emit(
         EventType.PROMPT_ASSEMBLED,
         PromptAssembledData(iteration=iteration, prompt_length=len(prompt)),
     )
+    if hooks is not None:
+        hooks.on_prompt_assembled(iteration=iteration, prompt=prompt)
 
     agent_succeeded, stop_for_completion_signal = _run_agent_phase(
-        prompt, config, state, emit
+        prompt, config, state, emit, hooks
     )
 
     if not agent_succeeded and config.stop_on_error:
@@ -364,6 +495,8 @@ def run_loop(
     state.status = RunStatus.RUNNING
     state.started_at = datetime.now(timezone.utc)
 
+    hooks = CombinedAgentHook(list(config.hooks)) if config.hooks else None
+
     if config.log_dir:
         config.log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -392,7 +525,7 @@ def run_loop(
             state.iteration += 1
 
             should_continue, stop_for_completion_signal = _run_iteration(
-                config, state, emit
+                config, state, emit, hooks
             )
             if stop_for_completion_signal:
                 state.status = RunStatus.COMPLETED

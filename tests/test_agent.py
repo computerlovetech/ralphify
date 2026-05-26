@@ -7,7 +7,7 @@ import signal
 import subprocess
 import sys
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 from helpers import MOCK_SUBPROCESS, fail_proc, make_mock_popen, ok_proc, timeout_proc
@@ -479,6 +479,10 @@ class TestExecuteAgentDispatch:
             on_output_line=on_output_line,
             capture_result_text=True,
             capture_stdout=False,
+            adapter=claude_adapter,
+            max_turns=None,
+            on_tool_use=None,
+            env=None,
         )
 
     def test_execute_agent_passes_capture_result_text_to_blocking_helper(
@@ -489,7 +493,9 @@ class TestExecuteAgentDispatch:
 
         # The autouse conftest fixture already forces every adapter's
         # supports_streaming flag to False, so ``echo`` falls into the
-        # blocking path through the GenericAdapter fallback.
+        # blocking path through the GenericAdapter fallback.  The fallback
+        # is constructed fresh per ``select_adapter`` call, so the dispatch
+        # assertion matches the adapter arg with ``ANY``.
         monkeypatch.setattr("ralphify._agent._run_agent_blocking", fake_blocking)
 
         execute_agent(
@@ -511,6 +517,10 @@ class TestExecuteAgentDispatch:
             on_output_line=on_output_line,
             capture_result_text=True,
             capture_stdout=False,
+            adapter=ANY,
+            max_turns=None,
+            on_tool_use=None,
+            env=None,
         )
 
 

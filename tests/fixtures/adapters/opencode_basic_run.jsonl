@@ -1,0 +1,7 @@
+{"type":"step_start","part":{}}
+{"type":"tool_use","part":{"tool":"read"}}
+{"type":"text","part":{"text":"reading files"}}
+{"type":"tool_use","part":{"tool":"edit"}}
+{"type":"tool_use","name":"bash"}
+{"type":"step_finish","part":{"tokens":123}}
+{"type":"text","part":{"text":"done <promise>COMPLETE</promise>"}}

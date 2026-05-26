@@ -55,6 +55,12 @@ from ralphify._events import (
     TurnApproachingLimitData,
     TurnCappedData,
 )
+from ralphify.hooks import (
+    AgentHook,
+    CombinedAgentHook,
+    NoOpAgentHook,
+    ShellAgentHook,
+)
 from ralphify.manager import ManagedRun, RunManager
 
 
@@ -94,6 +100,11 @@ __all__ = [
     "StopReason",
     "ManagedRun",
     "RunManager",
+    # Lifecycle hooks
+    "AgentHook",
+    "CombinedAgentHook",
+    "NoOpAgentHook",
+    "ShellAgentHook",
     # Typed event payloads
     "AgentActivityData",
     "AgentOutputLineData",

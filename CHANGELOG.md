@@ -7,6 +7,9 @@ All notable changes to ralphify are documented here.
 ### Added
 
 - **First-class opencode adapter** — agents that take the prompt as a positional argument instead of stdin are now first-class. Set `agent: opencode run` and ralphify adds `--format json`, appends your prompt as a safe positional argument (no `bash -c` wrapper, no quoting hazards), and parses opencode's JSON event stream for live tool-use tracking. See [Using with Different Agents](https://ralphify.co/docs/agents/#opencode) for the permission setup opencode needs to run autonomously.
+- **`max_turns` enforcement** — the `max_turns` frontmatter field now actively caps tool-use events per iteration. Streaming adapters that count tool uses (Claude, Codex, opencode) are SIGTERM'd at the limit and the iteration is recorded as completed-at-cap; blocking adapters (Copilot) cannot be preempted mid-run, so their tool uses are counted post-hoc after the process exits and the iteration is marked completed-at-cap once the count reaches the limit; adapters that emit no countable events (Crush) treat the field as a no-op.
+- **Agent lifecycle hooks** — new `hooks` frontmatter field plus an `AgentHook` Protocol (`ShellAgentHook`, `CombinedAgentHook`, `NoOpAgentHook`). Register shell commands to observe iteration start/end, prompt assembly, tool use, turn-approaching-limit, turn cap, and completion-signal events. Hooks are observers — a failing hook is logged but never aborts the run. See the new [Hooks](https://ralphify.co/docs/hooks/) page.
+- **Per-CLI soft wind-down** — when `max_turns_grace` is set, Claude's `PreToolUse` and Codex's `PostToolUse` hooks are installed into a per-iteration tempdir (`CLAUDE_CONFIG_DIR` / `CODEX_HOME` overrides, so the user's real config stays untouched) to nudge the agent toward wrapping up before the hard cap. Adapters without a hook system downgrade to hard-cap-only.
 
 ### Changed
 

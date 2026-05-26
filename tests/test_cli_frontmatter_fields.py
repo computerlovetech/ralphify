@@ -11,9 +11,11 @@ import typer
 from helpers import MOCK_WHICH
 from ralphify.cli import (
     _build_run_config,
+    _validate_hooks,
     _validate_max_turns,
     _validate_max_turns_grace,
 )
+from ralphify.hooks import ShellAgentHook
 
 
 class TestValidateMaxTurns:
@@ -150,3 +152,85 @@ class TestBuildRunConfigTurnCapFields:
                 log_dir=None,
                 timeout=None,
             )
+
+
+class TestValidateHooks:
+    def test_absent_returns_empty_list(self) -> None:
+        assert _validate_hooks(None) == []
+
+    def test_valid_hook_builds_shell_agent_hook(self) -> None:
+        hooks = _validate_hooks(
+            [{"event": "on_iteration_started", "run": "./notify.sh"}]
+        )
+        assert len(hooks) == 1
+        assert isinstance(hooks[0], ShellAgentHook)
+
+    def test_multiple_hooks_preserve_order(self) -> None:
+        hooks = _validate_hooks(
+            [
+                {"event": "on_turn_capped", "run": "a"},
+                {"event": "on_completion_signal", "run": "b"},
+            ]
+        )
+        assert len(hooks) == 2
+
+    def test_non_list_rejected(self) -> None:
+        with pytest.raises(typer.Exit):
+            _validate_hooks({"event": "on_tool_use", "run": "x"})
+
+    def test_missing_event_field_rejected(self) -> None:
+        with pytest.raises(typer.Exit):
+            _validate_hooks([{"run": "x"}])
+
+    def test_missing_run_field_rejected(self) -> None:
+        with pytest.raises(typer.Exit):
+            _validate_hooks([{"event": "on_tool_use"}])
+
+    def test_unknown_event_rejected(self) -> None:
+        with pytest.raises(typer.Exit):
+            _validate_hooks([{"event": "on_nonsense", "run": "x"}])
+
+    def test_empty_command_rejected(self) -> None:
+        with pytest.raises(typer.Exit):
+            _validate_hooks([{"event": "on_tool_use", "run": ""}])
+
+
+@patch(MOCK_WHICH, return_value="/usr/bin/claude")
+class TestBuildRunConfigHooks:
+    def _write_ralph(self, tmp_path: Path, body: str) -> Path:
+        ralph = tmp_path / "RALPH.md"
+        ralph.write_text(body, encoding="utf-8")
+        return ralph
+
+    def test_hooks_absent_yields_empty_list(self, _mock_which, tmp_path: Path) -> None:
+        self._write_ralph(tmp_path, "---\nagent: claude -p\n---\nhello\n")
+        config = _build_run_config(
+            ralph_path=str(tmp_path),
+            max_iterations=1,
+            stop_on_error=False,
+            delay=0,
+            log_dir=None,
+            timeout=None,
+        )
+        assert config.hooks == []
+
+    def test_hooks_threaded_through(self, _mock_which, tmp_path: Path) -> None:
+        self._write_ralph(
+            tmp_path,
+            "---\n"
+            "agent: claude -p\n"
+            "hooks:\n"
+            "  - event: on_turn_capped\n"
+            "    run: ./warn.sh\n"
+            "---\nhello\n",
+        )
+        config = _build_run_config(
+            ralph_path=str(tmp_path),
+            max_iterations=1,
+            stop_on_error=False,
+            delay=0,
+            log_dir=None,
+            timeout=None,
+        )
+        assert len(config.hooks) == 1
+        assert isinstance(config.hooks[0], ShellAgentHook)
