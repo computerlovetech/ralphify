@@ -1123,8 +1123,14 @@ class TestInstalledRalphResolution:
         installed = tmp_path / ".agents" / "ralphs" / "my-tool"
         installed.mkdir(parents=True)
         (installed / RALPH_MARKER).write_text("---\nagent: claude -p\n---\ngo")
-        result = runner.invoke(app, ["run", "my-tool", "-n", "1"])
-        # Should attempt to run (may fail at agent exec, but should NOT error on path resolution)
+        # Mock the subprocess so name resolution is exercised without spawning
+        # a real `claude` agent. Without this, the test makes a live agent call
+        # whose non-deterministic output can contain the asserted substrings by
+        # chance (the assertions check that the resolution-failure message is
+        # absent, not anything about the agent's response).
+        with patch(MOCK_SUBPROCESS, side_effect=ok_proc):
+            result = runner.invoke(app, ["run", "my-tool", "-n", "1"])
+        # Resolution should succeed (it must NOT print the path-resolution error).
         assert "not a directory" not in result.output.lower()
         assert "installed ralph" not in result.output.lower()
 
