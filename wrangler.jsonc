@@ -1,0 +1,31 @@
+{
+  // Single Cloudflare Worker serving the whole ralphify.co site as static assets:
+  //   /          -> landing page (from website/)
+  //   /docs/...  -> docs (mkdocs build)
+  //
+  // The build runs as part of `wrangler deploy` (see "build.command" below), so
+  // the Workers Build "Build command" field can be left EMPTY and the deploy
+  // command alone (`npx wrangler deploy`) builds + uploads. One source of truth.
+  //
+  // "name" must match the existing Worker that already holds the ralphify.co
+  // custom domain, so CI deploys into it rather than creating a new Worker.
+  "name": "ralphify-co",
+  "compatibility_date": "2025-05-31",
+
+  // Custom build step run by wrangler before deploy. Produces ./_site.
+  // Installs uv via its standalone installer (no system pip needed); uv fetches
+  // its own Python per pyproject's requires-python, then builds landing + docs.
+  "build": {
+    "command": "curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=\"$HOME/.local/bin:$PATH\" && uv sync --group dev && mkdir -p _site && cp -r website/* _site/ && uv run mkdocs build --strict --site-dir _site/docs"
+  },
+
+  "assets": {
+    "directory": "./_site",
+    // mkdocs uses directory-style URLs (/docs/cli/ -> /docs/cli/index.html).
+    "html_handling": "auto-trailing-slash",
+    // Serve the nearest 404.html on a miss.
+    "not_found_handling": "404-page"
+  }
+  // No "routes": the ralphify.co custom domain is already attached to this
+  // Worker in the dashboard, routing the entire hostname to it.
+}
