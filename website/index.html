@@ -157,10 +157,10 @@
         "@type": "HowToStep",
         "position": 2,
         "name": "Create a ralph",
-        "text": "Run ralph init my-ralph in your project directory to scaffold a RALPH.md prompt file.",
+        "text": "Run ralph scaffold my-ralph in your project directory to scaffold a RALPH.md prompt file.",
         "itemListElement": {
           "@type": "HowToDirection",
-          "text": "Run: ralph init my-ralph"
+          "text": "Run: ralph scaffold my-ralph"
         }
       },
       {
@@ -189,8 +189,7 @@
       </button>
       <div class="nav-links">
         <a href="docs/">Docs</a>
-        <a href="docs/cookbook/">Cookbook</a>
-        <a href="docs/blog/">Blog</a>
+        <a href="https://ralphloops.io/" target="_blank" rel="noopener noreferrer">Ralph loops</a>
         <a href="https://github.com/computerlovetech/ralphify" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="docs/getting-started/" class="nav-cta">Get Started</a>
       </div>
@@ -212,26 +211,25 @@
       <div class="hero-content">
         <div class="hero-badge">
           <span class="status-dot"></span>
-          Loop engineering &middot; Open-source &middot; Agent-agnostic
+          Loop engineering &middot; Open standard &middot; Agent-agnostic
         </div>
 
         <h1 class="hero-headline">
-          <span class="hero-line-muted">Stop stressing over not having</span>
-          <span class="hero-line-muted">an agent running.</span>
+          <span class="hero-line-muted">Write the loop once.</span>
           <span class="hero-line-bright">
-            <span class="gradient-text">Ralph is always running</span>
+            <span class="gradient-text">Ralphify runs it.</span>
             <span class="hero-runner" aria-hidden="true">&#x1F3C3;</span>
           </span>
         </h1>
 
         <p class="hero-sub">
-          Ralphify is the runtime for <strong>loop engineering</strong> — write a loop, run your AI coding agent autonomously.<br>
+          Ralphify is the runtime for <strong>loop engineering</strong>. Define an autonomous agent loop in the open <a href="https://ralphloops.io/">ralph loops standard</a> — a portable <code>RALPH.md</code> — and Ralphify runs it: fresh context and live data every iteration.<br>
           Write a prompt. Walk away. Wake up to commits.
         </p>
 
         <div class="hero-actions">
           <a href="docs/getting-started/" class="btn btn-primary">Get Started</a>
-          <a href="docs/cookbook/" class="btn btn-ghost">View Cookbook</a>
+          <a href="https://ralphloops.io/" class="btn btn-ghost">The ralph loops standard</a>
         </div>
 
         <div class="hero-install">
@@ -256,6 +254,31 @@
           <span class="status-dot"></span>
           <span class="terminal-status-text">ralph is running</span>
           <span class="terminal-status-meta" id="uptime">uptime 14h 23m</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- POSITIONING — standard + runtime              -->
+    <!-- ============================================ -->
+    <section class="why" aria-labelledby="positioning-heading">
+      <div class="section-inner">
+        <p class="section-eyebrow fade-up">A standard, and a runtime for it</p>
+        <h2 id="positioning-heading" class="section-heading fade-up">Loops are worth defining once.</h2>
+        <p class="section-sub fade-up">
+          Loop engineering splits into two pieces: an open way to <em>define</em> a loop, and a runtime that <em>runs</em> it.
+        </p>
+        <div class="card-grid card-grid-2 fade-up">
+          <div class="card">
+            <div class="card-icon">{ }</div>
+            <h3>Ralph loops &mdash; the standard</h3>
+            <p>The open <a href="https://ralphloops.io/">ralph loops format</a> defines a loop as a portable directory whose one required file is <code>RALPH.md</code>: a prompt, the commands that feed it live data, and the files it needs. Because it's a standard, a loop is shareable &mdash; write it once, commit the directory, and anyone can run it.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">🏃</div>
+            <h3>Ralphify &mdash; the runtime</h3>
+            <p>The <code>ralph</code> CLI runs a ralph loop: run the commands, assemble the prompt, pipe it to your agent, and repeat with a fresh context window every iteration. Agent-agnostic, zero config, pure terminal.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -479,22 +502,22 @@ pick the next task from TODO.md and implement it.</code></pre>
         <h2 id="agents-heading" class="section-heading fade-up">Any agent that reads stdin.</h2>
         <p class="section-sub fade-up">Ralphify is a harness, not an agent. Pipe to whatever you want.</p>
         <div class="agent-grid fade-up">
-          <a href="docs/agents/" class="agent-card">
+          <a href="docs/cli/#using-different-agents" class="agent-card">
             <span class="agent-icon">&#x2728;</span>
             <span class="agent-name">Claude Code</span>
             <span class="agent-desc">Anthropic's CLI agent</span>
           </a>
-          <a href="docs/agents/" class="agent-card">
+          <a href="docs/cli/#using-different-agents" class="agent-card">
             <span class="agent-icon">&gt;_</span>
             <span class="agent-name">Aider</span>
             <span class="agent-desc">AI pair programming</span>
           </a>
-          <a href="docs/agents/" class="agent-card">
+          <a href="docs/cli/#using-different-agents" class="agent-card">
             <span class="agent-icon">&#x25B6;</span>
             <span class="agent-name">Codex CLI</span>
             <span class="agent-desc">OpenAI's CLI agent</span>
           </a>
-          <a href="docs/agents/" class="agent-card">
+          <a href="docs/cli/#using-different-agents" class="agent-card">
             <span class="agent-icon">🏃</span>
             <span class="agent-name">Any CLI agent</span>
             <span class="agent-desc">If it reads stdin, it works</span>
@@ -525,8 +548,8 @@ pick the next task from TODO.md and implement it.</code></pre>
             <span class="install-num">2</span>
             <span class="install-label">Create a ralph</span>
             <div class="install-cmd">
-              <code>ralph init my-ralph</code>
-              <button class="copy-btn" aria-label="Copy init command" onclick="copyCommand(this, 'ralph init my-ralph')">Copy</button>
+              <code>ralph scaffold my-ralph</code>
+              <button class="copy-btn" aria-label="Copy scaffold command" onclick="copyCommand(this, 'ralph scaffold my-ralph')">Copy</button>
             </div>
           </div>
           <div class="install-connector" aria-hidden="true"></div>
@@ -539,7 +562,7 @@ pick the next task from TODO.md and implement it.</code></pre>
             </div>
           </div>
         </div>
-        <p class="install-alt fade-up">Also available via <code>pip install ralphify</code> or <code>pipx install ralphify</code></p>
+        <p class="install-alt fade-up">Installs the <code>ralph</code> command. Requires Python 3.11+ and any agent CLI that reads stdin.</p>
       </div>
     </section>
 
@@ -556,7 +579,7 @@ pick the next task from TODO.md and implement it.</code></pre>
           </details>
           <details class="faq-item">
             <summary>What AI coding agents work with Ralphify?</summary>
-            <p>Any agent that accepts prompts via stdin or CLI arguments &mdash; Claude Code, Aider, Codex CLI, and others. Ralphify is agent-agnostic by design. See <a href="docs/agents/">supported agents</a>.</p>
+            <p>Any agent that accepts prompts via stdin or CLI arguments &mdash; Claude Code, Aider, Codex CLI, and others. Ralphify is agent-agnostic by design. See <a href="docs/cli/#using-different-agents">supported agents</a>.</p>
           </details>
           <details class="faq-item">
             <summary>What is a ralph loop?</summary>
@@ -601,12 +624,12 @@ pick the next task from TODO.md and implement it.</code></pre>
           <span class="hero-runner" aria-hidden="true">&#x1F3C3;</span>
         </h2>
         <div class="install-cmd cta-cmd">
-          <code>uv tool install ralphify && ralph init my-ralph && ralph run my-ralph</code>
-          <button class="copy-btn" aria-label="Copy full command" onclick="copyCommand(this, 'uv tool install ralphify && ralph init my-ralph && ralph run my-ralph')">Copy</button>
+          <code>uv tool install ralphify && ralph scaffold my-ralph && ralph run my-ralph</code>
+          <button class="copy-btn" aria-label="Copy full command" onclick="copyCommand(this, 'uv tool install ralphify && ralph scaffold my-ralph && ralph run my-ralph')">Copy</button>
         </div>
         <div class="cta-buttons">
           <a href="docs/getting-started/" class="btn btn-primary">Read the guide</a>
-          <a href="docs/cookbook/" class="btn btn-ghost">View Cookbook</a>
+          <a href="https://ralphloops.io/" class="btn btn-ghost">The ralph loops standard</a>
         </div>
       </div>
     </section>
@@ -618,9 +641,8 @@ pick the next task from TODO.md and implement it.</code></pre>
         <h3>Documentation</h3>
         <ul>
           <li><a href="docs/getting-started/">Getting Started</a></li>
-          <li><a href="docs/cookbook/">Cookbook</a></li>
           <li><a href="docs/">Full Docs</a></li>
-          <li><a href="docs/blog/">Blog</a></li>
+          <li><a href="https://ralphloops.io/" target="_blank" rel="noopener noreferrer">Ralph loops standard</a></li>
         </ul>
       </div>
       <div class="footer-col">

@@ -6,16 +6,7 @@ keywords: loop engineering, loop engineering tutorial, ralph loops tutorial, ins
 
 # Getting Started
 
-!!! tldr "TL;DR"
-    `uv tool install ralphify` → `ralph scaffold my-ralph` → edit the RALPH.md → `ralph run my-ralph -n 1 --log-dir ralph_logs` to test → add a `commands` entry for your test suite → `ralph run my-ralph` to loop. The agent sees fresh command output each iteration and fixes what it breaks.
-
-What you're about to do is loop engineering: you write a loop in the open [ralph loops format](https://ralphloops.io/), and ralphify — the runtime — runs it. This tutorial walks through the five jobs — **write** a ralph, **feed** it live data, **run** the loop, **steer** it while it runs, and **share** it. By the end you'll have a self-healing loop that validates its own work.
-
-## Prerequisites
-
-- **Python 3.11+**
-- **An AI coding agent CLI** — this tutorial uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Install it with `npm install -g @anthropic-ai/claude-code`. Ralphify also works with [other agents](cli.md#using-different-agents).
-- **A project with a test suite** (we'll use this for the feedback loop)
+What you're about to do is loop engineering: you write a loop in the open [ralph loops format](https://ralphloops.io/), and ralphify — the runtime — runs it. This tutorial walks you through writing a ralph, feeding it live data, running the loop, steering it while it runs, and sharing it. By the end you'll have a self-healing loop that validates its own work.
 
 ## Step 1: Install ralphify
 
@@ -23,21 +14,7 @@ What you're about to do is loop engineering: you write a loop in the open [ralph
 uv tool install ralphify
 ```
 
-??? note "Alternative install methods"
-    ```bash
-    pip install ralphify   # pip works too
-    pipx install ralphify  # or pipx
-    ```
-
-Verify it's working:
-
-```bash
-ralph --version
-```
-
-```text
-ralphify 0.3.0
-```
+This gives you the `ralph` command.
 
 ## Step 2: Create a ralph
 
@@ -56,17 +33,16 @@ This creates `my-ralph/RALPH.md` with a ready-to-customize template including an
 
 Or create the file manually as shown below.
 
-!!! tip "Running a shared ralph?"
-    A ralph is just a directory, so a shared one lives in a git repo. Clone it and run it by name:
-
-    ```bash
-    git clone https://github.com/owner/repo
-    ralph run my-ralph
-    ```
-
 ### Manual setup
 
-A ralph is a *directory* containing a `RALPH.md` file — the file's shape is defined by the open [ralph loops format](https://ralphloops.io/). Create the directory and a `RALPH.md` with the agent field — this is the only required frontmatter:
+A ralph is a *directory* — not a single file. It contains a `RALPH.md` (the loop definition) plus any scripts or files the loop needs. `RALPH.md` is the only requirement; its shape is defined by the open [ralph loops format](https://ralphloops.io/):
+
+```text
+my-ralph/
+└── RALPH.md          # the loop definition (required)
+```
+
+Create the directory and a `RALPH.md` with the `agent` field — this is the only required frontmatter:
 
 ```markdown
 ---
@@ -88,27 +64,27 @@ implement it fully, then mark it done.
 - Mark the completed task in TODO.md
 ```
 
-!!! tip "Parameterize a ralph with `args`"
-    Declare `args` in the frontmatter to make one ralph reusable with different inputs. Each name becomes a `{{ args.<name> }}` placeholder filled from the CLI:
+### Parameterize with args
 
-    ```markdown
-    ---
-    agent: claude -p --dangerously-skip-permissions
-    args:
-      - focus
-    ---
+To make one ralph reusable with different inputs, declare `args` in the frontmatter. Each name becomes a `{{ args.<name> }}` placeholder in the prompt body, filled from the CLI at run time:
 
-    Refactor the code under {{ args.focus }}. One module per iteration.
-    ```
+```markdown
+---
+agent: claude -p --dangerously-skip-permissions
+args:
+  - focus
+---
 
-    ```bash
-    ralph run my-ralph --focus src/auth
-    ```
+Refactor the code under {{ args.focus }}. One module per iteration.
+```
 
-    See the [CLI reference](cli.md#user-arguments) for named vs. positional args.
+Pass the value with a matching flag:
 
-!!! info "What does `--dangerously-skip-permissions` do?"
-    Claude Code normally asks for your approval before running shell commands, editing files, or making git commits. The `--dangerously-skip-permissions` flag disables these interactive prompts so the agent can work autonomously without waiting for input. The `-p` flag enables non-interactive ("print") mode, which reads the prompt from stdin instead of opening a chat session.
+```bash
+ralph run my-ralph --focus src/auth     # {{ args.focus }} → src/auth
+```
+
+The same ralph now runs against any path you give it. See the [CLI reference](cli.md#user-arguments) for named vs. positional args.
 
 ## Step 3: Do a test run
 
@@ -132,17 +108,9 @@ ls ralph_logs/
 cat ralph_logs/001_*.log
 ```
 
-!!! tip "Add `ralph_logs/` to `.gitignore`"
-    Log files are useful for debugging but shouldn't be committed:
+Log files are useful for debugging but shouldn't be committed — add `echo "ralph_logs/" >> .gitignore`.
 
-    ```bash
-    echo "ralph_logs/" >> .gitignore
-    ```
-
-If the agent produced useful work, you're ready to add test feedback.
-
-!!! info "Something not working?"
-    If the agent errored or didn't do anything useful, check [Troubleshooting](cli.md#troubleshooting) for common issues — agent hangs, missing commands, and frontmatter mistakes are all covered there.
+If the agent produced useful work, you're ready to add test feedback. If it errored or didn't do anything useful, check [Troubleshooting](cli.md#troubleshooting).
 
 ## Step 4: Add a test command
 
@@ -291,8 +259,7 @@ Read TODO.md and focus only on the API module.
 
 This is the most powerful part of ralph loops — you're steering a running agent with a text file.
 
-!!! warning "Frontmatter changes need a restart"
-    Only the **prompt body** is re-read each iteration. Frontmatter fields (`agent`, `commands`, `args`) are parsed once at startup. If you add a new command or change the agent, stop the loop with `Ctrl+C` and restart it.
+Note that only the **prompt body** is re-read each iteration. Frontmatter fields (`agent`, `commands`, `args`) are parsed once at startup, so if you add a command or change the agent, stop the loop with `Ctrl+C` and restart it.
 
 ## Next steps
 

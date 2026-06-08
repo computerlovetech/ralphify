@@ -49,20 +49,18 @@ That's loop engineering in three lines: a prompt, a command for live data, and t
 ## Install
 
 ```bash
-uv tool install ralphify    # recommended
-pipx install ralphify       # or pipx
-pip install ralphify        # or pip (use a virtualenv)
+uv tool install ralphify
 ```
 
-Any of these gives you the `ralph` command.
+This gives you the `ralph` command.
 
 ---
 
-## The five jobs of loop engineering
+## What you do with ralphify
 
-Loop engineering with ralphify is one of these five jobs — write, feed, run, steer, share. That's the whole tool.
+Working with ralphify comes down to a few things — write a ralph, feed it live data, run the loop, steer it while it runs, and share it. That's the whole tool.
 
-### 1. Write a ralph
+### Write a ralph
 
 A ralph is a *directory* containing a `RALPH.md` file — that file is the only requirement, and its shape is defined by the open [ralph loops format](https://ralphloops.io/). Scaffold one:
 
@@ -102,7 +100,7 @@ Refactor the code under {{ args.focus }}. Keep tests green.
 ralph run my-ralph --focus src/auth     # {{ args.focus }} → src/auth
 ```
 
-### 2. Feed it live data
+### Feed it live data
 
 `commands` run before each iteration. Their output replaces `{{ commands.<name> }}` in the prompt, so the agent always sees the current state — test results, coverage, git log, lint output:
 
@@ -123,7 +121,7 @@ If tests are failing, fix them before starting new work.
 
 When the agent breaks a test, the next iteration sees the failure and fixes it. That's the self-healing feedback loop.
 
-### 3. Run the loop
+### Run the loop
 
 ```bash
 ralph run my-ralph           # loops until Ctrl+C
@@ -132,7 +130,7 @@ ralph run my-ralph -n 5      # run 5 iterations then stop
 
 Each iteration: run commands → assemble the prompt → pipe it to the agent → repeat with fresh context.
 
-### 4. Steer it while it runs
+### Steer it while it runs
 
 The prompt body is re-read from disk every iteration. Edit `RALPH.md` while the loop runs and the agent follows your new rules on the next cycle. When it does something dumb, add a sign:
 
@@ -142,7 +140,7 @@ The prompt body is re-read from disk every iteration. Edit `RALPH.md` while the 
 - Do NOT delete failing tests — fix the underlying code instead.
 ```
 
-### 5. Share a ralph
+### Share a ralph
 
 This is what the standard format buys you. Because a ralph is just a directory in the open [ralph loops format](https://ralphloops.io/), it's portable — and anyone with ralphify can run it. Commit it to git, push it, and your loop engineering becomes someone else's starting point:
 
