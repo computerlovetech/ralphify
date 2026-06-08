@@ -1,7 +1,7 @@
 ---
 title: Getting Started with Ralph Loops — Ralphify Tutorial
 description: Install ralphify, write your first ralph loop, feed it live data with commands, run it, and steer it while it runs — step-by-step in 10 minutes.
-keywords: ralph loops tutorial, install ralphify, write a ralph, ralphloops.io, self-healing loop, run agent loop, ralph loop setup, RALPH.md
+keywords: loop engineering, loop engineering tutorial, ralph loops tutorial, install ralphify, write a ralph, ralphloops.io, self-healing loop, run agent loop, ralph loop setup, RALPH.md
 ---
 
 # Getting Started
@@ -9,7 +9,7 @@ keywords: ralph loops tutorial, install ralphify, write a ralph, ralphloops.io, 
 !!! tldr "TL;DR"
     `uv tool install ralphify` → `ralph scaffold my-ralph` → edit the RALPH.md → `ralph run my-ralph -n 1 --log-dir ralph_logs` to test → add a `commands` entry for your test suite → `ralph run my-ralph` to loop. The agent sees fresh command output each iteration and fixes what it breaks.
 
-This tutorial walks through the five things you do with ralphify — **write** a ralph, **feed** it live data, **run** the loop, **steer** it while it runs, and **share** it. By the end you'll have a self-healing loop that validates its own work. Ralphify implements the open [ralph loops format](https://ralphloops.io/).
+What you're about to build is a loop: you write it in the [ralph loops format](https://ralphloops.io/), and ralphify runs it. This tutorial walks through the five things you do with ralphify — **write** a ralph, **feed** it live data, **run** the loop, **steer** it while it runs, and **share** it. By the end you'll have a self-healing loop that validates its own work.
 
 ## Prerequisites
 
@@ -56,14 +56,13 @@ This creates `my-ralph/RALPH.md` with a ready-to-customize template including an
 
 Or create the file manually as shown below.
 
-!!! tip "Installing an existing ralph?"
-    Use [agr](https://github.com/computerlovetech/agr) to install shared ralphs from GitHub:
+!!! tip "Running a shared ralph?"
+    A ralph is just a directory, so a shared one lives in a git repo. Clone it and run it by name:
 
     ```bash
-    agr add owner/repo
+    git clone https://github.com/owner/repo
+    ralph run my-ralph
     ```
-
-    This installs to `.agents/ralphs/` so you can run it by name with `ralph run <name>`.
 
 ### Manual setup
 

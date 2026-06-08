@@ -1,5 +1,5 @@
 site_name: Ralphify
-site_description: A minimal CLI harness for autonomous AI coding loops — run commands, assemble a prompt, pipe it to an agent, and repeat with fresh context each iteration.
+site_description: The runtime for loop engineering — write a loop in the ralph loops format, and ralphify runs it. Run commands, assemble a prompt, pipe it to an agent, and repeat with fresh context each iteration.
 site_url: https://ralphify.co/docs/
 repo_url: https://github.com/computerlovetech/ralphify
 repo_name: computerlovetech/ralphify

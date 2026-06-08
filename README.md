@@ -11,6 +11,8 @@
 
 **Ralphify runs ralph loops.**
 
+Designing autonomous agent loops — *loop engineering* — is becoming how people get real work out of coding agents. The [ralph loops format](https://ralphloops.io/) is how you write one. Ralphify is how you run it.
+
 A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): one required file, `RALPH.md`. Ralphify is the CLI that runs it.
 
 ```
@@ -138,20 +140,20 @@ The prompt body is re-read from disk every iteration. Edit `RALPH.md` while the 
 - Do NOT delete failing tests — fix the underlying code instead.
 ```
 
-### 5. Share and install ralphs
+### 5. Share a ralph
 
-A ralph is just a directory in the [ralph loops format](https://ralphloops.io/), so it's portable — version it in git, share it, install it. Use [agr](https://github.com/computerlovetech/agr) to install one from GitHub:
+A ralph is just a directory in the [ralph loops format](https://ralphloops.io/), so it's portable. Commit it to git, push it, and anyone can clone the repo and run it by name:
 
 ```bash
-agr add owner/repo/grow-coverage   # install a ralph
-ralph run grow-coverage            # run it by name
+git clone https://github.com/owner/repo   # grab a shared ralph
+ralph run grow-coverage                   # run it by name
 ```
 
 ---
 
-## Why loops
+## Why loop engineering works
 
-A single agent run can fix a bug or write a function. The leverage of a ralph loop is **sustained, autonomous work** — running for hours, one commit at a time, while you do something else.
+Instead of prompting an agent turn by turn, you write the loop once and let it drive the agent for you. A single agent run can fix a bug or write a function. The leverage of a ralph loop is **sustained, autonomous work** — running for hours, one commit at a time, while you do something else.
 
 - **Fresh context every iteration.** No context-window bloat. The agent starts clean and reads the current state of the codebase.
 - **Commands as feedback.** Live data feeds back into the prompt each loop, so the agent self-corrects.

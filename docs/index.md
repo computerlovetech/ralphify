@@ -1,7 +1,7 @@
 ---
 title: Ralphify — the runtime for ralph loops
-description: Ralphify runs ralph loops — an open format for autonomous agent loops (ralphloops.io). A ralph loop is a directory with a RALPH.md file. Ralphify runs it.
-keywords: ralphify, ralph loops, ralph loops format, RALPH.md, ralphloops.io, agent loop runtime, autonomous agent loop
+description: Ralphify runs ralph loops — the open format for loop engineering and autonomous agent loops (ralphloops.io). The ralph loops format is how you write a loop; ralphify is the runtime that runs it.
+keywords: ralphify, loop engineering, ralph loops, ralph loops format, RALPH.md, ralphloops.io, agent loop runtime, autonomous agent loop
 hide:
   - toc
 ---
@@ -13,6 +13,8 @@ hide:
 <p align="center" style="font-size: 1.3em; margin-top: -0.5em;">
 <strong>Ralphify runs ralph loops.</strong>
 </p>
+
+Designing autonomous agent loops — *loop engineering* — is becoming how people get real work out of coding agents. The [ralph loops format](https://ralphloops.io/) is how you write one. Ralphify is how you run it.
 
 A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): a directory whose one required file is `RALPH.md`. **Ralphify** is the CLI that runs it.
 
@@ -118,14 +120,15 @@ Everything in ralphify is one of these five jobs. That's the whole tool.
 
     [Getting Started →](getting-started.md#step-7-steer-while-it-runs)
 
--   :material-share-variant-outline:{ .lg .middle } **5. Share and install ralphs**
+-   :material-share-variant-outline:{ .lg .middle } **5. Share a ralph**
 
     ---
 
-    A ralph is a portable directory in the [ralph loops format](https://ralphloops.io/). Version it in git, share it, install it from GitHub with [agr](https://github.com/computerlovetech/agr).
+    A ralph is a portable directory in the [ralph loops format](https://ralphloops.io/). Commit it to git and push — anyone can clone the repo and run it by name.
 
     ```bash
-    agr add owner/repo/my-ralph
+    git clone https://github.com/owner/repo
+    ralph run my-ralph
     ```
 
 </div>

@@ -1,7 +1,7 @@
 ---
-title: How Autonomous AI Coding Loops Work — The Ralph Loop Lifecycle
-description: Step-by-step breakdown of what happens inside each ralph loop iteration — command execution, prompt assembly, agent piping, and the self-healing feedback cycle that auto-fixes broken code.
-keywords: autonomous coding loop lifecycle, how AI coding agents work, self-healing code loop, AI agent feedback cycle, prompt assembly pipeline, ralph loop architecture, agentic coding workflow
+title: How Loop Engineering Works — The Ralph Loop Lifecycle
+description: Step-by-step breakdown of loop engineering — what happens inside each ralph loop iteration — command execution, prompt assembly, agent piping, and the self-healing feedback cycle that auto-fixes broken code.
+keywords: loop engineering, how loop engineering works, autonomous coding loop lifecycle, how AI coding agents work, self-healing code loop, AI agent feedback cycle, prompt assembly pipeline, ralph loop architecture, agentic coding workflow
 ---
 
 # How the ralph loop works
@@ -9,7 +9,7 @@ keywords: autonomous coding loop lifecycle, how AI coding agents work, self-heal
 !!! tldr "TL;DR"
     Each iteration: re-read `RALPH.md` from disk → run commands → replace `{{ placeholders }}` with output → pipe the assembled prompt to the agent → agent works and exits → repeat. The prompt body is re-read every iteration (so you can edit it live), but frontmatter is parsed once at startup. Failed commands still capture output — that's what makes the loop self-healing.
 
-What happens inside each iteration of an autonomous coding loop? This page breaks down the lifecycle — from command execution to prompt assembly to agent piping — so you can write better prompts, debug unexpected behavior, and understand the self-healing feedback cycle.
+Writing a loop is becoming a discipline of its own — *loop engineering*. This page shows what one iteration of a ralph loop actually does: the format you write, and the runtime that runs it. It breaks down the lifecycle — from command execution to prompt assembly to agent piping — so you can write better prompts, debug unexpected behavior, and understand the self-healing feedback cycle.
 
 ## The six steps of each iteration
 
