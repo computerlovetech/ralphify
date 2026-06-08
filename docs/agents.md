@@ -1,7 +1,7 @@
 ---
 title: How to Run Claude Code, Aider, or Codex in an Autonomous Loop
 description: Set up Claude Code, Aider, Codex CLI, or any AI coding agent to run autonomously in a loop with ralphify. Copy-pasteable configs, wrapper scripts, and a comparison table.
-keywords: run claude code in loop, aider autonomous mode, codex cli automation, AI coding agent loop, autonomous claude code, aider loop setup, run AI agent automatically, pipe prompt to coding agent, claude code non-interactive, aider no-interactive mode, codex exec stdin, automate AI coding agent
+keywords: loop engineering, run claude code in loop, aider autonomous mode, codex cli automation, AI coding agent loop, autonomous claude code, aider loop setup, run AI agent automatically, pipe prompt to coding agent, claude code non-interactive, aider no-interactive mode, codex exec stdin, automate AI coding agent
 ---
 
 # Using with Different Agents
