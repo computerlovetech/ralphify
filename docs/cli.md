@@ -6,10 +6,9 @@ keywords: loop engineering, ralph CLI reference, RALPH.md format, ralph run, ral
 
 # Reference
 
-Everything beyond [the five jobs](index.md#the-five-jobs-of-loop-engineering) lives here: the CLI, the `RALPH.md` format, how a loop iteration works under the hood, how to wire up different agents, troubleshooting, and the Python API.
+Everything beyond [the basics](index.md#what-you-do-with-ralphify) lives here: the CLI, the `RALPH.md` format, how a loop iteration works under the hood, how to wire up different agents, troubleshooting, and the Python API.
 
-!!! tldr "TL;DR"
-    **`ralph run <path> -n 5`** runs the loop. **`ralph scaffold <name>`** creates a ralph from a template. Pass user args as `--name value` flags. Everything is configured in a single [`RALPH.md`](#ralphmd-format) file with YAML frontmatter.
+`ralph run <path> -n 5` runs the loop. `ralph scaffold <name>` creates a ralph from a template. Pass user args as `--name value` flags. Everything is configured in a single [`RALPH.md`](#ralphmd-format) file with YAML frontmatter.
 
 ---
 
@@ -177,8 +176,7 @@ Your instructions here. Reference args with {{ args.dir }}.
 
 Commands run in order. Output (stdout + stderr) is captured regardless of exit code.
 
-!!! warning "No shell features in commands"
-    Commands are parsed with `shlex.split()` and run directly, not through a shell — pipes (`|`), redirections (`>`), and chaining (`&&`) won't work in the `run` field. Point the `run` field at a script instead: `run: ./my-script.sh`.
+Commands are parsed with `shlex.split()` and run directly, not through a shell — pipes (`|`), redirections (`>`), and chaining (`&&`) won't work in the `run` field. Point the `run` field at a script instead: `run: ./my-script.sh`.
 
 ### Placeholders
 
@@ -309,11 +307,12 @@ The [`examples/`](https://github.com/computerlovetech/ralphify/tree/main/example
 
 ## Troubleshooting
 
-!!! tldr "Quick checklist"
-    1. Run `ralph run my-ralph -n 1` — it validates your setup and shows clear errors
-    2. Test the agent outside ralphify: `echo "Say hello" | claude -p`
-    3. Use `--log-dir ralph_logs` to capture output for debugging
-    4. Commands don't support shell features (pipes, `&&`) — use a wrapper script instead
+A quick checklist before digging in:
+
+1. Run `ralph run my-ralph -n 1` — it validates your setup and shows clear errors
+2. Test the agent outside ralphify: `echo "Say hello" | claude -p`
+3. Use `--log-dir ralph_logs` to capture output for debugging
+4. Commands don't support shell features (pipes, `&&`) — use a wrapper script instead
 
 ### Setup
 

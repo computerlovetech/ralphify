@@ -69,33 +69,19 @@ Write the loop once in the standard format, and ralphify runs it for as long as 
 
 ## Install
 
-=== "uv (recommended)"
-
-    ```bash
-    uv tool install ralphify
-    ```
-
-=== "pipx"
-
-    ```bash
-    pipx install ralphify
-    ```
-
-=== "pip"
-
-    ```bash
-    pip install ralphify
-    ```
+```bash
+uv tool install ralphify
+```
 
 ---
 
-## The five jobs of loop engineering
+## What you do with ralphify
 
-Loop engineering with ralphify is one of these five jobs — write, feed, run, steer, share. That's the whole tool.
+Working with ralphify comes down to a few things — write a ralph, feed it live data, run the loop, steer it while it runs, and share it. That's the whole tool.
 
 <div class="grid cards" markdown>
 
--   :material-file-document-edit-outline:{ .lg .middle } **1. Write a ralph**
+-   :material-file-document-edit-outline:{ .lg .middle } **Write a ralph**
 
     ---
 
@@ -107,7 +93,7 @@ Loop engineering with ralphify is one of these five jobs — write, feed, run, s
 
     [Getting Started →](getting-started.md)
 
--   :material-database-arrow-down-outline:{ .lg .middle } **2. Feed it live data**
+-   :material-database-arrow-down-outline:{ .lg .middle } **Feed it live data**
 
     ---
 
@@ -115,7 +101,7 @@ Loop engineering with ralphify is one of these five jobs — write, feed, run, s
 
     [How it works →](cli.md#how-the-loop-works)
 
--   :material-play-circle-outline:{ .lg .middle } **3. Run the loop**
+-   :material-play-circle-outline:{ .lg .middle } **Run the loop**
 
     ---
 
@@ -127,7 +113,7 @@ Loop engineering with ralphify is one of these five jobs — write, feed, run, s
 
     [CLI reference →](cli.md)
 
--   :material-pencil-outline:{ .lg .middle } **4. Steer it while it runs**
+-   :material-pencil-outline:{ .lg .middle } **Steer it while it runs**
 
     ---
 
@@ -135,7 +121,7 @@ Loop engineering with ralphify is one of these five jobs — write, feed, run, s
 
     [Getting Started →](getting-started.md#step-7-steer-while-it-runs)
 
--   :material-share-variant-outline:{ .lg .middle } **5. Share a ralph**
+-   :material-share-variant-outline:{ .lg .middle } **Share a ralph**
 
     ---
 
