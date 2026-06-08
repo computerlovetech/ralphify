@@ -1,7 +1,7 @@
 ---
-title: Ralphify — a runtime for the ralph format
-description: Ralphify is the runtime for the ralph format — a skill-like spec for autonomous agent loops. A ralph is a directory with a RALPH.md file. Ralphify runs it.
-keywords: ralphify, ralph format, RALPH.md, autonomous agent loop, agent runtime, harness engineering, skill-like format, ralph spec
+title: Ralphify — the runtime for ralph loops
+description: Ralphify runs ralph loops — an open format for autonomous agent loops (ralphloops.io). A ralph loop is a directory with a RALPH.md file. Ralphify runs it.
+keywords: ralphify, ralph loops, ralph loops format, RALPH.md, ralphloops.io, agent loop runtime, autonomous agent loop
 hide:
   - toc
 ---
@@ -11,18 +11,15 @@ hide:
 </p>
 
 <p align="center" style="font-size: 1.3em; margin-top: -0.5em;">
-<strong>A ralph is a directory that defines an autonomous agent loop. Ralphify runs it.</strong>
+<strong>Ralphify runs ralph loops.</strong>
 </p>
 
-A **ralph** is a directory with a `RALPH.md` file — a skill-like format that bundles a prompt, the commands to run between iterations, and any files the agent needs. **Ralphify** is the CLI runtime that executes them.
-
-See [How it Works](how-it-works.md) for a full breakdown of the loop lifecycle.
+A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): one required file, `RALPH.md`. **Ralphify** is the CLI that runs it.
 
 ```
 grow-coverage/
 ├── RALPH.md               # the loop definition (required)
-├── check-coverage.sh      # command that runs each iteration
-└── testing-conventions.md # context for the agent
+└── check-coverage.sh      # a command that runs each iteration
 ```
 
 ```markdown
@@ -33,10 +30,7 @@ commands:
     run: ./check-coverage.sh
 ---
 
-You are an autonomous coding agent working in a loop.
 Each iteration, write tests for one untested module, then stop.
-
-Follow the conventions in testing-conventions.md.
 
 ## Current coverage
 
@@ -47,12 +41,12 @@ Follow the conventions in testing-conventions.md.
 ralph run grow-coverage     # loops until Ctrl+C
 ```
 
-One directory. One command. Each iteration starts with fresh context and current data — ralphify runs the commands, fills in `{{ placeholders }}`, pipes the prompt to your agent, and loops.
+Each iteration starts with a **fresh context window** and **current data** — ralphify runs the commands, fills in the `{{ placeholders }}`, pipes the prompt to your agent, and loops.
 
 *Works with any agent CLI. Swap `claude -p` for Codex, Aider, or your own — just change the `agent` field.*
 
 [Get Started](getting-started.md){ .md-button .md-button--primary }
-[How it Works](how-it-works.md){ .md-button }
+[The ralph loops format](https://ralphloops.io/){ .md-button }
 
 ---
 
@@ -76,67 +70,76 @@ One directory. One command. Each iteration starts with fresh context and current
     pip install ralphify
     ```
 
-## Scaffold a ralph and run it
-
-```bash
-ralph scaffold my-ralph
-```
-
-This creates a directory with a `RALPH.md` template. Edit it, then run:
-
-```bash
-ralph run my-ralph         # loop until Ctrl+C
-ralph run my-ralph -n 3    # run 3 iterations
-```
-
-Edit `RALPH.md` while the loop is running — changes take effect on the next iteration.
-
-## Or install one with agr
-
-Ralphs are just directories, so you can share them via any git repo. Install a pre-built ralph from GitHub with [agr](https://github.com/computerlovetech/agr):
-
-```bash
-agr add owner/repo/my-ralph     # install a ralph from GitHub
-ralph run my-ralph              # run it by name
-```
-
-agr installs ralphs to `.agents/ralphs/` so they're automatically discovered by `ralph run`.
-
 ---
 
-## Why a format
+## The five things you do with ralphify
 
-Everyone writing ralph loops ends up with the same scaffolding: a markdown prompt, a few shell commands that surface state between iterations, a while-loop that ties them together. Turning that into a format makes ralphs **shareable**, **versionable**, and **installable** — the same way skills made inner-loop workflows shareable.
-
-Ralphs are to the outer loop what [skills](https://agentskills.io/) are to the inner loop. A skill guides an agent inside a session. A ralph defines what runs *between* sessions.
+Everything in ralphify is one of these five jobs. That's the whole tool.
 
 <div class="grid cards" markdown>
 
--   :material-refresh:{ .lg .middle } **Fresh context, no decay**
+-   :material-file-document-edit-outline:{ .lg .middle } **1. Write a ralph**
 
     ---
 
-    Each iteration starts with a clean context window. No conversation bloat, no hallucinated memories, no degradation over time. The agent reads the current state of the codebase every loop.
+    Scaffold a directory with a `RALPH.md` — YAML frontmatter for config, a markdown body for the prompt. The only required field is `agent`.
 
--   :material-shield-check-outline:{ .lg .middle } **Commands as feedback**
+    ```bash
+    ralph scaffold my-ralph
+    ```
 
-    ---
+    [Getting Started →](getting-started.md)
 
-    Commands run each iteration and their output feeds into the prompt. When tests fail, the agent sees the failure output and fixes it in the next iteration — a self-healing feedback loop.
-
--   :material-pencil-outline:{ .lg .middle } **Steer while it runs**
-
-    ---
-
-    The prompt is re-read every iteration. Edit `RALPH.md` while the loop runs and the agent follows your new rules on the next cycle. When it does something dumb, add a sign.
-
--   :material-git:{ .lg .middle } **Progress lives in git**
+-   :material-database-arrow-down-outline:{ .lg .middle } **2. Feed it live data**
 
     ---
 
-    Every iteration commits to git. If something goes wrong, `git log` shows exactly what happened and `git reset` rolls it back. No opaque internal state to debug or lose.
+    `commands` run each iteration; their output fills `{{ commands.<name> }}` in the prompt. The agent always sees current test results, coverage, and git log — a self-healing feedback loop.
+
+    [How it works →](how-it-works.md)
+
+-   :material-play-circle-outline:{ .lg .middle } **3. Run the loop**
+
+    ---
+
+    `ralph run` assembles the prompt, pipes it to your agent, and repeats with fresh context. Loop until `Ctrl+C` or cap it with `-n`.
+
+    ```bash
+    ralph run my-ralph -n 5
+    ```
+
+    [CLI reference →](cli.md)
+
+-   :material-pencil-outline:{ .lg .middle } **4. Steer it while it runs**
+
+    ---
+
+    The prompt is re-read every iteration. Edit `RALPH.md` mid-run and the agent follows your new rules next cycle. When it does something dumb, add a sign.
+
+    [Getting Started →](getting-started.md#step-7-steer-while-it-runs)
+
+-   :material-share-variant-outline:{ .lg .middle } **5. Share and install ralphs**
+
+    ---
+
+    A ralph is a portable directory in the [ralph loops format](https://ralphloops.io/). Version it in git, share it, install it from GitHub with [agr](https://github.com/computerlovetech/agr).
+
+    ```bash
+    agr add owner/repo/my-ralph
+    ```
 
 </div>
+
+---
+
+## Why loops
+
+A single agent run fixes a bug or writes a function. The leverage of a ralph loop is **sustained, autonomous work** — running for hours, one commit at a time, while you do something else.
+
+- **Fresh context, no decay.** Each iteration starts with a clean context window. The agent reads the current state of the codebase every loop — no conversation bloat, no degradation.
+- **Commands as feedback.** Command output feeds into the prompt each iteration. When tests fail, the agent sees the failure and fixes it next cycle.
+- **Steer with a text file.** Edit `RALPH.md` while the loop runs to redirect a running agent.
+- **Progress lives in git.** Every iteration commits. `git log` shows what happened; `git reset` rolls it back.
 
 ---
 
@@ -149,8 +152,7 @@ Ralphs are to the outer loop what [skills](https://agentskills.io/) are to the i
 
 ## Next steps
 
-- **[How it Works](how-it-works.md)** — the full loop lifecycle
 - **[Getting Started](getting-started.md)** — from install to a running loop in 10 minutes
 - **[How it Works](how-it-works.md)** — what happens inside each iteration
-- **[Cookbook](cookbook.md)** — copy-pasteable ralphs for coding, docs, research, and more
-- **[Python API](api.md)** — embed the loop in your own automation
+- **[Cookbook](cookbook.md)** — copy-pasteable ralph loops to start from
+- **[The ralph loops format](https://ralphloops.io/)** — the open spec ralphify implements

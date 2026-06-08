@@ -9,7 +9,7 @@ keywords: ralphify cookbook, autonomous coding recipes, RALPH.md examples, docum
 !!! tldr "TL;DR"
     8 copy-pasteable ralph loops: [autoresearch](#autoresearch), [codebase improvement](#codebase-improvement), [documentation](#documentation-loop), [bug hunting](#bug-hunter), [deep research](#deep-research), [code migration](#code-migration), [security scanning](#security-scan), and [test coverage](#test-coverage). Each is a real, runnable example from the `examples/` directory.
 
-Copy-pasteable setups for common autonomous workflows. Each recipe is a real, runnable ralph from the [`examples/`](https://github.com/computerlovetech/ralphify/tree/main/examples) directory.
+Once you know [the five things you do with ralphify](index.md#the-five-things-you-do-with-ralphify), these are starting points to copy. Each recipe is a real, runnable ralph loop from the [`examples/`](https://github.com/computerlovetech/ralphify/tree/main/examples) directory.
 
 All recipes use **Claude Code** as the agent. To use a different agent, swap the `agent` field — see [Using with Different Agents](agents.md).
 
