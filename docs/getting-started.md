@@ -67,7 +67,7 @@ Or create the file manually as shown below.
 
 ### Manual setup
 
-Create a ralph directory and `RALPH.md` with the agent field — this is the only required frontmatter:
+A ralph is a *directory* containing a `RALPH.md` file — the file's shape is defined by the open [ralph loops format](https://ralphloops.io/). Create the directory and a `RALPH.md` with the agent field — this is the only required frontmatter:
 
 ```markdown
 ---
@@ -88,6 +88,25 @@ implement it fully, then mark it done.
 - Commit with a descriptive message like `feat: add X` or `fix: resolve Y`
 - Mark the completed task in TODO.md
 ```
+
+!!! tip "Parameterize a ralph with `args`"
+    Declare `args` in the frontmatter to make one ralph reusable with different inputs. Each name becomes a `{{ args.<name> }}` placeholder filled from the CLI:
+
+    ```markdown
+    ---
+    agent: claude -p --dangerously-skip-permissions
+    args:
+      - focus
+    ---
+
+    Refactor the code under {{ args.focus }}. One module per iteration.
+    ```
+
+    ```bash
+    ralph run my-ralph --focus src/auth
+    ```
+
+    See the [CLI reference](cli.md#user-arguments) for named vs. positional args.
 
 !!! info "What does `--dangerously-skip-permissions` do?"
     Claude Code normally asks for your approval before running shell commands, editing files, or making git commits. The `--dangerously-skip-permissions` flag disables these interactive prompts so the agent can work autonomously without waiting for input. The `-p` flag enables non-interactive ("print") mode, which reads the prompt from stdin instead of opening a chat session.

@@ -60,7 +60,7 @@ Everything in ralphify is one of these five jobs. That's the whole tool.
 
 ### 1. Write a ralph
 
-A ralph is a directory with a `RALPH.md` file. Scaffold one:
+A ralph is a *directory* containing a `RALPH.md` file — that file is the only requirement, and its shape is defined by the open [ralph loops format](https://ralphloops.io/). Scaffold one:
 
 ```bash
 ralph scaffold my-ralph
@@ -75,6 +75,27 @@ agent: claude -p --dangerously-skip-permissions
 
 Read TODO.md, pick the top unfinished task, implement it fully, commit, then stop.
 One task per iteration. No placeholder code.
+```
+
+The format has three frontmatter fields — `agent`, `commands` (live data, see below), and `args` (user arguments that parameterize the loop). `args` lets one ralph be reused with different inputs:
+
+```markdown
+---
+agent: claude -p --dangerously-skip-permissions
+commands:
+  - name: tests
+    run: uv run pytest -x
+args:
+  - focus
+---
+
+Refactor the code under {{ args.focus }}. Keep tests green.
+
+{{ commands.tests }}
+```
+
+```bash
+ralph run my-ralph --focus src/auth     # {{ args.focus }} → src/auth
 ```
 
 ### 2. Feed it live data
