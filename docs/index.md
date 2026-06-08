@@ -14,7 +14,7 @@ hide:
 <strong>Ralphify runs ralph loops.</strong>
 </p>
 
-A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): one required file, `RALPH.md`. **Ralphify** is the CLI that runs it.
+A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's a directory-based format ([ralphloops.io](https://ralphloops.io/)), like skills: a directory that must contain a `RALPH.md` file. **Ralphify** is the CLI that runs it.
 
 ```
 grow-coverage/
