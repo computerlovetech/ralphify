@@ -14,7 +14,7 @@ hide:
 <strong>Ralphify runs ralph loops.</strong>
 </p>
 
-A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): one required file, `RALPH.md`. **Ralphify** is the CLI that runs it.
+A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): a directory whose one required file is `RALPH.md`. **Ralphify** is the CLI that runs it.
 
 ```
 grow-coverage/
@@ -82,7 +82,7 @@ Everything in ralphify is one of these five jobs. That's the whole tool.
 
     ---
 
-    Scaffold a directory with a `RALPH.md` — YAML frontmatter for config, a markdown body for the prompt. The only required field is `agent`.
+    Scaffold a directory with a `RALPH.md` — YAML frontmatter for config, a markdown body for the prompt. The only required field is `agent`; add `args` to parameterize the loop with `{{ args.<name> }}`.
 
     ```bash
     ralph scaffold my-ralph
