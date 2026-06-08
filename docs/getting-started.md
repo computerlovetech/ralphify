@@ -1,15 +1,15 @@
 ---
-title: How to Set Up an Autonomous AI Coding Agent Loop — Ralphify Tutorial
-description: Install ralphify, create your first ralph, add test commands for self-healing feedback, and run an autonomous AI coding loop — step-by-step in 10 minutes.
-keywords: set up autonomous AI coding agent, install ralphify, AI coding loop tutorial, self-healing coding agent, run AI agent in loop, automate coding agent prompts, ralph loop setup, claude code autonomous
+title: Getting Started with Ralph Loops — Ralphify Tutorial
+description: Install ralphify, write your first ralph loop, feed it live data with commands, run it, and steer it while it runs — step-by-step in 10 minutes.
+keywords: ralph loops tutorial, install ralphify, write a ralph, ralphloops.io, self-healing loop, run agent loop, ralph loop setup, RALPH.md
 ---
 
 # Getting Started
 
 !!! tldr "TL;DR"
-    `uv tool install ralphify` → `ralph scaffold my-ralph` → edit the RALPH.md → `ralph run my-ralph -n 1 --log-dir ralph_logs` to test → add a `commands` entry for your test suite → `ralph run my-ralph` to loop. The agent sees fresh test output each iteration and fixes what it breaks.
+    `uv tool install ralphify` → `ralph scaffold my-ralph` → edit the RALPH.md → `ralph run my-ralph -n 1 --log-dir ralph_logs` to test → add a `commands` entry for your test suite → `ralph run my-ralph` to loop. The agent sees fresh command output each iteration and fixes what it breaks.
 
-This tutorial walks through setting up ralphify, creating a ralph with commands, and running a productive autonomous loop. By the end, you'll have a self-healing coding loop that validates its own work.
+This tutorial walks through the five things you do with ralphify — **write** a ralph, **feed** it live data, **run** the loop, **steer** it while it runs, and **share** it. By the end you'll have a self-healing loop that validates its own work. Ralphify implements the open [ralph loops format](https://ralphloops.io/).
 
 ## Prerequisites
 
