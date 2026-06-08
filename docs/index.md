@@ -1,7 +1,7 @@
 ---
-title: Ralphify — the runtime for ralph loops
-description: Ralphify runs ralph loops — the open format for loop engineering and autonomous agent loops (ralphloops.io). The ralph loops format is how you write a loop; ralphify is the runtime that runs it.
-keywords: ralphify, loop engineering, ralph loops, ralph loops format, RALPH.md, ralphloops.io, agent loop runtime, autonomous agent loop
+title: Ralphify — the runtime for loop engineering
+description: Ralphify is the runtime for loop engineering. Ralph loops (ralphloops.io) is the open, standard format for writing an autonomous agent loop; ralphify is the runtime that runs it.
+keywords: loop engineering, ralphify, ralph loops, ralph loops format, RALPH.md, ralphloops.io, agent loop runtime, autonomous agent loop
 hide:
   - toc
 ---
@@ -11,12 +11,14 @@ hide:
 </p>
 
 <p align="center" style="font-size: 1.3em; margin-top: -0.5em;">
-<strong>Ralphify runs ralph loops.</strong>
+<strong>Ralphify is the runtime for loop engineering.</strong>
 </p>
 
-Designing autonomous agent loops — *loop engineering* — is becoming how people get real work out of coding agents. The [ralph loops format](https://ralphloops.io/) is how you write one. Ralphify is how you run it.
+*Loop engineering* — designing autonomous agent loops instead of prompting turn by turn — is becoming how people get real work out of coding agents. You write a loop once and let it drive the agent for hours, one commit at a time.
 
-A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): a directory whose one required file is `RALPH.md`. **Ralphify** is the CLI that runs it.
+**[Ralph loops](https://ralphloops.io/) is the open, standard format for writing one.** A ralph loop is a portable directory — a prompt, the commands to run between iterations, and any files the agent needs — whose one required file is `RALPH.md`. Because the format is a standard, a loop is portable: write it once, commit the directory, and anyone with ralphify can run it.
+
+**Ralphify is the runtime that runs it.**
 
 ```
 grow-coverage/
@@ -52,6 +54,19 @@ Each iteration starts with a **fresh context window** and **current data** — r
 
 ---
 
+## What is loop engineering?
+
+**Loop engineering is the practice of designing autonomous agent loops** — instead of steering a coding agent turn by turn, you engineer a loop that drives it for you. A loop has three parts: a **prompt** (what the agent should do each pass), **commands** that pull in live data (test results, coverage, git log), and a **runtime** that assembles the prompt, runs the agent, and repeats with fresh context.
+
+Loop engineering is becoming how people get sustained, autonomous work out of coding agents — hours of progress, one commit at a time. It rests on two pieces:
+
+- **[Ralph loops](https://ralphloops.io/) — the format.** An open, standard way to write a loop as a portable directory (`RALPH.md`). Because it's a standard, loops are shareable and reusable across people and projects.
+- **Ralphify — the runtime.** The `ralph` CLI that runs a loop: run commands → assemble the prompt → pipe it to your agent → loop.
+
+Write the loop once in the standard format, and ralphify runs it for as long as you want.
+
+---
+
 ## Install
 
 === "uv (recommended)"
@@ -74,9 +89,9 @@ Each iteration starts with a **fresh context window** and **current data** — r
 
 ---
 
-## The five things you do with ralphify
+## The five jobs of loop engineering
 
-Everything in ralphify is one of these five jobs. That's the whole tool.
+Loop engineering with ralphify is one of these five jobs — write, feed, run, steer, share. That's the whole tool.
 
 <div class="grid cards" markdown>
 
@@ -98,7 +113,7 @@ Everything in ralphify is one of these five jobs. That's the whole tool.
 
     `commands` run each iteration; their output fills `{{ commands.<name> }}` in the prompt. The agent always sees current test results, coverage, and git log — a self-healing feedback loop.
 
-    [How it works →](how-it-works.md)
+    [How it works →](cli.md#how-the-loop-works)
 
 -   :material-play-circle-outline:{ .lg .middle } **3. Run the loop**
 
@@ -124,7 +139,7 @@ Everything in ralphify is one of these five jobs. That's the whole tool.
 
     ---
 
-    A ralph is a portable directory in the [ralph loops format](https://ralphloops.io/). Commit it to git and push — anyone can clone the repo and run it by name.
+    This is what the standard format buys you. A ralph is a portable directory in the open [ralph loops format](https://ralphloops.io/) — commit it, push it, and anyone with ralphify can run it.
 
     ```bash
     git clone https://github.com/owner/repo
@@ -135,9 +150,9 @@ Everything in ralphify is one of these five jobs. That's the whole tool.
 
 ---
 
-## Why loops
+## Why loop engineering works
 
-A single agent run fixes a bug or writes a function. The leverage of a ralph loop is **sustained, autonomous work** — running for hours, one commit at a time, while you do something else.
+A single agent run fixes a bug or writes a function. The leverage of loop engineering is **sustained, autonomous work** — a ralph loop runs for hours, one commit at a time, while you do something else.
 
 - **Fresh context, no decay.** Each iteration starts with a clean context window. The agent reads the current state of the codebase every loop — no conversation bloat, no degradation.
 - **Commands as feedback.** Command output feeds into the prompt each iteration. When tests fail, the agent sees the failure and fixes it next cycle.
@@ -149,13 +164,12 @@ A single agent run fixes a bug or writes a function. The leverage of a ralph loo
 ## Requirements
 
 - Python 3.11+
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (or [any agent CLI](agents.md) that accepts piped input)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (or [any agent CLI](cli.md#using-different-agents) that accepts piped input)
 
 ---
 
 ## Next steps
 
 - **[Getting Started](getting-started.md)** — from install to a running loop in 10 minutes
-- **[How it Works](how-it-works.md)** — what happens inside each iteration
-- **[Cookbook](cookbook.md)** — copy-pasteable ralph loops to start from
-- **[The ralph loops format](https://ralphloops.io/)** — the open spec ralphify implements
+- **[Reference](cli.md)** — the CLI, RALPH.md format, how the loop works, agents, troubleshooting, and the Python API
+- **[The ralph loops format](https://ralphloops.io/)** — the open, standard spec ralphify implements

@@ -9,11 +9,13 @@
   <a href="https://ralphify.co/docs/"><img src="https://img.shields.io/badge/docs-ralphify.co%2Fdocs-blue" alt="Documentation"></a>
 </p>
 
-**Ralphify runs ralph loops.**
+**Ralphify is the runtime for loop engineering.**
 
-Designing autonomous agent loops — *loop engineering* — is becoming how people get real work out of coding agents. The [ralph loops format](https://ralphloops.io/) is how you write one. Ralphify is how you run it.
+*Loop engineering* — designing autonomous agent loops instead of prompting turn by turn — is becoming how people get real work out of coding agents. You write a loop once and let it drive the agent for hours, one commit at a time.
 
-A **ralph loop** is a portable directory that defines an autonomous agent loop — a prompt, the commands to run between iterations, and any files the agent needs. It's an open format ([ralphloops.io](https://ralphloops.io/)): one required file, `RALPH.md`. Ralphify is the CLI that runs it.
+**[Ralph loops](https://ralphloops.io/) is the open, standard format for writing one.** A ralph loop is a portable directory — a prompt, the commands to run between iterations, and any files the agent needs — with one required file: `RALPH.md`. Because the format is a standard, a loop is portable: write it once, commit the directory, and anyone can run it.
+
+**Ralphify is the runtime that runs it.**
 
 ```
 grow-coverage/
@@ -40,7 +42,7 @@ Each iteration, write tests for one untested module, then stop.
 ralph run grow-coverage     # loops until Ctrl+C
 ```
 
-Each iteration starts with a **fresh context window** and **current data**: ralphify runs the commands, fills in the `{{ placeholders }}`, pipes the prompt to your agent, and loops. Walk away, come back to a pile of commits.
+That's loop engineering in three lines: a prompt, a command for live data, and the runtime. Each iteration starts with a **fresh context window** and **current data** — ralphify runs the commands, fills in the `{{ placeholders }}`, pipes the prompt to your agent, and loops. Walk away, come back to a pile of commits.
 
 *Works with any agent CLI. Swap `claude -p` for Codex, Aider, or your own — just change the `agent` field.*
 
@@ -56,9 +58,9 @@ Any of these gives you the `ralph` command.
 
 ---
 
-## The five things you do with ralphify
+## The five jobs of loop engineering
 
-Everything in ralphify is one of these five jobs. That's the whole tool.
+Loop engineering with ralphify is one of these five jobs — write, feed, run, steer, share. That's the whole tool.
 
 ### 1. Write a ralph
 
@@ -142,7 +144,7 @@ The prompt body is re-read from disk every iteration. Edit `RALPH.md` while the 
 
 ### 5. Share a ralph
 
-A ralph is just a directory in the [ralph loops format](https://ralphloops.io/), so it's portable. Commit it to git, push it, and anyone can clone the repo and run it by name:
+This is what the standard format buys you. Because a ralph is just a directory in the open [ralph loops format](https://ralphloops.io/), it's portable — and anyone with ralphify can run it. Commit it to git, push it, and your loop engineering becomes someone else's starting point:
 
 ```bash
 git clone https://github.com/owner/repo   # grab a shared ralph

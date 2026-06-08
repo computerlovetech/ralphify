@@ -9,12 +9,12 @@ keywords: loop engineering, loop engineering tutorial, ralph loops tutorial, ins
 !!! tldr "TL;DR"
     `uv tool install ralphify` → `ralph scaffold my-ralph` → edit the RALPH.md → `ralph run my-ralph -n 1 --log-dir ralph_logs` to test → add a `commands` entry for your test suite → `ralph run my-ralph` to loop. The agent sees fresh command output each iteration and fixes what it breaks.
 
-What you're about to build is a loop: you write it in the [ralph loops format](https://ralphloops.io/), and ralphify runs it. This tutorial walks through the five things you do with ralphify — **write** a ralph, **feed** it live data, **run** the loop, **steer** it while it runs, and **share** it. By the end you'll have a self-healing loop that validates its own work.
+What you're about to do is loop engineering: you write a loop in the open [ralph loops format](https://ralphloops.io/), and ralphify — the runtime — runs it. This tutorial walks through the five jobs — **write** a ralph, **feed** it live data, **run** the loop, **steer** it while it runs, and **share** it. By the end you'll have a self-healing loop that validates its own work.
 
 ## Prerequisites
 
 - **Python 3.11+**
-- **An AI coding agent CLI** — this tutorial uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Install it with `npm install -g @anthropic-ai/claude-code`. Ralphify also works with [other agents](agents.md).
+- **An AI coding agent CLI** — this tutorial uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Install it with `npm install -g @anthropic-ai/claude-code`. Ralphify also works with [other agents](cli.md#using-different-agents).
 - **A project with a test suite** (we'll use this for the feedback loop)
 
 ## Step 1: Install ralphify
@@ -142,7 +142,7 @@ cat ralph_logs/001_*.log
 If the agent produced useful work, you're ready to add test feedback.
 
 !!! info "Something not working?"
-    If the agent errored or didn't do anything useful, check [Troubleshooting](troubleshooting.md) for common issues — agent hangs, missing commands, and frontmatter mistakes are all covered there.
+    If the agent errored or didn't do anything useful, check [Troubleshooting](cli.md#troubleshooting) for common issues — agent hangs, missing commands, and frontmatter mistakes are all covered there.
 
 ## Step 4: Add a test command
 
@@ -296,7 +296,6 @@ This is the most powerful part of ralph loops — you're steering a running agen
 
 ## Next steps
 
-- [Cookbook](cookbook.md) — copy-pasteable setups for coding, docs, research, and more
-- [How it Works](how-it-works.md) — what happens inside each iteration
-- [Troubleshooting](troubleshooting.md) — when things don't work as expected
-- [CLI Reference](cli.md) — all commands and options
+- [Reference](cli.md) — the CLI, RALPH.md format, how the loop works, agents, troubleshooting, and the Python API
+- [How the loop works](cli.md#how-the-loop-works) — what happens inside each iteration
+- [Examples](https://github.com/computerlovetech/ralphify/tree/main/examples) — copy-pasteable ralph loops for coding, docs, research, and more

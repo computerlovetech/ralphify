@@ -85,7 +85,7 @@ INFO    -  Building documentation to directory: site
 INFO    -  Documentation built in 1.91 seconds
 ```
 
-The `--strict` flag treats warnings as errors. The CI pipeline uses this flag, so make sure your changes build cleanly before submitting. For guidance on what each docs page should cover, see [Keeping docs surfaces in sync](../quick-reference.md) and the existing page structure.
+The `--strict` flag treats warnings as errors. The CI pipeline uses this flag, so make sure your changes build cleanly before submitting. For guidance on what each docs page should cover, see the [Reference](../cli.md) page and the existing page structure.
 
 ## Working on the website
 
@@ -160,5 +160,5 @@ Docs deploy automatically to GitHub Pages on every push to `main` that changes f
 
 - [Codebase Map](codebase-map.md) — architecture overview and module-by-module guide
 - [CLI Reference](../cli.md) — understand the commands you'll be extending
-- [Python API](../api.md) — the public API surface that contributors maintain
+- [Python API](../cli.md#python-api) — the public API surface that contributors maintain
 - [Changelog](../changelog.md) — see what's been released and what's in progress
