@@ -108,18 +108,9 @@ extra:
 
 nav:
   - Home: index.md
-  - Guide:
-    - Getting Started: getting-started.md
-    - How it Works: how-it-works.md
-    - Using with Different Agents: agents.md
-    - Cookbook: cookbook.md
-  - Reference:
-    - Quick Reference: quick-reference.md
-    - CLI: cli.md
-    - Python API: api.md
-  - Help:
-    - Troubleshooting: troubleshooting.md
-    - Changelog: changelog.md
+  - Getting Started: getting-started.md
+  - Reference: cli.md
+  - Changelog: changelog.md
   - Contributing:
     - contributing/index.md
     - Codebase Map: contributing/codebase-map.md
