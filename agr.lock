@@ -38,6 +38,10 @@ installed-name = "code-review"
 path = "skills/ralphify-release"
 installed-name = "ralphify-release"
 
+[[skill]]
+path = "./skills/ralph-cli"
+installed-name = "ralph-cli"
+
 [[ralph]]
 path = "ralphs/bug-hunter"
 installed-name = "bug-hunter"

@@ -40,7 +40,7 @@ ralph run my-ralph         # loop until Ctrl+C
 ralph run my-ralph -n 5    # run 5 iterations
 ```
 
-Works with any agent CLI — swap `claude -p` for Codex, Aider, or your own.
+Works with any agent CLI — swap `claude -p` for Codex, Pi, or your own.
 
 ## Why a format
 
@@ -52,7 +52,7 @@ Everyone writing ralph loops ends up with the same scaffolding: a markdown promp
 - **Live steering**: Edit `RALPH.md` while the loop runs. Changes take effect on the next iteration.
 - **Fresh context every cycle**: No conversation bloat or hallucinated memories. The agent reads current codebase state each time.
 - **Progress in git**: Every iteration commits to git. Roll back with `git reset` if needed.
-- **Any agent**: Works with Claude Code, Aider, Codex CLI, or any CLI that reads stdin.
+- **Any agent**: Works with Claude Code, Pi, Codex CLI, or any CLI that reads stdin.
 - **Shareable ralphs**: Ralphs are just directories — share via git repos, install with [agr](https://github.com/computerlovetech/agr).
 
 ## Placeholder types
@@ -80,7 +80,7 @@ Embed the loop in automation pipelines. See the API docs for details.
 
 - [Getting Started](https://ralphify.co/docs/getting-started/): Install to running loop in 10 minutes
 - [How it Works](https://ralphify.co/docs/how-it-works/): Iteration lifecycle details
-- [Using with Different Agents](https://ralphify.co/docs/agents/): Claude Code, Aider, Codex CLI setup
+- [Using with Different Agents](https://ralphify.co/docs/agents/): Claude Code, Pi, Codex CLI setup
 - [Cookbook](https://ralphify.co/docs/cookbook/): Copy-pasteable recipes for coding, docs, research
 - [CLI Reference](https://ralphify.co/docs/cli/): All commands and options
 - [Python API](https://ralphify.co/docs/api/): Programmatic usage

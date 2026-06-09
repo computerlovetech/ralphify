@@ -28,6 +28,7 @@ dependencies = [
     {path = "ralphs/bug-hunter", type = "ralph"},
     {path = "skills/ralphify-release", type = "skill"},
     {handle = "computerlovetech/ralphs/improve-codebase", type = "ralph"},
+    {path = "./skills/ralph-cli", type = "skill"},
 ]
 
 [[source]]

@@ -62,7 +62,7 @@ content. Then:
   developers actually type
 - Add clear `description` and `keywords` to frontmatter — base these
   on actual search intent, not just the page content
-- Research what terms competing tools (aider, cursor, claude-code,
+- Research what terms competing tools (pi, cursor, claude-code,
   copilot) rank for and use relevant ones
 - Target long-tail keywords around specific tasks ("run AI agent in
   loop", "automate coding agent prompts")

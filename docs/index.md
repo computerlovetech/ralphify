@@ -47,7 +47,7 @@ ralph run grow-coverage     # loops until Ctrl+C
 
 Each iteration starts with a **fresh context window** and **current data** — ralphify runs the commands, fills in the `{{ placeholders }}`, pipes the prompt to your agent, and loops.
 
-*Works with any agent CLI. Swap `claude -p` for Codex, Aider, or your own — just change the `agent` field.*
+*Works with any agent CLI. Swap `claude -p` for Codex, Pi, or your own — just change the `agent` field.*
 
 [Get Started](getting-started.md){ .md-button .md-button--primary }
 [The ralph loops format](https://ralphloops.io/){ .md-button }
