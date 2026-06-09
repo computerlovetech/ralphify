@@ -44,7 +44,7 @@ ralph run grow-coverage     # loops until Ctrl+C
 
 That's loop engineering in three lines: a prompt, a command for live data, and the runtime. Each iteration starts with a **fresh context window** and **current data** — ralphify runs the commands, fills in the `{{ placeholders }}`, pipes the prompt to your agent, and loops. Walk away, come back to a pile of commits.
 
-*Works with any agent CLI. Swap `claude -p` for Codex, Aider, or your own — just change the `agent` field.*
+*Works with any agent CLI. Swap `claude -p` for Codex, Pi, or your own — just change the `agent` field.*
 
 ## Install
 
@@ -169,7 +169,7 @@ Full docs at **[ralphify.co/docs](https://ralphify.co/docs/)** — getting start
 ## Requirements
 
 - Python 3.11+
-- An agent CLI that accepts piped input ([Claude Code](https://docs.anthropic.com/en/docs/claude-code), Codex, Aider, or your own)
+- An agent CLI that accepts piped input ([Claude Code](https://docs.anthropic.com/en/docs/claude-code), Codex, Pi, or your own)
 
 ## License
 

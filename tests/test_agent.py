@@ -33,7 +33,7 @@ class TestSupportsStreamJson:
         assert _supports_stream_json(["/usr/local/bin/claude", "-p"]) is True
 
     def test_non_claude_binary(self):
-        assert _supports_stream_json(["aider", "--yes"]) is False
+        assert _supports_stream_json(["pi", "--yes"]) is False
 
     def test_empty_command(self):
         assert _supports_stream_json([]) is False

@@ -118,7 +118,7 @@ The compact peek panel shows the ten most recent activity lines. Press **shift+P
 | `[` / `]` | Browse to the previous / next iteration |
 | `q` or `P` | Exit back to the compact view |
 
-Live streaming works with line-buffered agents such as Claude Code, OpenAI Codex, and Aider. Agents that repaint their own terminal UI (full-screen curses or TUI apps) are not supported — ralphify pipes their stdio, so they detect a non-TTY and fall back to plain output. If lines appear in bursts rather than as produced, set `PYTHONUNBUFFERED=1` (or the equivalent) in the environment where you launch `ralph`.
+Live streaming works with line-buffered agents such as Claude Code, OpenAI Codex, and Pi. Agents that repaint their own terminal UI (full-screen curses or TUI apps) are not supported — ralphify pipes their stdio, so they detect a non-TTY and fall back to plain output. If lines appear in bursts rather than as produced, set `PYTHONUNBUFFERED=1` (or the equivalent) in the environment where you launch `ralph`.
 
 ### `ralph scaffold`
 
@@ -238,7 +238,7 @@ Ralphify works with **any CLI that reads a prompt from stdin and exits when done
 | Agent | Stdin support | Streaming | Wrapper needed |
 |---|---|---|---|
 | [Claude Code](#claude-code) | Native (`-p`) | Yes — real-time activity tracking | No |
-| [Aider](#aider) | Via bash wrapper | No | Yes (`bash -c`) |
+| [Pi](#pi) | Native (`-p`) | No | No |
 | [Codex CLI](#codex-cli) | Native (`exec`) | No | No |
 | [Custom](#custom-wrapper-script) | You implement it | No | Yes (script) |
 
@@ -254,17 +254,17 @@ agent: claude -p --dangerously-skip-permissions
 
 `-p` enables non-interactive mode (reads prompt from stdin, prints output, exits). `--dangerously-skip-permissions` skips approval prompts so the agent works autonomously — without it, the agent would hang forever waiting for approval that nobody is there to give. Install with `npm install -g @anthropic-ai/claude-code`. When the command starts with `claude`, ralphify automatically adds `--output-format stream-json --verbose` for activity tracking and result-text extraction.
 
-### Aider
+### Pi
 
-[Aider](https://aider.chat) doesn't natively read prompts from stdin, so wrap it with `bash -c` and `cat -`:
+[Pi](https://pi.dev) is a minimal coding-agent CLI. Its print mode reads the piped prompt from stdin natively, so no wrapper is needed:
 
 ```markdown
 ---
-agent: bash -c 'aider --yes-always --no-auto-commits --message "$(cat -)"'
+agent: pi -p -a
 ---
 ```
 
-`--yes-always` auto-approves changes; `--no-auto-commits` lets your prompt control commits. Add `--model claude-sonnet-4-6` (or another) to pick a model.
+`-p` enables print mode (non-interactive: reads the piped prompt from stdin, prints the response, exits). `-a` (`--approve`) trusts the project-local Pi config and extensions for the run so the loop runs unattended. Install with `npm install -g --ignore-scripts @earendil-works/pi-coding-agent` or `curl -fsSL https://pi.dev/install.sh | sh`.
 
 ### Codex CLI
 

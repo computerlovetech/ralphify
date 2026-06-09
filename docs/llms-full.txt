@@ -43,7 +43,7 @@ ralph run grow-coverage     # loops until Ctrl+C
 
 One directory. One command. Each iteration starts with fresh context and current data — ralphify runs the commands, fills in `{{ placeholders }}`, pipes the prompt to your agent, and loops.
 
-Works with any agent CLI. Swap `claude -p` for Codex, Aider, or your own — just change the `agent` field.
+Works with any agent CLI. Swap `claude -p` for Codex, Pi, or your own — just change the `agent` field.
 
 ## Install
 
@@ -586,7 +586,7 @@ This page shows how to configure the `agent` field in your RALPH.md for popular 
 | Agent | Stdin support | Streaming | Wrapper needed |
 |---|---|---|---|
 | [Claude Code](#claude-code) | Native (`-p`) | Yes — real-time activity tracking | No |
-| [Aider](#aider) | Via bash wrapper | No | Yes (`bash -c`) |
+| [Pi](#pi) | Native (`-p`) | No | No |
 | [Codex CLI](#codex-cli) | Native (`exec`) | No | No |
 | [Custom](#custom-wrapper-script) | You implement it | No | Yes (script) |
 
@@ -643,33 +643,32 @@ This enables ralphify to:
 - Track agent activity in real time
 - Extract the final result text from the agent's response
 
-## Aider
+## Pi
 
-[Aider](https://aider.chat) is an AI pair-programming tool that works with multiple LLM providers.
+[Pi](https://pi.dev) is a minimal coding-agent CLI. Its print mode reads the piped prompt from stdin natively, so no wrapper is needed.
 
 ```markdown
 ---
-agent: bash -c 'aider --yes-always --no-auto-commits --message "$(cat -)"'
+agent: pi -p -a
 ---
 ```
 
 | Flag | Purpose |
 |---|---|
-| `--yes-always` | Auto-approve all changes (no interactive prompts) |
-| `--no-auto-commits` | Let your prompt control when commits happen |
-| `--message "..."` | Pass the prompt as a message instead of stdin |
+| `-p` | Print mode — non-interactive: reads the piped prompt from stdin, prints output, exits |
+| `-a` / `--approve` | Trust the project-local Pi config and extensions for the run so the loop runs unattended |
 
-Why the bash wrapper?
+Install Pi:
 
-Aider doesn't natively read prompts from stdin. The `bash -c` wrapper reads stdin with `cat -` and passes it as a `--message` argument.
-
-### Aider with a specific model
-
-```markdown
----
-agent: bash -c 'aider --yes-always --no-auto-commits --model claude-sonnet-4-6 --message "$(cat -)"'
----
+```bash
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# or
+curl -fsSL https://pi.dev/install.sh | sh
 ```
+
+Why `-p`?
+
+Print mode is non-interactive — it reads the assembled prompt straight from stdin and exits when done, exactly what an autonomous loop needs. Because Pi reads stdin natively, there's no `bash -c` wrapper to write.
 
 ## Codex CLI
 
@@ -731,7 +730,7 @@ Verify the agent works outside of ralphify first. The command depends on which a
     ```
 
     ```bash
-    echo "Say hello and nothing else" | bash -c 'aider --yes-always --no-auto-commits --message "$(cat -)"'
+    echo "Say hello and nothing else" | pi -p -a
     ```
 
     ```bash
@@ -1935,7 +1934,7 @@ The loop also stops automatically when:
 
 When you run `ralph run` in an interactive terminal, the agent's stdout and stderr stream live to the console by default. Press `p` to silence the stream (useful for quieter loops) and press `p` again to resume it. The default is off whenever the output is not a real terminal (piped, redirected, or captured in CI), so `ralph run ... | cat` is unaffected.
 
-Live streaming works with line-buffered agents such as Claude Code, OpenAI Codex, Aider, and any other process that writes one line at a time. When `--log-dir` is set, output is captured to the log file and also echoed after each iteration completes; live peek still works the same way in that mode.
+Live streaming works with line-buffered agents such as Claude Code, OpenAI Codex, Pi, and any other process that writes one line at a time. When `--log-dir` is set, output is captured to the log file and also echoed after each iteration completes; live peek still works the same way in that mode.
 
 ---
 

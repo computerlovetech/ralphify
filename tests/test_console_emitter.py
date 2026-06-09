@@ -199,7 +199,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="my-ralph",
-                agent="aider",
+                agent="pi",
                 timeout=0,
                 commands=0,
                 max_iterations=None,
@@ -216,7 +216,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="test",
-                agent="aider",
+                agent="pi",
                 timeout=120,
                 commands=0,
                 max_iterations=None,
@@ -232,7 +232,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="test",
-                agent="aider",
+                agent="pi",
                 timeout=0,
                 commands=3,
                 max_iterations=None,
@@ -248,7 +248,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="test",
-                agent="aider",
+                agent="pi",
                 timeout=0,
                 commands=1,
                 max_iterations=None,
@@ -266,7 +266,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="test",
-                agent="aider",
+                agent="pi",
                 timeout=0,
                 commands=0,
                 max_iterations=5,
@@ -282,7 +282,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="test",
-                agent="aider",
+                agent="pi",
                 timeout=0,
                 commands=0,
                 max_iterations=None,
@@ -301,7 +301,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="test",
-                agent="aider",
+                agent="pi",
                 timeout=60,
                 commands=2,
                 max_iterations=3,
@@ -322,7 +322,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="my-ralph",
-                agent="aider",
+                agent="pi",
                 timeout=0,
                 commands=0,
                 max_iterations=None,
@@ -356,7 +356,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="my-ralph",
-                agent="aider --yes",
+                agent="pi --yes",
                 timeout=0,
                 commands=0,
                 max_iterations=None,
@@ -374,7 +374,7 @@ class TestPeekToggle:
             _make_event(
                 EventType.RUN_STARTED,
                 ralph_name="my-ralph",
-                agent="aider",
+                agent="pi",
                 timeout=0,
                 commands=0,
                 max_iterations=None,
@@ -1510,7 +1510,7 @@ class TestIsClaudeCommand:
         assert _is_claude_command("/usr/local/bin/claude -p") is True
 
     def test_not_claude(self):
-        assert _is_claude_command("aider --yes") is False
+        assert _is_claude_command("pi --yes") is False
 
     def test_empty(self):
         assert _is_claude_command("") is False
