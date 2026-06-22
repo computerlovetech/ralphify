@@ -17,3 +17,4 @@ mess/
 .ralphify/
 scripts/tui_dev/output/
 
+.worktrees/
