@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "skills": {
+    "brand-guidelines": {
+      "source": "/Users/kasperjunge/Agent/Code/computerlovetech/public/ralphify/skills",
+      "sourceType": "local",
+      "computedHash": "bc56ee9f099c1a4aab7ac3c7b4edf96f07ac9e4fbd7f39705004ed3f33811c8c"
+    },
+    "code-review": {
+      "source": "maragudk/skills",
+      "sourceType": "github",
+      "skillPath": "code-review/SKILL.md",
+      "computedHash": "991fc1c0e2917a1077bddca62e78c598666f6aa9b09c733c36b5ecb42e3aa68d"
+    },
+    "playwright-cli": {
+      "source": "microsoft/playwright-cli",
+      "sourceType": "github",
+      "skillPath": "skills/playwright-cli/SKILL.md",
+      "computedHash": "f602822b51bcb6d033749c60731b8f1e80f308222fcb2e4af551905a817c6e08"
+    },
+    "ralph-cli": {
+      "source": "/Users/kasperjunge/Agent/Code/computerlovetech/public/ralphify/skills",
+      "sourceType": "local",
+      "computedHash": "5afcdd89b5e162132a958b657cf6f7a360175f36af3babe3e141f5ad6fb14b7c"
+    },
+    "release": {
+      "source": "/Users/kasperjunge/Agent/Code/computerlovetech/public/ralphify/skills/ralphify-release",
+      "sourceType": "local",
+      "computedHash": "c72ec1e7a57497678286f8db7a328544d52eb36d5a39348aa8cd34e77faabb8a"
+    }
+  }
+}
