@@ -59,6 +59,10 @@ A **ralph** is a directory containing a `RALPH.md` file. That's it. No project-l
   - `README.md` — keep short and high-level. Update only when the change affects the quickstart, install, or core concepts.
   - `CHANGELOG.md` — add an entry for every release.
 
+## Iterating on the TUI
+
+Editing `_console_emitter.py` and need to see what the terminal output looks like? Run `./scripts/tui_dev/run.sh` to regenerate PNG snapshots in `scripts/tui_dev/output/`, then `Read` them in your editor. The harness covers both the live peek panel *and* general terminal states (iteration result lines, run summaries, error logs, markdown results) — add a fixture to `scripts/tui_dev/fixtures.py` for any new state worth iterating on. See `docs/contributing/tui-dev-harness.md` for details.
+
 ## Boundaries
 
 ### Always Do
