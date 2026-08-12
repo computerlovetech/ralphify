@@ -9,6 +9,11 @@
   <a href="https://ralphify.co/docs/"><img src="https://img.shields.io/badge/docs-ralphify.co%2Fdocs-blue" alt="Documentation"></a>
 </p>
 
+> [!IMPORTANT]
+> This repository is kept for educational purposes and is not actively
+> maintained. You are welcome to study and reuse the code, but should not expect
+> updates, support, or production-readiness.
+
 **Ralphify is the runtime for loop engineering.**
 
 *Loop engineering* — designing autonomous agent loops instead of prompting turn by turn — is becoming how people get real work out of coding agents. You write a loop once and let it drive the agent for hours, one commit at a time.
