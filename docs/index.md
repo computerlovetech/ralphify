@@ -6,6 +6,11 @@ hide:
   - toc
 ---
 
+!!! important
+    Ralphify is kept for educational purposes and is not actively maintained.
+    You are welcome to study and reuse the code, but should not expect updates,
+    support, or production-readiness.
+
 <p align="center">
   <img src="assets/cli-banner.png" alt="Ralphify CLI banner" style="max-width: 500px;" />
 </p>
